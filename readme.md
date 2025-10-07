@@ -14,8 +14,6 @@
 **All-Ahraga** adalah platform berbasis web untuk **menyewa lapangan olahraga** seperti tenis, padel, futsal, badminton, dan basket, serta menyediakan layanan **coaching**.  
 Aplikasi ini dirancang untuk mempermudah pengguna dalam **mencari, memesan, dan membayar lapangan secara online**, sekaligus menghubungkan pengguna dengan **pelatih profesional** guna meningkatkan pengalaman olahraga.
 
-Dengan target pasar di kota-kota besar Indonesia seperti **Jakarta, Tangerang, dan Bali**, All-Ahraga bertujuan menjadi platform **all-in-one** untuk penyewaan lapangan dan layanan coaching bagi para penggemar olahraga.
-
 ---
 
 ### Cerita Singkat Penggunaan
