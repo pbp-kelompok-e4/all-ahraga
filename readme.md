@@ -66,7 +66,7 @@ Dataset awal untuk kategori utama produk (lapangan tenis, padel, futsal, dll.) d
 **Sumber utama meliputi:**
 - [Ayo Indonesia](https://ayo.co.id/venues): Daftar lapangan futsal, tenis, padel, dan badminton di kota besar.  
 - [Gelora.id](https://gelora.id/venue): Listing venue olahraga (fokus sepak bola, basket, dan tenis).  
-- [G-Sports.id](https://g-sports.id): Data padel court (134 lapangan di 7 provinsi, termasuk 28 di DKI Jakarta dan 92 di Bali).  
+- [G-Sports.id](https://g-sports.id): Data padel court
 - **Google Maps**: Referensi lokasi dan data tambahan lapangan olahraga.
 
 ---
