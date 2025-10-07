@@ -1,11 +1,11 @@
 # 🏀 All-Ahraga — Kelompok 4 PBP E
 
 ## Nama-nama Anggota Kelompok
-- [Nama Anggota 1]  
-- [Nama Anggota 2]  
+- **Amadio Juno Trisanto**  
+- **Felicia Evangeline Mubarun**  
 - **Ahsan Parvez**  
-- [Nama Anggota 4]  
-- [Nama Anggota 5]
+- **Muhammad Razka Faltasyah**
+- **Mafaza Ananda Rahman**
 
 ---
 
