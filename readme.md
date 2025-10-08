@@ -88,7 +88,7 @@ https://docs.google.com/spreadsheets/d/1t_XP8-ce49bFA8lb_G9DQBf5znkMyC4y4aohg_ZZ
 
 ## Tautan Deployment PWS dan Link Design
 - **Link PWS:**  
-  *(akan diisi setelah deployment)*  
+  https://pbp.cs.ui.ac.id/muhammad.razka41/allahraga
 
 - **Link Design (Figma):**  
-  *(akan diisi setelah desain selesai)*
+  https://www.figma.com/design/5QlFEjv6Icwo8CMqN7bh0C/Design-All-ahraga?node-id=0-1&t=kbMu2oTsx7oVALKj-1
