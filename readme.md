@@ -76,7 +76,7 @@ Dataset awal untuk kategori utama produk (lapangan tenis, padel, futsal, dll.) d
 
 | Role | Deskripsi |
 |------|------------|
-| **Visitor ** | Dapat melihat daftar lapangan, alat, dan pelatih, tetapi belum bisa melakukan booking. |
+| **Visitor** | Dapat melihat daftar lapangan, alat, dan pelatih, tetapi belum bisa melakukan booking. |
 | **Customer** | Pengguna yang mencari, memesan, dan membayar lapangan atau coaching. Dapat mengakses dashboard pribadi untuk riwayat dan ulasan. |
 | **Coach** | Pelatih terverifikasi yang menawarkan sesi privat/grup. Dapat mengelola profil, jadwal, dan rating. |
 | **Venue Owner** | Pemilik lapangan yang mengelola listing, ketersediaan jadwal, dan laporan pendapatan. |
