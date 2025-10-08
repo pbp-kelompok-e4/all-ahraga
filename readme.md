@@ -37,24 +37,20 @@ Jika ingin berlatih tenis, pengguna juga bisa memesan pelatih (*coach*) yang ter
 1. **Modul Autentikasi Pengguna**  
    - Register, login, dan logout (untuk user dan admin).
 
-2. **Modul Pencarian dan Pemesanan Lapangan**  
-   - Menampilkan daftar lapangan berdasarkan lokasi, waktu, dan jenis olahraga.  
-   - Fitur filter ketersediaan.
-
-3. **Modul Coaching**  
+2. **Modul Coaching**  
    - Daftar pelatih berdasarkan olahraga dan rating.  
    - Pemesanan sesi latihan dengan jadwal fleksibel.
 
-4. **Modul Manajemen Lapangan (Admin/Pengelola)**  
+3. **Modul Manajemen Lapangan (Admin/Pengelola)**  
    - CRUD data lapangan, harga, dan jadwal ketersediaan.
 
-5. **Modul Manajemen Pelatih (Coach)**  
+4. **Modul Manajemen Pelatih (Coach)**  
    - CRUD profil pelatih, jadwal, dan tarif.
 
-6. **Modul Review & Rating**  
+5. **Modul Review & Rating**  
    - Pengguna dapat memberikan ulasan terhadap lapangan dan pelatih.
 
-7. **Modul Pembayaran (Simulasi 50:50)**  
+6. **Modul Pembayaran (Simulasi 50:50)**  
    - Simulasi pembayaran seperti *Bayar di Tempat* atau *Transfer Manual*.
 
 ---
