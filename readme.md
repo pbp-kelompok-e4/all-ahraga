@@ -70,6 +70,8 @@ Dataset awal untuk kategori utama produk (lapangan tenis, padel, futsal, dll.) d
 - [G-Sports.id](https://g-sports.id): Data padel court
 - **Google Maps**: Referensi lokasi dan data tambahan lapangan olahraga.
 
+https://docs.google.com/spreadsheets/d/1t_XP8-ce49bFA8lb_G9DQBf5znkMyC4y4aohg_ZZn74/edit?usp=sharing
+
 ---
 
 ## Role atau Peran Pengguna
