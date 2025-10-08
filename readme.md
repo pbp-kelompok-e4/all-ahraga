@@ -11,8 +11,11 @@
 
 ## Deskripsi Aplikasi
 
-**All-Ahraga** adalah platform berbasis web untuk **menyewa lapangan olahraga** seperti tenis, padel, futsal, badminton, dan basket, serta menyediakan layanan **coaching**.  
-Aplikasi ini dirancang untuk mempermudah pengguna dalam **mencari, memesan, dan membayar lapangan secara online**, sekaligus menghubungkan pengguna dengan **pelatih profesional** guna meningkatkan pengalaman olahraga.
+All-ahraga adalah aplikasi web berbasis Django yang menyediakan layanan serba ada untuk kebutuhan olahraga. Mulai dari booking lapangan, sewa alat olahraga, hingga pesan sesi coaching/pelatihan olahraga.
+
+Aplikasi ini dibuat untuk mempermudah masyarakat dalam mengakses layanan olahraga tanpa perlu berpindah-pindah platform. Pengguna dapat mencari lapangan olahraga di sekitar mereka, menyewa peralatan yang dibutuhkan, atau memesan pelatih profesional hanya dalam satu website.
+
+Dengan All-ahraga, semua kebutuhan olahraga dapat terpenuhi secara praktis, efisien, dan terintegrasi dalam satu tempat.
 
 ---
 
@@ -22,6 +25,7 @@ Seorang pengguna ingin bermain futsal dengan teman-temannya namun kesulitan menc
 Ia membuka **All-Ahraga**, memilih jenis olahraga *Futsal*, melihat daftar lapangan yang tersedia di sekitar lokasi, lalu melakukan pemesanan.  
 Jika ingin berlatih tenis, pengguna juga bisa memesan pelatih (*coach*) yang tersedia di area tersebut.
 
+
 ---
 
 ### Kebermanfaatan
@@ -29,6 +33,7 @@ Jika ingin berlatih tenis, pengguna juga bisa memesan pelatih (*coach*) yang ter
 - Meningkatkan pendapatan bagi pengelola lapangan.  
 - Memberikan peluang bagi pelatih untuk memasarkan jasanya.  
 - Mendorong gaya hidup sehat dan aktif melalui kemudahan akses fasilitas olahraga.
+- Memberikan pengalaman olahraga yang efisien, mudah diakses, dan terpercaya.
 
 ---
 
@@ -71,6 +76,7 @@ Dataset awal untuk kategori utama produk (lapangan tenis, padel, futsal, dll.) d
 
 | Role | Deskripsi |
 |------|------------|
+| **Visitor ** | Dapat melihat daftar lapangan, alat, dan pelatih, tetapi belum bisa melakukan booking. |
 | **Customer** | Pengguna yang mencari, memesan, dan membayar lapangan atau coaching. Dapat mengakses dashboard pribadi untuk riwayat dan ulasan. |
 | **Coach** | Pelatih terverifikasi yang menawarkan sesi privat/grup. Dapat mengelola profil, jadwal, dan rating. |
 | **Venue Owner** | Pemilik lapangan yang mengelola listing, ketersediaan jadwal, dan laporan pendapatan. |
