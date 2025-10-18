@@ -1,14 +1,16 @@
 from django.db import migrations
 
 def create_initial_master_data(apps, schema_editor):
-    """Fungsi yang akan dijalankan untuk memasukkan data master."""
+    """Fungsi untuk memasukkan data kategori dan area."""
     SportCategory = apps.get_model('main', 'SportCategory')
     LocationArea = apps.get_model('main', 'LocationArea')
     
+    # 1. DATA KATEGORI OLAHRAGA
     sport_categories = ['Futsal', 'Basket', 'Mini Soccer', 'Padel', 'Tenis']
     for name in sport_categories:
         SportCategory.objects.get_or_create(name=name)
         
+    # 2. DATA AREA LOKASI
     location_areas = ['Jakarta', 'Tangerang', 'Bogor', 'Depok', 'Bekasi']
     for name in location_areas:
         LocationArea.objects.get_or_create(name=name)
