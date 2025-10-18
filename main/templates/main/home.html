@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Halaman Utama All-Ahraga{% endblock title %}
+
+{% block content %}
+<div style="text-align: center; margin-top: 50px;">
+    <h1>Selamat Datang di All-Ahraga!</h1>
+    
+    {% if user.is_authenticated %}
+        <p style="font-size: 1.2em; color: green;">
+            Anda berhasil login sebagai **{{ user.username }}**.
+        </p>
+        <p>Anda telah dialihkan ke sini karena *dashboard* sedang dikembangkan.</p>
+    {% else %}
+        <p style="font-size: 1.1em; color: #555;">Silakan masuk atau daftar untuk mulai mencari lapangan.</p>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px;">Daftar Lapangan</h3>
+        <p>*(belum diimplementasikan)*</p>
+    </div>
+</div>
+{% endblock content %}
