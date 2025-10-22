@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Tambah Feedback{% endblock %}
+
+{% block content %}
+<div style="max-width:600px;margin:30px auto;padding:20px;background:white;border-radius:8px;">
+  <h2>Tambah Feedback</h2>
+  <form method="post">
+    {% csrf_token %}
+    <label>Rating (1-5)</label>
+    <input type="number" name="rating" min="1" max="5" required>
+    <label>Pesan</label>
+    <textarea name="message" rows="4" required></textarea>
+    <button type="submit">Kirim</button>
+  </form>
+</div>
+{% endblock %}

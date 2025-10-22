@@ -6,14 +6,182 @@
 <div style="max-width: 500px; margin: 50px auto; padding: 25px; border: 1px solid #ddd; background-color: white; border-radius: 8px;">
     <h2 style="text-align: center;">Daftar Akun</h2>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data" id="register-form">
         {% csrf_token %}
-        {{ form.as_p }}
-        
-        <button type="submit" style="width: 100%; padding: 10px; background-color: #28a848; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        {{ form.username.label_tag }} {{ form.username }}
+        {{ form.email.label_tag }} {{ form.email }}
+        {{ form.phone_number.label_tag }} {{ form.phone_number }}
+        {{ form.role_type.label_tag }} {{ form.role_type }}
+
+        {# Coach-only fields container (hidden by default) #}
+    <style>
+        /* helper class for server-side show */
+        #coach-fields { display: none; }
+        #coach-fields.show-coach { display: block; }
+    </style>
+
+    <div id="coach-fields" class="{% if show_coach_fields %}show-coach{% endif %}" style="margin-top:12px; padding:8px; border:1px solid #eee;">
+            <label for="id_service_area">Pilih Wilayah Layanan</label>
+            {{ form.service_area }}
+
+            <div style="margin-top:8px;">
+                <input type="search" id="venue-search" placeholder="Cari venue berdasarkan nama atau daerah" style="width:100%; padding:6px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-top:8px;">
+                <label>Choose venues where you can teach</label>
+                <div id="venue-list" style="max-height:200px; overflow:auto; border:1px solid #ddd; padding:6px;">
+                    {% for v in venues %}
+                        <div class="venue-item" data-venue-id="{{ v.id }}" data-venue-name="{{ v.name|lower }}" data-venue-location="{{ v.location.id }}" style="display:flex; align-items:center; justify-content:space-between; padding:4px;">
+                            <div>
+                                <input type="checkbox" class="venue-check" data-venue-id="{{ v.id }}" id="venue-{{ v.id }}"> 
+                                <label for="venue-{{ v.id }}">{{ v.name }} ({{ v.location }})</label>
+                            </div>
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <input type="number" min="0" class="venue-rate-input" data-venue-id="{{ v.id }}" placeholder="Enter your rate" style="width:120px; display:none;">
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="margin-top:8px;">
+                {{ form.profile_picture.label_tag }} {{ form.profile_picture }}
+            </div>
+
+            {# hidden field to hold JSON of selected venues+rates #}
+            {{ form.selected_venues_json }}
+        </div>
+
+        {{ form.password1.label_tag }} {{ form.password1 }}
+        {{ form.password2.label_tag }} {{ form.password2 }}
+
+        <button type="submit" id="register-submit" style="width: 100%; padding: 10px; background-color: #28a848; color: white; border: none; border-radius: 4px; cursor: pointer;">
             Daftar
         </button>
     </form>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        // role field may be rendered as <select id="id_role_type"> or as radio inputs
+        let roleField = document.getElementById('id_role_type');
+        if(!roleField){
+            // try radio buttons / other inputs by name
+            const byName = document.getElementsByName('role_type');
+            if(byName && byName.length) roleField = byName;
+        }
+        const coachFields = document.getElementById('coach-fields');
+        const registerForm = document.getElementById('register-form');
+        const selectedInput = document.getElementById('id_selected_venues_json');
+        const venueSearch = document.getElementById('venue-search');
+        const serviceAreaSelect = document.getElementById('id_service_area');
+
+        function venueChecksList(){
+            return Array.from(document.querySelectorAll('.venue-check'));
+        }
+
+        function getRoleValue(){
+            if(!roleField) return null;
+            // NodeList of radio inputs
+            if(roleField instanceof NodeList || roleField instanceof HTMLCollection || Array.isArray(roleField)){
+                for(const el of roleField){
+                    if(el.checked) return el.value;
+                }
+                return null;
+            }
+            // single select/input
+            return roleField.value;
+        }
+
+        function toggleCoachFields(){
+            if(!roleField || !coachFields) return;
+            const val = getRoleValue();
+            if(val === 'COACH'){
+                coachFields.classList.add('show-coach');
+            } else {
+                coachFields.classList.remove('show-coach');
+            }
+        }
+
+        if(roleField){
+            // attach listeners appropriately
+            if(roleField instanceof NodeList || roleField instanceof HTMLCollection || Array.isArray(roleField)){
+                for(const el of roleField){
+                    el.addEventListener('change', toggleCoachFields);
+                }
+            } else {
+                roleField.addEventListener('change', toggleCoachFields);
+            }
+            // initial check
+            toggleCoachFields();
+        }
+
+        // Show/hide rate input when checkbox toggled
+        function attachCheckboxHandlers(){
+            venueChecksList().forEach(function(chk){
+                chk.removeEventListener('change', null);
+                chk.addEventListener('change', function(){
+                    const vid = this.dataset.venueId;
+                    const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
+                    if(!rateEl) return;
+                    if(this.checked){
+                        rateEl.style.display = 'inline-block';
+                        rateEl.required = true;
+                    } else {
+                        rateEl.style.display = 'none';
+                        rateEl.required = false;
+                        rateEl.value = '';
+                    }
+                });
+            });
+        }
+        attachCheckboxHandlers();
+
+        // Filter venue list by search term and selected area
+        function filterVenues(){
+            const term = venueSearch ? venueSearch.value.trim().toLowerCase() : '';
+            const areaId = serviceAreaSelect ? serviceAreaSelect.value : '';
+            const items = Array.from(document.querySelectorAll('.venue-item'));
+            items.forEach(function(it){
+                const name = it.dataset.venueName || '';
+                const loc = String(it.dataset.venueLocation || '');
+                const matchesTerm = term === '' || name.indexOf(term) !== -1;
+                const matchesArea = !areaId || areaId === '' || loc === areaId;
+                if(matchesTerm && matchesArea){
+                    it.style.display = 'flex';
+                } else {
+                    it.style.display = 'none';
+                    // uncheck and hide rate if it's hidden
+                    const chk = it.querySelector('.venue-check');
+                    const rateEl = it.querySelector('.venue-rate-input');
+                    if(chk && !matchesTerm){ chk.checked = false; }
+                    if(rateEl){ rateEl.style.display = 'none'; rateEl.required = false; rateEl.value = ''; }
+                }
+            });
+        }
+
+        if(venueSearch){ venueSearch.addEventListener('input', filterVenues); }
+        if(serviceAreaSelect){ serviceAreaSelect.addEventListener('change', filterVenues); }
+
+        // Before submit, serialize selected venues+rates into hidden input
+        if(registerForm){
+            registerForm.addEventListener('submit', function(){
+                const selected = [];
+                venueChecksList().forEach(function(chk){
+                    if(chk.checked && chk.offsetParent !== null){ // only consider visible checks
+                        const vid = chk.dataset.venueId;
+                        const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
+                        const rateVal = rateEl ? rateEl.value : '';
+                        selected.push({venue_id: vid, rate: rateVal});
+                    }
+                });
+                if(selectedInput){
+                    selectedInput.value = JSON.stringify(selected);
+                }
+            });
+        }
+    });
+    </script>
     
     <p style="text-align: center; margin-top: 15px;">
         Sudah punya akun? <a href="{% url 'login' %}">Masuk di sini</a>

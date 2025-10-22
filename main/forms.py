@@ -13,6 +13,9 @@ class CustomUserCreationForm(UserCreationForm):
     role_type = forms.ChoiceField(choices=ROLE_CHOICES, label="Daftar Sebagai")
     phone_number = forms.CharField(max_length=15, required=True, label="Nomor Telepon")
     email = forms.EmailField(required=True, label="Email Address") 
+    profile_picture = forms.ImageField(required=False, label="Upload Profile Picture")
+    service_area = forms.ModelChoiceField(queryset=LocationArea.objects.all(), required=False, label="Wilayah Layanan")
+    selected_venues_json = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
         model = User 
@@ -21,10 +24,9 @@ class CustomUserCreationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data.get('email')
-        
         if commit:
             user.save()
-        
+
         role = self.cleaned_data.get('role_type')
         profile = UserProfile.objects.create(
             user=user,
@@ -33,6 +35,44 @@ class CustomUserCreationForm(UserCreationForm):
             is_venue_owner=(role == 'VENUE_OWNER'),
             is_coach=(role == 'COACH'),
         )
+
+        # If coach, create CoachProfile and optional CoachVenue entries
+        if role == 'COACH':
+            from .models import CoachProfile, CoachVenue, Venue
+
+            coach = CoachProfile.objects.create(
+                user=user,
+            )
+
+            # save profile picture if provided
+            pic = self.cleaned_data.get('profile_picture')
+            if pic:
+                coach.profile_picture = pic
+                coach.save()
+
+            # service area
+            area = self.cleaned_data.get('service_area')
+            if area:
+                coach.service_areas.add(area)
+
+            # parse selected venues json and create CoachVenue entries
+            import json
+            sv = self.cleaned_data.get('selected_venues_json')
+            if sv:
+                try:
+                    data = json.loads(sv)
+                    for item in data:
+                        vid = item.get('venue_id')
+                        rate = item.get('rate')
+                        if vid:
+                            try:
+                                venue = Venue.objects.get(id=vid)
+                                CoachVenue.objects.create(coach=coach, venue=venue, rate=rate or 0)
+                            except Venue.DoesNotExist:
+                                continue
+                except Exception:
+                    pass
+
         return user
     
 class VenueForm(forms.ModelForm):

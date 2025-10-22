@@ -37,7 +37,7 @@ def register_view(request):
         return redirect('home')
 
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
 
@@ -47,8 +47,11 @@ def register_view(request):
             messages.error(request, "Mohon periksa input Anda.")
     else:
         form = CustomUserCreationForm()
-    
-    return render(request, 'main/register.html', {'form': form})
+    venues = Venue.objects.all().select_related('location')
+    show_coach = False
+    if request.method == 'POST' and request.POST.get('role_type') == 'COACH':
+        show_coach = True
+    return render(request, 'main/register.html', {'form': form, 'venues': venues, 'show_coach_fields': show_coach})
 
 def login_view(request):
     if request.user.is_authenticated:

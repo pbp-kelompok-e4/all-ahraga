@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feedback{% endblock %}
+
+{% block content %}
+<section id="feedback" style="padding: 30px 20px;">
+    <div class="container">
+        <h2>Feedback Pengguna</h2>
+        {% if feedback_contributors %}
+        <div id="feedback-contributors" style="margin-bottom: 16px;">
+            <h4>Kontributor Terbaru</h4>
+            <ul>
+                {% for c in feedback_contributors %}
+                    <li>
+                        <strong>{{ c.username }}</strong>
+                        — rata-rata: {{ c.avg_rating }}/5
+                        ({{ c.count }} feedback)
+                        <div style="font-style:italic;">"{{ c.last_message }}"</div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if feedback_list %}
+            <ul id="global-feedback-list">
+                {% for fb in feedback_list %}
+                    <li>
+                        <strong>{{ fb.customer.username }}</strong> — {{ fb.rating }}/5
+                        <p>{{ fb.comment }}</p>
+                        {% if user == fb.customer %}
+                            <a href="{% url 'edit_feedback' fb.id %}">Edit</a> |
+                            <a href="{% url 'delete_feedback' fb.id %}">Hapus</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Belum ada feedback.</p>
+        {% endif %}
+
+        {# Quick link to full feedback form if needed #}
+        {% if user.is_authenticated %}
+            <a href="{% url 'add_feedback' %}" class="btn">Tambah Feedback</a>
+        {% endif %}
+    </div>
+</section>
+
+{# Booking history + inline feedback via AJAX — only shown to authenticated users #}
+{% if user.is_authenticated and user_bookings %}
+<section id="my-bookings" style="padding: 20px 20px; background-color: #f9f9f9;">
+    <div class="container">
+        <h3>Riwayat Booking Anda</h3>
+        <ul id="booking-list">
+            {% for booking in user_bookings %}
+                <li data-booking-id="{{ booking.id }}">
+                    <strong>{{ booking.venue_schedule.venue.name }}</strong>
+                    - {{ booking.booking_time|date:'Y-m-d H:i' }}
+                    <div>
+                        <label>Berikan Feedback:</label>
+                        <select class="rating-select">
+                            <option value="">Pilih rating</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                        <input type="text" class="fb-message" placeholder="Tulis pesan...">
+                        <button class="btn btn-sm btn-primary send-feedback">Kirim</button>
+                    </div>
+                </li>
+            {% empty %}
+                <li>Tidak ada riwayat booking.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.send-feedback').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const li = this.closest('li');
+            const bookingId = li.getAttribute('data-booking-id');
+            const rating = li.querySelector('.rating-select').value;
+            const message = li.querySelector('.fb-message').value.trim();
+
+            if (!rating || !message) {
+                alert('Rating dan pesan wajib diisi.');
+                return;
+            }
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            const csrftoken = getCookie('csrftoken');
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '{% url "add_review_ajax" %}');
+            xhr.setRequestHeader('X-CSRFToken', csrftoken);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    const resp = JSON.parse(xhr.responseText);
+                    if (resp.success) {
+                        alert('Feedback berhasil dikirim!');
+                        // reset inputs
+                        li.querySelector('.rating-select').value = '';
+                        li.querySelector('.fb-message').value = '';
+                        // append to feedback list if present
+                        const fbList = document.querySelector('#global-feedback-list');
+                        if (fbList) {
+                            const item = document.createElement('li');
+                            item.innerHTML = `<strong>${resp.review.customer}</strong> — ${resp.review.rating}/5<p>${resp.review.comment}</p>`;
+                            fbList.insertBefore(item, fbList.firstChild);
+                        }
+                    } else {
+                        alert('Error: ' + (resp.error || 'Unknown'));
+                    }
+                } else {
+                    alert('Terjadi error saat mengirim feedback.');
+                }
+            };
+            const body = 'booking_id=' + encodeURIComponent(bookingId) + '&rating=' + encodeURIComponent(rating) + '&message=' + encodeURIComponent(message);
+            xhr.send(body);
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
