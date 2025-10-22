@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date
-from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm
+from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment
 
 def get_user_dashboard(user):
@@ -368,3 +368,45 @@ def my_bookings(request):
     }
 
     return render(request, 'main/my_bookings.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def coach_profile_view(request):
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        coach_profile = None
+
+    phone = ''
+    try:
+        phone = request.user.profile.phone_number or ''
+    except Exception:
+        phone = ''
+
+    context = {
+        'user_obj': request.user,
+        'phone_number': phone,
+        'coach_profile': coach_profile,
+    }
+    return render(request, 'main/coach_profile.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def manage_coach_profile(request):
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        coach_profile = CoachProfile(user=request.user)
+
+    if request.method == 'POST':
+        form = CoachProfileForm(request.POST, instance=coach_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profil pelatih berhasil disimpan.")
+            return redirect('coach_dashboard')
+        else:
+            messages.error(request, "Mohon periksa input Anda.")
+    else:
+        form = CoachProfileForm(instance=coach_profile)
+
+    return render(request, 'main/manage_coach_profile.html', {'form': form})
