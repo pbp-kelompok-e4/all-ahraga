@@ -227,3 +227,30 @@ def customer_payment(request, booking_id):
     transaction.status = 'CONFIRMED'
     transaction.save()
     return redirect('home')
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def booking_history(request):
+    bookings = Booking.objects.filter(customer=request.user).select_related('venue_schedule__venue', 'transaction').order_by(
+        '-venue_schedule__date')
+    context = {
+        'bookings' : bookings
+    }
+
+    return render(request, 'main/booking_history.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def my_bookings(request):
+    bookings = Booking.objects.filter(
+        customer=request.user, 
+        transaction__status='PENDING'
+    ).select_related(
+        'venue_schedule__venue', 'transaction'
+    ).order_by('-venue_schedule__date')
+
+    context = {
+        'bookings' : bookings
+    }
+
+    return render(request, 'main/my_bookings.html', context)
