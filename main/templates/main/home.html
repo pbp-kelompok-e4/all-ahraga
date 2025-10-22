@@ -27,6 +27,11 @@
                         <br>
                         {% endfor %}
                     </ul>
+                    <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;">
+                        {% for venue in venues %}
+                            {% include 'main/venue_card.html' with venue=venue %}
+                        {% endfor %}
+                    </div>
                 {% else %}
                     <p>Tidak ada lapangan yang tersedia saat ini.</p>
                 {% endif %}
