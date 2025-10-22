@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan Pendapatan Pelatih{% endblock title %}
+
+{% block content %}
+<h2>Laporan Pendapatan Pelatih</h2>
+
+<p>Total Pendapatan: Rp {{ total_revenue }}</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID Transaksi</th>
+            <th>Metode Pembayaran</th>
+            <th>Status</th>
+            <th>Pendapatan Pelatih</th>
+            <th>Tanggal Transaksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.id }}</td>
+            <td>{{ transaction.payment_method }}</td>
+            <td>{{ transaction.status }}</td>
+            <td>Rp {{ transaction.revenue_coach }}</td>
+            <td>{{ transaction.transaction_time }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">Tidak ada transaksi.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock content %}
