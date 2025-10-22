@@ -99,7 +99,20 @@ def venue_detail_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_dashboard_view(request):
-    return redirect('home')
+    venues = Venue.objects.all().select_related('sport_category')
+    categories = SportCategory.objects.all()
+    areas = LocationArea.objects.all()
+    
+    query = request.GET.get('q')
+    if query:
+        venues = venues.filter(name__icontains=query)
+
+    context = {
+        'venues': venues,
+        'categories': categories,
+        'areas': areas,
+    }
+    return render(request, 'main/home.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
@@ -195,7 +208,7 @@ def create_booking(request, venue_id):
             revenue_platform=0
         )
 
-        return redirect('customer_bookings')
+        return redirect('home')
 
     context = {
         'venue': venue,
@@ -203,14 +216,7 @@ def create_booking(request, venue_id):
         'equipment_list': equipment_list,
         'coaches': coaches,
     }
-    return render(request, 'main/venue_booking.html', context)
-
-@login_required(login_url='login')
-@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
-def customer_booking(request):
-    # Menampilkan semua bookingan user
-    bookings = Booking.objects.filter(customer=request.user).select_related('venue_schedule', 'transaction')
-    return render(request, 'main/customer_booking.html', {'bookings' : bookings})
+    return render(request, 'main/home.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
@@ -220,4 +226,4 @@ def customer_payment(request, booking_id):
     transaction = booking.transaction
     transaction.status = 'CONFIRMED'
     transaction.save()
-    return redirect(customer_booking)
+    return redirect('home')

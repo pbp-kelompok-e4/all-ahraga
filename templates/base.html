@@ -43,8 +43,8 @@
                         <a href="{% url 'coach_dashboard' %}">Profil Pelatih</a>
                     
                     {% elif user.profile.is_customer %}
-                        <a href="{% url 'customer_dashboard' %}">Booking Saya</a>
-                    
+                        <a href="{% url 'customer_dashboard' %}">Bookingan Saya</a>
+                        
                     {% endif %}
 
                 {% endif %} 
