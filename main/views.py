@@ -5,8 +5,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date, datetime, timedelta
-from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm
-from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment
+from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm, CoachScheduleForm
+from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment, CoachSchedule
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
@@ -145,8 +145,9 @@ def venue_create_view(request):
     if request.method == 'POST':
         form = VenueForm(request.POST)
         if form.is_valid():
+            user = request.user
             venue = form.save(commit=False)
-            venue.owner = request.user  # Set owner
+            venue.owner = user  # Set owner
             venue.save()
             messages.success(request, f"Lapangan '{venue.name}' berhasil ditambahkan.")
             return redirect('venue_dashboard')
@@ -492,6 +493,104 @@ def delete_coach_profile(request):
         return redirect('home') 
 
     return render(request, 'main/confirm_delete_coach_profile.html', {'coach_profile': coach_profile})
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def coach_schedule(request):
+    """
+    Tampilkan dan tambahkan jadwal pelatih (per jam). 
+    Jika belum ada CoachProfile, arahkan ke manage_coach_profile.
+    """
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        messages.info(request, "Silakan buat profil pelatih terlebih dahulu.")
+        return redirect('manage_coach_profile')
+
+    form = CoachScheduleForm()
+    schedules = coach_profile.schedules.all().order_by('date', 'start_time')
+
+    if request.method == 'POST':
+        form = CoachScheduleForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            schedule_date = cd['date']
+            start_time = cd['start_time']
+            end_time = cd['end_time']
+            is_available = cd.get('is_available', True)
+
+            start_dt = datetime.combine(schedule_date, start_time)
+            end_dt = datetime.combine(schedule_date, end_time)
+            if end_dt <= start_dt:
+                messages.error(request, "Waktu selesai harus setelah waktu mulai.")
+                return redirect('coach_schedule')
+
+            created = 0
+            skipped = 0
+            current = start_dt
+            while current < end_dt:
+                slot_start = current.time()
+                next_dt = current + timedelta(hours=1)
+                slot_end = next_dt.time() if next_dt <= end_dt else end_time
+
+                exists = CoachSchedule.objects.filter(
+                    coach=coach_profile, date=schedule_date, start_time=slot_start
+                ).exists()
+
+                if not exists:
+                    CoachSchedule.objects.create(
+                        coach=coach_profile,
+                        date=schedule_date,
+                        start_time=slot_start,
+                        end_time=slot_end,
+                        is_available=is_available
+                    )
+                    created += 1
+                else:
+                    skipped += 1
+
+                current = next_dt
+
+            messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
+            return redirect('coach_schedule')
+        else:
+            messages.error(request, "Mohon periksa input jadwal.")
+            return redirect('coach_schedule')
+
+    context = {
+        'coach_profile': coach_profile,
+        'schedules': schedules,
+        'form': form,
+    }
+    return render(request, 'main/coach_schedule.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def coach_schedule_delete(request):
+    if request.method != 'POST':
+        return redirect('coach_schedule')
+
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        messages.error(request, "Profil pelatih tidak ditemukan.")
+        return redirect('coach_schedule')
+
+    ids = request.POST.getlist('selected_schedules')
+    deleted = 0
+    for sid in ids:
+        try:
+            cs = CoachSchedule.objects.get(id=sid, coach=coach_profile)
+            if cs.is_booked:
+                messages.warning(request, f"Slot {cs.date} {cs.start_time.strftime('%H:%M')} tidak dapat dihapus (sudah dibooking).")
+                continue
+            cs.delete()
+            deleted += 1
+        except CoachSchedule.DoesNotExist:
+            continue
+
+    messages.success(request, f"{deleted} jadwal berhasil dihapus.")
+    return redirect('coach_schedule')
 
 def coach_list_view(request):
     """Menampilkan daftar semua coach"""

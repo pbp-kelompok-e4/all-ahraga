@@ -39,7 +39,7 @@
                         <a href="{% url 'venue_revenue' %}">Revenue Report</a>
                     
                     {% elif user.profile.is_coach %}
-                        <a href="{% url 'coach_dashboard' %}">Jadwal Sesi</a>
+                        <a href="{% url 'coach_schedule' %}">Jadwal Sesi</a>
                         <a href="{% url 'coach_profile' %}">Profil Pelatih</a>
                         <a href="{% url 'coach_dashboard' %}">Laporan Pendapatan</a>
                         <a href="{% url 'coach_list' %}">Daftar Pelatih</a>
