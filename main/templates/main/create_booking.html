@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Booking - {{ venue.name }}{% endblock title %}
+
+{% block content %}
+<div style="max-width:900px;margin:30px auto;background:#fff;padding:20px;border-radius:8px;">
+  <h2>Booking: {{ venue.name }}</h2>
+  <p><strong>Harga / jam:</strong> Rp <span id="base-price">{{ venue.price_per_hour|default:"0" }}</span></p>
+
+  {% if schedules %}
+    <form method="post">
+      {% csrf_token %}
+
+      <fieldset style="margin-bottom:12px;">
+        <legend><strong>Pilih Jadwal</strong></legend>
+        <ul style="list-style:none;padding:0;">
+          {% for s in schedules %}
+            <li style="margin-bottom:6px;">
+              <label>
+                <input type="radio" name="schedule_id" value="{{ s.id }}" {% if forloop.first %}checked{% endif %}>
+                {{ s.date|date:"D, d M Y" }} — {{ s.start_time }} - {{ s.end_time }}
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </fieldset>
+
+      {% if equipment_list %}
+        <fieldset style="margin-bottom:12px;">
+          <legend><strong>Equipment (opsional)</strong></legend>
+          <ul style="list-style:none;padding:0;">
+            {% for eq in equipment_list %}
+              <li style="margin-bottom:6px;">
+                <label>
+                  <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}">
+                  {{ eq.name }} — Rp {{ eq.rental_price|default:"0" }}
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </fieldset>
+      {% endif %}
+
+      {% if coaches %}
+        <fieldset style="margin-bottom:12px;">
+          <legend><strong>Coach (opsional)</strong></legend>
+          <select name="coach" id="coach-select">
+            <option value="">-- Tanpa Coach --</option>
+            {% for c in coaches %}
+              <option value="{{ c.id }}" data-rate="{{ c.rate_per_hour|default:0 }}">
+                {{ c.user.username }} — Rp {{ c.rate_per_hour|default:"0" }} / jam
+              </option>
+            {% endfor %}
+          </select>
+        </fieldset>
+      {% endif %}
+
+      <fieldset style="margin-bottom:12px;">
+        <legend><strong>Metode Pembayaran</strong></legend>
+        <label><input type="radio" name="payment_method" value="CASH" checked> Cash</label>
+        <label style="margin-left:12px;"><input type="radio" name="payment_method" value="TRANSFER"> Transfer</label>
+      </fieldset>
+
+      <p><strong>Total Perkiraan:</strong> Rp <span id="total-price">{{ venue.price_per_hour|default:"0" }}</span></p>
+
+      <div style="margin-top:16px;">
+        <button type="submit" style="padding:8px 12px;background:#28a745;color:#fff;border:none;border-radius:6px;">Buat Booking</button>
+        <a href="{% url 'home' %}" style="margin-left:8px;padding:8px 12px;background:#6c757d;color:#fff;border-radius:6px;text-decoration:none;">Batal</a>
+      </div>
+    </form>
+
+    <script>
+      (function(){
+        const base = parseFloat(document.getElementById('base-price').textContent) || 0;
+        const eqCheckboxes = Array.from(document.querySelectorAll('input[type="checkbox"][name="equipment"]'));
+        const coachSelect = document.getElementById('coach-select');
+        const totalEl = document.getElementById('total-price');
+
+        function calc(){
+          let total = base;
+          eqCheckboxes.forEach(cb => { if(cb.checked) total += parseFloat(cb.dataset.price || 0); });
+          if(coachSelect && coachSelect.value){
+            const opt = coachSelect.options[coachSelect.selectedIndex];
+            total += parseFloat(opt.dataset.rate || 0);
+          }
+          totalEl.textContent = Math.round(total);
+        }
+
+        eqCheckboxes.forEach(cb => cb.addEventListener('change', calc));
+        if(coachSelect) coachSelect.addEventListener('change', calc);
+        calc();
+      })();
+    </script>
+
+  {% else %}
+    <p>Tidak ada jadwal tersedia untuk venue ini saat ini.</p>
+    <a href="{% url 'home' %}" style="padding:8px 12px;background:#6c757d;color:#fff;border-radius:6px;text-decoration:none;">Kembali</a>
+  {% endif %}
+</div>
+{% endblock content %}
