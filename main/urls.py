@@ -22,5 +22,6 @@ urlpatterns = [
     path('coach/profile/', views.manage_coach_profile, name='manage_coach_profile'),
     path('coach/profile/view/', views.coach_profile_view, name='coach_profile'),
     path('coach/profile/delete/', views.delete_coach_profile, name='delete_coach_profile'),
-
+    path('coaches/', views.coach_list_view, name='coach_list'),
+    path('coach/<int:coach_id>/', views.coach_detail_public_view, name='coach_detail_public'),
 ]
