@@ -11,4 +11,8 @@ urlpatterns = [
     path('dashboard/venue/', views.venue_dashboard_view, name='venue_dashboard'),
     path('dashboard/coach/', views.coach_dashboard_view, name='coach_dashboard'),
     path('dashboard/admin/', views.admin_dashboard_view, name='admin_dashboard'),
+    path('venue/<int:venue_id>/book/', views.create_booking, name='create_booking'),
+    path('customer/payment/<int:booking_id>/', views.customer_payment, name='customer_payment'),
+    path('history/', views.booking_history, name='booking_history'),
+    path('my-bookings/', views.my_bookings, name='my_bookings'),
 ]
