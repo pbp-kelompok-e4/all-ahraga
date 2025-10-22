@@ -8,16 +8,41 @@
     
     {% if user.is_authenticated %}
         <p style="font-size: 1.2em; color: green;">
-            Anda berhasil login sebagai **{{ user.username }}**.
+            Anda berhasil login sebagai <strong>{{ user.username }}</strong>.
         </p>
-        <p>Anda telah dialihkan ke sini karena *dashboard* sedang dikembangkan.</p>
-    {% else %}
-        <p style="font-size: 1.1em; color: #555;">Silakan masuk atau daftar untuk mulai mencari lapangan.</p>
+        
+        {% if user.profile.is_customer %}
+            <div style="margin-top: 30px; text-align: left;">
+                <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px; text-align: center;">Daftar Lapangan</h3>
+                
+                {% if venues %}
+                    <ul>
+                        {% for venue in venues %}
+                        <li>
+                            <strong>{{ venue.name }}</strong><br>
+                            {{ venue.sport_category.name }}<br>
+                            Harga per jam: Rp {{ venue.price_per_hour }}<br>
+                            <a href="{% url 'create_booking' venue.id %}">Book Now</a>
+                        </li>
+                        <br>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Tidak ada lapangan yang tersedia saat ini.</p>
+                {% endif %}
+            </div>
+
+        {% elif user.profile.is_venue_owner %}
+            <p>Anda login sebagai Venue Owner. <a href="#">Tambahkan venue baru Anda</a>.</p>
+        
+        {% elif user.profile.is_coach %}
+            <p>Anda login sebagai Coach. <a href="#">Atur jadwal dan rate Anda</a>.</p>
+
+        {% elif user.is_staff %}
+             <p>Anda login sebagai Admin. <a href="/admin">Masuk ke Admin Panel</a>.</p>
+       
+        {% endif %}
     {% endif %}
 
-    <div style="margin-top: 30px;">
-        <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px;">Daftar Lapangan</h3>
-        <p>*(belum diimplementasikan)*</p>
-    </div>
 </div>
 {% endblock content %}
