@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User 
-from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory
+from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory, CoachProfile
 
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
@@ -69,3 +69,11 @@ class EquipmentForm(forms.ModelForm):
         model = Equipment
         fields = ['name', 'rental_price', 'stock_quantity']
         # 'venue' akan diisi otomatis oleh view
+
+class CoachProfileForm(forms.ModelForm):
+    class Meta:
+        model = CoachProfile
+        fields = ['age', 'experience_desc', 'rate_per_hour', 'main_sport_trained', 'service_areas']
+        widgets = {
+            'service_areas': forms.CheckboxSelectMultiple(),
+        }

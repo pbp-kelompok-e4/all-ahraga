@@ -19,4 +19,6 @@ urlpatterns = [
     path('customer/payment/<int:booking_id>/', views.customer_payment, name='customer_payment'),
     path('history/', views.booking_history, name='booking_history'),
     path('my-bookings/', views.my_bookings, name='my_bookings'),
+    path('coach/profile/', views.manage_coach_profile, name='manage_coach_profile'),
+    path('coach/profile/view/', views.coach_profile_view, name='coach_profile'),
 ]
