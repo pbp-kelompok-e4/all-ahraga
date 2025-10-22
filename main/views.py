@@ -369,11 +369,13 @@ def customer_payment(request, booking_id):
 
             venue_schedule = booking.venue_schedule
             venue_schedule.is_booked = True
+            venue_schedule.is_available = False
             venue_schedule.save()
 
             if booking.coach_schedule:
                 coach_schedule = booking.coach_schedule
                 coach_schedule.is_booked = True
+                coach_schedule.is_available = False
                 coach_schedule.save()
 
         return redirect('my_bookings')
@@ -384,11 +386,13 @@ def customer_payment(request, booking_id):
 
         venue_schedule = booking.venue_schedule
         venue_schedule.is_booked = True
+        venue_schedule.is_available = False
         venue_schedule.save()
 
         if booking.coach_schedule:
             coach_schedule = booking.coach_schedule
             coach_schedule.is_booked = True
+            coach_schedule.is_available = False
             coach_schedule.save()
 
         return redirect('my_bookings')
