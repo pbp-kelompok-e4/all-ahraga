@@ -478,3 +478,16 @@ def manage_coach_profile(request):
         form = CoachProfileForm(instance=coach_profile)
 
     return render(request, 'main/manage_coach_profile.html', {'form': form})
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def delete_coach_profile(request):
+    coach_profile = get_object_or_404(CoachProfile, user=request.user)
+
+    if request.method == 'POST':
+        coach_profile.delete()
+        messages.success(request, "Profil pelatih berhasil dihapus.")
+        return redirect('home') 
+
+    return render(request, 'main/confirm_delete_coach_profile.html', {'coach_profile': coach_profile})
+
