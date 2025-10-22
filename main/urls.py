@@ -22,5 +22,6 @@ urlpatterns = [
     path('coach/profile/', views.manage_coach_profile, name='manage_coach_profile'),
     path('coach/profile/view/', views.coach_profile_view, name='coach_profile'),
     path('coach/profile/delete/', views.delete_coach_profile, name='delete_coach_profile'),
-
+    path('coach/schedule/', views.coach_schedule, name='coach_schedule'),
+    path('coach/schedule/delete/', views.coach_schedule_delete, name='coach_schedule_delete'),
 ]

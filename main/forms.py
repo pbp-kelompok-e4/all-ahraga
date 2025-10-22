@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User 
-from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory, CoachProfile
+from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory, CoachProfile, CoachSchedule
 
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
@@ -76,4 +76,14 @@ class CoachProfileForm(forms.ModelForm):
         fields = ['age', 'experience_desc', 'rate_per_hour', 'main_sport_trained', 'service_areas']
         widgets = {
             'service_areas': forms.CheckboxSelectMultiple(),
+        }
+
+class CoachScheduleForm(forms.ModelForm):
+    class Meta:
+        model = CoachSchedule
+        fields = ['date', 'start_time', 'end_time', 'is_available']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time'}),
         }
