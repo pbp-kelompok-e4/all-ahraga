@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Profil Pelatih{% endblock title %}
+
+{% block content %}
+<div style="position: relative; padding-top: 10px;">
+  <!-- Tombol kembali ke halaman utama -->
+  <a href="{% url 'home' %}" 
+     style="position: absolute; top: 0; left: 0; 
+            padding: 8px 12px; 
+            background: #6c757d; 
+            color: #fff; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            font-size: 14px;">
+    ← Kembali ke Halaman Utama
+  </a>
+
+  <h2 style="text-align:center; margin-top: 40px;">Profil Pelatih</h2>
+
+  <div style="max-width:800px; margin:auto; margin-top:20px;">
+    <h3>Informasi Akun</h3>
+    <p><strong>Username:</strong> {{ user_obj.username }}</p>
+    <p><strong>Email:</strong> {{ user_obj.email }}</p>
+    <p><strong>Nomor Telepon:</strong> {{ phone_number }}</p>
+
+    <hr>
+
+    {% if coach_profile %}
+      <h3>Detail Pelatih</h3>
+      <p><strong>Umur:</strong> {{ coach_profile.age|default:"-" }}</p>
+      <p><strong>Pengalaman:</strong> {{ coach_profile.experience_desc|default:"-" }}</p>
+      <p><strong>Rate per hour:</strong> Rp {{ coach_profile.rate_per_hour }}</p>
+      <p><strong>Main Sport Trained:</strong> {{ coach_profile.main_sport_trained.name }}</p>
+      <p><strong>Service Areas:</strong>
+        {% for area in coach_profile.service_areas.all %}
+          {{ area.name }}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+          -
+        {% endfor %}
+      </p>
+      <p><strong>Verifikasi:</strong> {{ coach_profile.is_verified|yesno:"Terverifikasi,Tidak" }}</p>
+    {% else %}
+      <p>Anda belum menambahkan detail profil pelatih.</p>
+    {% endif %}
+
+    <p style="margin-top:20px;">
+      <a href="{% url 'manage_coach_profile' %}" 
+         style="padding:8px 12px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">
+        Kelola Profil
+      </a>
+    </p>
+  </div>
+</div>
+{% endblock content %}

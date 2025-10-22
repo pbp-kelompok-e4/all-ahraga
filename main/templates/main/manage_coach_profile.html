@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Profil Pelatih{% endblock title %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; background-color: white; border-radius: 8px;">
+    <h2 style="text-align: center;">Kelola Profil Pelatih</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" style="width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Simpan Perubahan
+        </button>
+    </form>
+</div>
+{% endblock content %}
