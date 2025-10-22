@@ -311,29 +311,59 @@ def create_booking(request, venue_id):
                 except Equipment.DoesNotExist:
                     continue
 
+        # PERBAIKAN: Buat CoachSchedule jika coach dipilih
         coach_obj = None
+        coach_schedule_obj = None
+        
         if coach_id:
             try:
-                # Ambil coach yang sesuai area + sport, tapi jangan buat/ubah jadwal coach sekarang
                 coach_obj = CoachProfile.objects.get(
                     id=coach_id,
                     service_areas=venue.location,
                     main_sport_trained=venue.sport_category
                 )
                 total_price += coach_obj.rate_per_hour or 0
+                
+                # BUAT COACH SCHEDULE
+                # Cek apakah sudah ada jadwal coach yang tersedia di tanggal & waktu yang sama
+                coach_schedule_obj = CoachSchedule.objects.filter(
+                    coach=coach_obj,
+                    date=schedule.date,
+                    start_time=schedule.start_time,
+                    end_time=schedule.end_time,
+                    is_available=True,
+                    is_booked=False
+                ).first()
+                
+                # Jika belum ada, buat jadwal baru
+                if not coach_schedule_obj:
+                    coach_schedule_obj = CoachSchedule.objects.create(
+                        coach=coach_obj,
+                        date=schedule.date,
+                        start_time=schedule.start_time,
+                        end_time=schedule.end_time,
+                        is_available=True,
+                        is_booked=False
+                    )
+                    
             except CoachProfile.DoesNotExist:
                 coach_obj = None
+                coach_schedule_obj = None
 
-        # Buat booking tanpa mengatur coach_schedule sekarang (tampilkan coach saja dulu)
+        # Buat booking DENGAN coach_schedule
         booking = Booking.objects.create(
             customer=request.user,
             venue_schedule=schedule,
+            coach_schedule=coach_schedule_obj,  # ← TAMBAHKAN INI
             total_price=total_price,
         )
 
         for equipment in selected_equipment:
             BookingEquipment.objects.create(
-                booking=booking, equipment=equipment, quantity=1, sub_total=equipment.rental_price
+                booking=booking, 
+                equipment=equipment, 
+                quantity=1, 
+                sub_total=equipment.rental_price
             )
 
         Transaction.objects.create(
@@ -652,4 +682,18 @@ def coach_detail_public_view(request, coach_id):
         'total_reviews': reviews.count(),
     }
     return render(request, 'main/coach_detail.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def coach_revenue_report(request):
+    coach_profile = get_object_or_404(CoachProfile, user=request.user)
+    transactions = Transaction.objects.filter(booking__coach_schedule__coach=coach_profile, status='CONFIRMED')
+
+    total_revenue = transactions.aggregate(Sum('revenue_coach'))['revenue_coach__sum'] or 0
+
+    context = {
+        'transactions': transactions,
+        'total_revenue': total_revenue,
+    }
+    return render(request, 'main/coach_revenue_report.html', context)
 
