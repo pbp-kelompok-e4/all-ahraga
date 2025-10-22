@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Bookingan Saya{% endblock title %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 20px auto; padding: 25px; background-color: white; border-radius: 8px;">
+    <h2 style="text-align: center; border-bottom: 2px solid #f4f4f4; padding-bottom: 15px;">
+        Riwayat Bookingan Saya
+    </h2>
+
+    {% if bookings %}
+        <ul style="list-style: none; padding: 0;">
+            {% for booking in bookings %}
+                <li style="border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; padding: 20px; background-color: #f9f9f9;">
+                    
+                    <h4>
+                        Booking #{{ booking.id }} - 
+                        <strong>{{ booking.venue_schedule.venue.name }}</strong>
+                    </h4>
+                    
+                    <p>
+                        <strong>Jadwal:</strong> 
+                        {{ booking.venue_schedule.date|date:"l, d F Y" }}
+                        </p>
+                    <p>
+                        <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
+                    </p>
+                    <p>
+                        <strong>Status Pembayaran:</strong> 
+                        <span> 
+                            {{ booking.transaction.get_status_display|default:booking.transaction.status }}
+                        </span>
+                    </p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p style="text-align: center;">Anda belum memiliki riwayat booking.</p>
+    {% endif %}
+</div>
+{% endblock content %}

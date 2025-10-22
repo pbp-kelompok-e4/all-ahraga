@@ -35,8 +35,8 @@
                         <a href="/admin/" target="_blank">Django Admin</a> 
                     
                     {% elif user.profile.is_venue_owner %}
-                        <a href="{% url 'venue_dashboard' %}">Kelola Lapangan</a>
-                        <a href="{% url 'venue_dashboard' %}">Laporan Pendapatan</a>
+                        <a href="{% url 'venue_dashboard' %}">Manage Venue</a>
+                        <a href="{% url 'venue_revenue' %}">Revenue Report</a>
                     
                     {% elif user.profile.is_coach %}
                         <a href="{% url 'coach_dashboard' %}">Jadwal Sesi</a>
@@ -44,8 +44,8 @@
                         <a href="{% url 'coach_dashboard' %}">Laporan Pendapatan</a>
                     
                     {% elif user.profile.is_customer %}
-                        <a href="{% url 'customer_dashboard' %}">Booking Saya</a>
-                    
+                        <a href="{% url 'my_bookings' %}">Bookingan Saya</a>
+                        <a href="{% url 'booking_history' %}">Riwayat Booking</a>
                     {% endif %}
 
                 {% endif %} 

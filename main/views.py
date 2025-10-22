@@ -5,28 +5,28 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date
-from .forms import CustomUserCreationForm
-from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile 
+from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm
+from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
-        return redirect('home')
-    
+        return redirect('admin_dashboard_view') # Arahkan ke admin dashboard
+
     try:
         profile = user.profile 
-        
+
         if profile.is_venue_owner:
-            return redirect('home')
-        
+            return redirect('venue_dashboard') # UBAH BARIS INI
+
         elif profile.is_coach:
-            return redirect('home')
-        
+            return redirect('coach_dashboard') # UBAH BARIS INI
+
         elif profile.is_customer:
-            return redirect('home')
-            
+            return redirect('customer_dashboard') # UBAH BARIS INI
+
     except UserProfile.DoesNotExist:
         pass
-        
+
     return redirect('home')
 
 def is_admin(user):
@@ -99,19 +99,272 @@ def venue_detail_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_dashboard_view(request):
-    return redirect('home')
+    venues = Venue.objects.all().select_related('sport_category')
+    categories = SportCategory.objects.all()
+    areas = LocationArea.objects.all()
+    
+    query = request.GET.get('q')
+    if query:
+        venues = venues.filter(name__icontains=query)
+
+    context = {
+        'venues': venues,
+        'categories': categories,
+        'areas': areas,
+    }
+    return render(request, 'main/home.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_dashboard_view(request):
-    return redirect('home')
+    venues = Venue.objects.filter(owner=request.user)
+    context = {
+        'venues': venues,
+    }
+    return render(request, 'main/venue_dashboard.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_revenue_view(request):
+    # 1. Ambil semua venue milik user ini
+    venues = Venue.objects.filter(owner=request.user)
+    venue_ids = venues.values_list('id', flat=True)
+    total_revenue = Transaction.objects.filter(
+        booking__venue_schedule__venue__id__in=venue_ids,
+        status='CONFIRMED'
+    ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
+
+    context = {
+        'total_revenue': total_revenue,
+    }
+    return render(request, 'main/venue_revenue.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_create_view(request):
+    if request.method == 'POST':
+        form = VenueForm(request.POST)
+        if form.is_valid():
+            venue = form.save(commit=False)
+            venue.owner = request.user  # Set owner
+            venue.save()
+            messages.success(request, f"Lapangan '{venue.name}' berhasil ditambahkan.")
+            return redirect('venue_dashboard')
+    else:
+        form = VenueForm()
+
+    return render(request, 'main/venue_form.html', {'form': form, 'page_title': 'Tambah Lapangan Baru'})
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_manage_view(request, venue_id):
+    # Pastikan venue ada dan milik user
+    venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
+
+    # Siapkan semua form
+    venue_edit_form = VenueForm(instance=venue)
+    schedule_form = VenueScheduleForm()
+    equipment_form = EquipmentForm()
+
+    if request.method == 'POST':
+        # Cek form mana yang di-submit
+        if 'submit_venue_edit' in request.POST:
+            venue_edit_form = VenueForm(request.POST, instance=venue)
+            if venue_edit_form.is_valid():
+                venue_edit_form.save()
+                messages.success(request, "Data lapangan berhasil diperbarui.")
+                return redirect('venue_manage', venue_id=venue.id)
+
+        elif 'submit_schedule' in request.POST:
+            schedule_form = VenueScheduleForm(request.POST)
+            if schedule_form.is_valid():
+                schedule = schedule_form.save(commit=False)
+                schedule.venue = venue # Set venue
+                schedule.save()
+                messages.success(request, "Jadwal baru berhasil ditambahkan.")
+                return redirect('venue_manage', venue_id=venue.id)
+
+        elif 'submit_equipment' in request.POST:
+            equipment_form = EquipmentForm(request.POST)
+            if equipment_form.is_valid():
+                equipment = equipment_form.save(commit=False)
+                equipment.venue = venue # Set venue
+                equipment.save()
+                messages.success(request, "Equipment baru berhasil ditambahkan.")
+                return redirect('venue_manage', venue_id=venue.id)
+            
+    # 1. Dapatkan lokasi dari venue tersebut
+    venue_location = venue.location 
+
+    # 2. Filter semua CoachProfile yang area layanannya (service_areas)
+    #    mencakup lokasi venue tersebut.
+    available_coaches = CoachProfile.objects.filter(
+        service_areas=venue_location, 
+        is_verified=True # Pastikan hanya pelatih terverifikasi
+    )
+
+    # Ambil data untuk ditampilkan di list
+    schedules = venue.schedules.all().order_by('date', 'start_time')
+    equipments = venue.equipment.all()
+
+    context = {
+        'venue': venue,
+        'venue_edit_form': venue_edit_form,
+        'schedule_form': schedule_form,
+        'equipment_form': equipment_form,
+        'schedules': schedules,
+        'equipments': equipments,
+        'available_coaches': available_coaches,
+    }
+    return render(request, 'main/venue_manage.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_dashboard_view(request):
     return redirect('home')
 
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def delete_venue_view(request, venue_id):
+    venue = get_object_or_404(Venue, pk=venue_id)
+    
+    # Security check: ensure user owns this venue
+    if venue.owner != request.user:
+        messages.error(request, "Anda tidak memiliki izin untuk menghapus lapangan ini.")
+        return redirect('venue_dashboard')
+    
+    venue_name = venue.name
+    venue.delete()
+    messages.success(request, f"Lapangan '{venue_name}' berhasil dihapus.")
+    return redirect('venue_dashboard')
+
 def admin_dashboard_view(request):
     if not is_admin(request.user):
         return redirect('home')
     return redirect('home')
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def create_booking(request, venue_id):
+    # Ambil data
+    venue = get_object_or_404(Venue, id=venue_id)
+    schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
+    equipment_list = Equipment.objects.filter(venue=venue)
+    coaches = CoachProfile.objects.filter(service_area=venue.location, is_verified=True)
+
+    # Jika user book 
+    if request.method == 'POST':
+        schedule_id = request.POST.get('schedule_id')
+        equipment_ids = request.POST.getlist('equipment')
+        coach_id = request.POST.get('coach')
+
+        # Validasi jadwal
+        if not schedule_id:
+            messages.error(request, "Pilih jadwal terlebih dahulu!")
+            return redirect('create_booking', venue_id=venue.id)
+        try:
+            schedule = VenueSchedule.objects.get(id=schedule_id, venue=venue, is_booked=False)
+        except VenueSchedule.DoesNotExist:
+            messages.error(request, "Jadwal sudah dibooking")
+            return redirect('create_booking', venue_id=venue.id)
+        
+        total_price = venue.price_per_hour
+
+        # Jika user ingin sewa equipment
+        selected_equipment = []
+        if equipment_ids:
+            for equipment_id in equipment_ids:
+                try:
+                    equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                    selected_equipment.append(equipment)
+                    total_price += equipment.rental_price
+                except Equipment.DoesNotExist:
+                    continue
+        
+        # Jika user ingin sewa coach
+        coach_schedule = None
+        coach = None
+        if coach_id:
+            try:
+                coach = CoachProfile.objects.get(id=coach_id, service_area=venue.location)
+                total_price += coach.rate_per_hour
+                coach_schedule = CoachProfile.objects.filter(coach=coach, date=schedule.date, is_available=True, is_booked=False).first()
+            except coach.DoesNotExist:
+                coach = None
+
+        # Buat dan simpan booking baru
+        booking = Booking.objects.create(
+            customer=request.user, 
+            venue_schedule=schedule, 
+            coach_schedule=coach_schedule if coach_schedule else None, 
+            total_price=total_price,
+        )
+
+        schedule.is_booked = True
+        schedule.save()
+
+        if coach_schedule:
+            coach_schedule.is_booked = True
+            coach_schedule.save()
+
+        for equipment in selected_equipment:
+            BookingEquipment.objects.create(
+                booking=booking, equipment=equipment, quantity=1, sub_total=equipment.rental_price
+            )
+        
+        # Buat dan simpan transaksi baru
+        Transaction.objects.create(
+            booking=booking, 
+            status='PENDING', 
+            payment_method='TRANSFER', 
+            revenue_venue=venue.price_per_hour,
+            revenue_coach=coach.rate_per_hour if coach else 0,
+            revenue_platform=0
+        )
+
+        return redirect('home')
+
+    context = {
+        'venue': venue,
+        'schedules': schedules,
+        'equipment_list': equipment_list,
+        'coaches': coaches,
+    }
+    return render(request, 'main/home.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def customer_payment(request, booking_id):
+    # Konfirmasi pembayaran
+    booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
+    transaction = booking.transaction
+    transaction.status = 'CONFIRMED'
+    transaction.save()
+    return redirect('home')
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def booking_history(request):
+    bookings = Booking.objects.filter(customer=request.user).select_related('venue_schedule__venue', 'transaction').order_by(
+        '-venue_schedule__date')
+    context = {
+        'bookings' : bookings
+    }
+
+    return render(request, 'main/booking_history.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def my_bookings(request):
+    bookings = Booking.objects.filter(
+        customer=request.user, 
+        transaction__status='PENDING'
+    ).select_related(
+        'venue_schedule__venue', 'transaction'
+    ).order_by('-venue_schedule__date')
+
+    context = {
+        'bookings' : bookings
+    }
+
+    return render(request, 'main/my_bookings.html', context)
