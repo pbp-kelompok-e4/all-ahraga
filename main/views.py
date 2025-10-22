@@ -4,8 +4,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
-from datetime import date
-from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm
+from datetime import date, datetime, timedelta
+from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment
 
 def get_user_dashboard(user):
@@ -158,16 +158,13 @@ def venue_create_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_manage_view(request, venue_id):
-    # Pastikan venue ada dan milik user
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
-    # Siapkan semua form
     venue_edit_form = VenueForm(instance=venue)
     schedule_form = VenueScheduleForm()
     equipment_form = EquipmentForm()
 
     if request.method == 'POST':
-        # Cek form mana yang di-submit
         if 'submit_venue_edit' in request.POST:
             venue_edit_form = VenueForm(request.POST, instance=venue)
             if venue_edit_form.is_valid():
@@ -178,10 +175,45 @@ def venue_manage_view(request, venue_id):
         elif 'submit_schedule' in request.POST:
             schedule_form = VenueScheduleForm(request.POST)
             if schedule_form.is_valid():
-                schedule = schedule_form.save(commit=False)
-                schedule.venue = venue # Set venue
-                schedule.save()
-                messages.success(request, "Jadwal baru berhasil ditambahkan.")
+                cd = schedule_form.cleaned_data
+                schedule_date = cd['date']
+                start_time = cd['start_time']
+                end_time = cd['end_time']
+                is_available = cd.get('is_available', True)
+
+                start_dt = datetime.combine(schedule_date, start_time)
+                end_dt = datetime.combine(schedule_date, end_time)
+                if end_dt <= start_dt:
+                    messages.error(request, "Waktu selesai harus setelah waktu mulai.")
+                    return redirect('venue_manage', venue_id=venue.id)
+
+                created = 0
+                skipped = 0
+                current = start_dt
+                while current < end_dt:
+                    slot_start = current.time()
+                    next_dt = current + timedelta(hours=1)
+                    slot_end = next_dt.time() if next_dt <= end_dt else end_time
+
+                    exists = VenueSchedule.objects.filter(
+                        venue=venue, date=schedule_date, start_time=slot_start
+                    ).exists()
+
+                    if not exists:
+                        VenueSchedule.objects.create(
+                            venue=venue,
+                            date=schedule_date,
+                            start_time=slot_start,
+                            end_time=slot_end,
+                            is_available=is_available
+                        )
+                        created += 1
+                    else:
+                        skipped += 1
+
+                    current = next_dt
+
+                messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
                 return redirect('venue_manage', venue_id=venue.id)
 
         elif 'submit_equipment' in request.POST:
@@ -193,17 +225,12 @@ def venue_manage_view(request, venue_id):
                 messages.success(request, "Equipment baru berhasil ditambahkan.")
                 return redirect('venue_manage', venue_id=venue.id)
             
-    # 1. Dapatkan lokasi dari venue tersebut
     venue_location = venue.location 
-
-    # 2. Filter semua CoachProfile yang area layanannya (service_areas)
-    #    mencakup lokasi venue tersebut.
     available_coaches = CoachProfile.objects.filter(
         service_areas=venue_location, 
-        is_verified=True # Pastikan hanya pelatih terverifikasi
+        is_verified=True
     )
 
-    # Ambil data untuk ditampilkan di list
     schedules = venue.schedules.all().order_by('date', 'start_time')
     equipments = venue.equipment.all()
 
@@ -228,7 +255,6 @@ def coach_dashboard_view(request):
 def delete_venue_view(request, venue_id):
     venue = get_object_or_404(Venue, pk=venue_id)
     
-    # Security check: ensure user owns this venue
     if venue.owner != request.user:
         messages.error(request, "Anda tidak memiliki izin untuk menghapus lapangan ini.")
         return redirect('venue_dashboard')
@@ -408,3 +434,44 @@ def delete_booking(request, booking_id):
         booking.transaction.delete()
         booking.delete()
     return redirect('home')
+  
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def coach_profile_view(request):
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        coach_profile = None
+
+    phone = ''
+    try:
+        phone = request.user.profile.phone_number or ''
+    except Exception:
+        phone = ''
+
+    context = {
+        'user_obj': request.user,
+        'phone_number': phone,
+        'coach_profile': coach_profile,
+    }
+    return render(request, 'main/coach_profile.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def manage_coach_profile(request):
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        coach_profile = CoachProfile(user=request.user)
+
+    if request.method == 'POST':
+        form = CoachProfileForm(request.POST, instance=coach_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profil pelatih berhasil disimpan.")
+            return redirect('coach_dashboard')
+        else:
+            messages.error(request, "Mohon periksa input Anda.")
+    else:
+        form = CoachProfileForm(instance=coach_profile)
+
+    return render(request, 'main/manage_coach_profile.html', {'form': form})
