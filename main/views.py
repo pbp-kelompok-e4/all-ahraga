@@ -272,58 +272,61 @@ def admin_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def create_booking(request, venue_id):
-    # Ambil data
     venue = get_object_or_404(Venue, id=venue_id)
     schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
     equipment_list = Equipment.objects.filter(venue=venue)
-    coaches = CoachProfile.objects.filter(service_areas=venue.location, is_verified=True)
+    
+    # Tampilkan coach yang melayani area venue dan melatih olahraga yang sama dengan venue
+    coaches = CoachProfile.objects.filter(
+        service_areas=venue.location,
+        main_sport_trained=venue.sport_category
+    ).select_related('user', 'main_sport_trained').distinct()
 
-    # Jika user book 
     if request.method == 'POST':
         schedule_id = request.POST.get('schedule_id')
         equipment_ids = request.POST.getlist('equipment')
         coach_id = request.POST.get('coach')
         payment_method = request.POST.get('payment_method')
 
-        # Validasi jadwal
         if not schedule_id:
             messages.error(request, "Pilih jadwal terlebih dahulu!")
             return redirect('create_booking', venue_id=venue.id)
+
         try:
             schedule = VenueSchedule.objects.get(id=schedule_id, venue=venue, is_booked=False)
         except VenueSchedule.DoesNotExist:
-            messages.error(request, "Jadwal sudah dibooking")
+            messages.error(request, "Jadwal tidak tersedia atau sudah dibooking.")
             return redirect('create_booking', venue_id=venue.id)
-        
-        total_price = venue.price_per_hour
 
-        # Jika user ingin sewa equipment
+        total_price = venue.price_per_hour or 0
+
         selected_equipment = []
         if equipment_ids:
             for equipment_id in equipment_ids:
                 try:
                     equipment = Equipment.objects.get(id=equipment_id, venue=venue)
                     selected_equipment.append(equipment)
-                    total_price += equipment.rental_price
+                    total_price += equipment.rental_price or 0
                 except Equipment.DoesNotExist:
                     continue
-        
-        # Jika user ingin sewa coach
-        coach_schedule = None
-        coach = None
+
+        coach_obj = None
         if coach_id:
             try:
-                coach = CoachProfile.objects.get(id=coach_id, service_area=venue.location)
-                total_price += coach.rate_per_hour
-                coach_schedule = CoachProfile.objects.filter(coach=coach, date=schedule.date, is_available=True, is_booked=False).first()
-            except coach.DoesNotExist:
-                coach = None
+                # Ambil coach yang sesuai area + sport, tapi jangan buat/ubah jadwal coach sekarang
+                coach_obj = CoachProfile.objects.get(
+                    id=coach_id,
+                    service_areas=venue.location,
+                    main_sport_trained=venue.sport_category
+                )
+                total_price += coach_obj.rate_per_hour or 0
+            except CoachProfile.DoesNotExist:
+                coach_obj = None
 
-        # Buat dan simpan booking baru
+        # Buat booking tanpa mengatur coach_schedule sekarang (tampilkan coach saja dulu)
         booking = Booking.objects.create(
-            customer=request.user, 
-            venue_schedule=schedule, 
-            coach_schedule=coach_schedule if coach_schedule else None, 
+            customer=request.user,
+            venue_schedule=schedule,
             total_price=total_price,
         )
 
@@ -331,17 +334,17 @@ def create_booking(request, venue_id):
             BookingEquipment.objects.create(
                 booking=booking, equipment=equipment, quantity=1, sub_total=equipment.rental_price
             )
-        
-        # Buat dan simpan transaksi baru
+
         Transaction.objects.create(
-            booking=booking, 
-            status='PENDING', 
-            payment_method=payment_method, 
-            revenue_venue=venue.price_per_hour,
-            revenue_coach=coach.rate_per_hour if coach else 0,
+            booking=booking,
+            status='PENDING',
+            payment_method=payment_method,
+            revenue_venue=venue.price_per_hour or 0,
+            revenue_coach=coach_obj.rate_per_hour if coach_obj else 0,
             revenue_platform=0
         )
 
+        messages.success(request, "Booking dibuat. Lakukan pembayaran untuk mengonfirmasi.")
         return redirect('my_bookings')
 
     context = {
@@ -473,3 +476,16 @@ def manage_coach_profile(request):
         form = CoachProfileForm(instance=coach_profile)
 
     return render(request, 'main/manage_coach_profile.html', {'form': form})
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def delete_coach_profile(request):
+    coach_profile = get_object_or_404(CoachProfile, user=request.user)
+
+    if request.method == 'POST':
+        coach_profile.delete()
+        messages.success(request, "Profil pelatih berhasil dihapus.")
+        return redirect('home') 
+
+    return render(request, 'main/confirm_delete_coach_profile.html', {'coach_profile': coach_profile})
+
