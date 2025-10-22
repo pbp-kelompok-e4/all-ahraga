@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Venue Dashboard{% endblock title %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 20px auto;">
+    <h2>Revenue Report</h2>
+    <div style="padding: 20px; background-color: #f0f9ff; border: 1px solid #d1eaff; border-radius: 8px; margin-bottom: 25px;">
+        <h3 style="margin-top: 0;">Revenue Report</h3>
+        <p style="font-size: 1.5em; font-weight: bold;">Rp {{ total_revenue|floatformat:0 }}</p>
+        <small>*Total net revenue from all 'CONFIRMED' bookings.</small>
+    </div>
+</div>
+{% endblock content %}

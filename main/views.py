@@ -5,28 +5,28 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date
-from .forms import CustomUserCreationForm
-from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile 
+from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm
+from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Equipment 
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
-        return redirect('home')
-    
+        return redirect('admin_dashboard_view') # Arahkan ke admin dashboard
+
     try:
         profile = user.profile 
-        
+
         if profile.is_venue_owner:
-            return redirect('home')
-        
+            return redirect('venue_dashboard') # UBAH BARIS INI
+
         elif profile.is_coach:
-            return redirect('home')
-        
+            return redirect('coach_dashboard') # UBAH BARIS INI
+
         elif profile.is_customer:
-            return redirect('home')
-            
+            return redirect('customer_dashboard') # UBAH BARIS INI
+
     except UserProfile.DoesNotExist:
         pass
-        
+
     return redirect('home')
 
 def is_admin(user):
@@ -104,12 +104,126 @@ def customer_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_dashboard_view(request):
-    return redirect('home')
+    venues = Venue.objects.filter(owner=request.user)
+    context = {
+        'venues': venues,
+    }
+    return render(request, 'main/venue_dashboard.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_revenue_view(request):
+    # 1. Ambil semua venue milik user ini
+    venues = Venue.objects.filter(owner=request.user)
+    venue_ids = venues.values_list('id', flat=True)
+    total_revenue = Transaction.objects.filter(
+        booking__venue_schedule__venue__id__in=venue_ids,
+        status='CONFIRMED'
+    ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
+
+    context = {
+        'total_revenue': total_revenue,
+    }
+    return render(request, 'main/venue_revenue.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_create_view(request):
+    if request.method == 'POST':
+        form = VenueForm(request.POST)
+        if form.is_valid():
+            venue = form.save(commit=False)
+            venue.owner = request.user  # Set owner
+            venue.save()
+            messages.success(request, f"Lapangan '{venue.name}' berhasil ditambahkan.")
+            return redirect('venue_dashboard')
+    else:
+        form = VenueForm()
+
+    return render(request, 'main/venue_form.html', {'form': form, 'page_title': 'Tambah Lapangan Baru'})
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_manage_view(request, venue_id):
+    # Pastikan venue ada dan milik user
+    venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
+
+    # Siapkan semua form
+    venue_edit_form = VenueForm(instance=venue)
+    schedule_form = VenueScheduleForm()
+    equipment_form = EquipmentForm()
+
+    if request.method == 'POST':
+        # Cek form mana yang di-submit
+        if 'submit_venue_edit' in request.POST:
+            venue_edit_form = VenueForm(request.POST, instance=venue)
+            if venue_edit_form.is_valid():
+                venue_edit_form.save()
+                messages.success(request, "Data lapangan berhasil diperbarui.")
+                return redirect('venue_manage', venue_id=venue.id)
+
+        elif 'submit_schedule' in request.POST:
+            schedule_form = VenueScheduleForm(request.POST)
+            if schedule_form.is_valid():
+                schedule = schedule_form.save(commit=False)
+                schedule.venue = venue # Set venue
+                schedule.save()
+                messages.success(request, "Jadwal baru berhasil ditambahkan.")
+                return redirect('venue_manage', venue_id=venue.id)
+
+        elif 'submit_equipment' in request.POST:
+            equipment_form = EquipmentForm(request.POST)
+            if equipment_form.is_valid():
+                equipment = equipment_form.save(commit=False)
+                equipment.venue = venue # Set venue
+                equipment.save()
+                messages.success(request, "Equipment baru berhasil ditambahkan.")
+                return redirect('venue_manage', venue_id=venue.id)
+            
+    # 1. Dapatkan lokasi dari venue tersebut
+    venue_location = venue.location 
+
+    # 2. Filter semua CoachProfile yang area layanannya (service_areas)
+    #    mencakup lokasi venue tersebut.
+    available_coaches = CoachProfile.objects.filter(
+        service_areas=venue_location, 
+        is_verified=True # Pastikan hanya pelatih terverifikasi
+    )
+
+    # Ambil data untuk ditampilkan di list
+    schedules = venue.schedules.all().order_by('date', 'start_time')
+    equipments = venue.equipment.all()
+
+    context = {
+        'venue': venue,
+        'venue_edit_form': venue_edit_form,
+        'schedule_form': schedule_form,
+        'equipment_form': equipment_form,
+        'schedules': schedules,
+        'equipments': equipments,
+        'available_coaches': available_coaches,
+    }
+    return render(request, 'main/venue_manage.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_dashboard_view(request):
     return redirect('home')
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def delete_venue_view(request, venue_id):
+    venue = get_object_or_404(Venue, pk=venue_id)
+    
+    # Security check: ensure user owns this venue
+    if venue.owner != request.user:
+        messages.error(request, "Anda tidak memiliki izin untuk menghapus lapangan ini.")
+        return redirect('venue_dashboard')
+    
+    venue_name = venue.name
+    venue.delete()
+    messages.success(request, f"Lapangan '{venue_name}' berhasil dihapus.")
+    return redirect('venue_dashboard')
 
 def admin_dashboard_view(request):
     if not is_admin(request.user):
