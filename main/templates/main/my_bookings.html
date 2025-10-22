@@ -24,15 +24,24 @@
                         <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
                     </p>
                     <p>
+                        <strong>Metode Pembayaran:</strong> {{ booking.transaction.payment_method }}
+                    </p>
+                    <p>
                         <strong>Status Pembayaran:</strong> 
                         <span style="font-weight: bold; color: #E67E22;">
                             MENUNGGU PEMBAYARAN
                         </span>
                     </p>
                     
-                    <a href="{% url 'customer_payment' booking.id %}" style="display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                        Bayar Sekarang
-                    </a>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{% url 'customer_payment' booking.id %}" style="display: inline-block; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Bayar Sekarang
+                        </a>
+                        <a href="{% url 'delete_booking' booking.id %}" style="display: inline-block; padding: 10px 15px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;"
+                           onclick="return confirm('Apakah Anda yakin ingin membatalkan booking ini?');">
+                            Cancel Booking
+                        </a>
+                    </div>
                 </li>
             {% endfor %}
         </ul>

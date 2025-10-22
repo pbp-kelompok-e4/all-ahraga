@@ -283,6 +283,7 @@ def create_booking(request, venue_id):
         schedule_id = request.POST.get('schedule_id')
         equipment_ids = request.POST.getlist('equipment')
         coach_id = request.POST.get('coach')
+        payment_method = request.POST.get('payment_method')
 
         # Validasi jadwal
         if not schedule_id:
@@ -326,13 +327,6 @@ def create_booking(request, venue_id):
             total_price=total_price,
         )
 
-        schedule.is_booked = True
-        schedule.save()
-
-        if coach_schedule:
-            coach_schedule.is_booked = True
-            coach_schedule.save()
-
         for equipment in selected_equipment:
             BookingEquipment.objects.create(
                 booking=booking, equipment=equipment, quantity=1, sub_total=equipment.rental_price
@@ -342,13 +336,13 @@ def create_booking(request, venue_id):
         Transaction.objects.create(
             booking=booking, 
             status='PENDING', 
-            payment_method='TRANSFER', 
+            payment_method=payment_method, 
             revenue_venue=venue.price_per_hour,
             revenue_coach=coach.rate_per_hour if coach else 0,
             revenue_platform=0
         )
 
-        return redirect('home')
+        return redirect('my_bookings')
 
     context = {
         'venue': venue,
@@ -364,9 +358,45 @@ def customer_payment(request, booking_id):
     # Konfirmasi pembayaran
     booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
     transaction = booking.transaction
-    transaction.status = 'CONFIRMED'
-    transaction.save()
-    return redirect('home')
+
+    if transaction.method and transaction.payment_method.upper() == 'CASH':
+        if transaction.status != 'CONFIRMED':
+            transaction.status = 'CONFIRMED'
+            transaction.save()
+
+            venue_schedule = booking.venue_schedule
+            venue_schedule.is_booked = True
+            venue_schedule.save()
+
+            if booking.coach:
+                coach_schedule = booking.coach_schedule
+                coach_schedule.is_booked = True
+                coach_schedule.save()
+
+        return redirect('my_bookings')
+    
+    if request.method == 'POST':
+        # Tombol "Sudah bayar" ditekan → konfirmasi transaksi sama seperti cash
+        transaction.status = 'CONFIRMED'
+        transaction.save()
+
+        venue_schedule = booking.venue_schedule
+        venue_schedule.is_booked = True
+        venue_schedule.save()
+
+        if booking.coach_schedule:
+            coach_schedule = booking.coach_schedule
+            coach_schedule.is_booked = True
+            coach_schedule.save()
+
+        messages.success(request, "Pembayaran terkonfirmasi. Booking dikonfirmasi.")
+        return redirect('my_bookings')
+    context = {
+        'booking': booking,
+        'transaction': transaction,
+    }
+
+    return render(request, 'main/customer_payment.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
@@ -396,6 +426,15 @@ def my_bookings(request):
     return render(request, 'main/my_bookings.html', context)
 
 @login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def delete_booking(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
+
+    if booking.transaction and booking.transaction.status == 'PENDING':
+        booking.transaction.delete()
+        booking.delete()
+    return redirect('home')
+  
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_profile_view(request):
     try:
