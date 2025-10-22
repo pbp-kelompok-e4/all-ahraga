@@ -24,4 +24,7 @@ urlpatterns = [
     path('coach/profile/delete/', views.delete_coach_profile, name='delete_coach_profile'),
     path('coach/schedule/', views.coach_schedule, name='coach_schedule'),
     path('coach/schedule/delete/', views.coach_schedule_delete, name='coach_schedule_delete'),
+    path('coaches/', views.coach_list_view, name='coach_list'),
+    path('coach/<int:coach_id>/', views.coach_detail_public_view, name='coach_detail_public'),
+    path('booking/delete/<int:booking_id>/', views.delete_booking, name='delete_booking'),
 ]

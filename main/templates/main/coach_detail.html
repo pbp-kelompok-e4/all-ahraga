@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Detail Pelatih - {{ coach.user.get_full_name|default:coach.user.username }}{% endblock title %}
+
+{% block content %}
+<div style="padding: 20px; max-width: 900px; margin: auto;">
+  <!-- Header dengan tombol kembali -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Detail Pelatih</h2>
+    <a href="{% url 'coach_list' %}" 
+       style="padding: 8px 16px; background: #6c757d; color: #fff; 
+              text-decoration: none; border-radius: 6px;">
+      ← Kembali ke Daftar
+    </a>
+  </div>
+
+  <!-- Informasi Utama Coach -->
+  <div style="background: white; border: 1px solid #ddd; border-radius: 8px; 
+              padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    
+    <div style="border-bottom: 2px solid #007bff; padding-bottom: 15px; margin-bottom: 20px;">
+      <h3 style="margin: 0; color: #007bff; font-size: 24px;">
+        {{ coach.user.get_full_name|default:coach.user.username }}
+      </h3>
+      {% if coach.is_verified %}
+      <span style="display: inline-block; margin-top: 8px; padding: 4px 12px; 
+                   background: #28a745; color: white; border-radius: 4px; font-size: 12px;">
+        ✓ Terverifikasi
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Informasi Detail -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+      <div>
+        <p style="margin: 10px 0;">
+          <strong style="color: #555;">Umur:</strong><br>
+          <span style="font-size: 18px;">{{ coach.age|default:"-" }} tahun</span>
+        </p>
+        <p style="margin: 10px 0;">
+          <strong style="color: #555;">Olahraga Utama:</strong><br>
+          <span style="font-size: 18px;">{{ coach.main_sport_trained.name }}</span>
+        </p>
+      </div>
+      <div>
+        <p style="margin: 10px 0;">
+          <strong style="color: #555;">Tarif per Jam:</strong><br>
+          <span style="font-size: 22px; color: #28a745; font-weight: bold;">
+            Rp {{ coach.rate_per_hour|floatformat:0 }}
+          </span>
+        </p>
+        {% if avg_rating > 0 %}
+        <p style="margin: 10px 0;">
+          <strong style="color: #555;">Rating:</strong><br>
+          <span style="font-size: 18px; color: #ffc107;">
+            ⭐ {{ avg_rating|floatformat:1 }} ({{ total_reviews }} ulasan)
+          </span>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Area Layanan -->
+    <div style="margin-bottom: 25px;">
+      <h4 style="color: #555; margin-bottom: 10px;">Area Layanan:</h4>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        {% for area in coach.service_areas.all %}
+        <span style="padding: 6px 14px; background: #e9ecef; 
+                     border-radius: 20px; font-size: 14px;">
+          📍 {{ area.name }}
+        </span>
+        {% empty %}
+        <span style="color: #999;">Belum ada area layanan</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Pengalaman -->
+    <div style="margin-bottom: 25px;">
+      <h4 style="color: #555; margin-bottom: 10px;">Pengalaman:</h4>
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; 
+                  border-left: 4px solid #007bff;">
+        <p style="margin: 0; line-height: 1.6; white-space: pre-wrap;">{{ coach.experience_desc|default:"Belum ada deskripsi pengalaman." }}</p>
+      </div>
+    </div>
+
+    <!-- Kontak -->
+    <div style="margin-bottom: 25px;">
+      <h4 style="color: #555; margin-bottom: 10px;">Kontak:</h4>
+      <p style="margin: 5px 0;">
+        <strong>Email:</strong> {{ coach.user.email|default:"-" }}
+      </p>
+      {% if coach.user.profile.phone_number %}
+      <p style="margin: 5px 0;">
+        <strong>Telepon:</strong> {{ coach.user.profile.phone_number }}
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- Tombol Booking (jika user adalah customer) -->
+    {% if user.is_authenticated and user.profile.is_customer %}
+    <div style="margin-top: 30px; text-align: center;">
+      <a href="{% url 'home' %}" 
+         style="display: inline-block; padding: 12px 30px; 
+                background: #007bff; color: white; text-decoration: none; 
+                border-radius: 6px; font-size: 16px; font-weight: bold;
+                transition: background 0.2s;">
+        Booking Pelatih
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Section Review -->
+  {% if reviews %}
+  <div style="margin-top: 30px; background: white; border: 1px solid #ddd; 
+              border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <h4 style="margin-top: 0; color: #555;">Ulasan Terbaru:</h4>
+    
+    {% for review in reviews %}
+    <div style="border-bottom: 1px solid #eee; padding: 15px 0; margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <strong>{{ review.customer.get_full_name|default:review.customer.username }}</strong>
+        <span style="color: #ffc107;">
+          {% for i in "12345" %}
+            {% if forloop.counter <= review.rating %}⭐{% endif %}
+          {% endfor %}
+        </span>
+      </div>
+      <p style="margin: 5px 0; color: #666; line-height: 1.5;">{{ review.comment }}</p>
+      <small style="color: #999;">{{ review.created_at|date:"d M Y" }}</small>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  a[style*="background: #007bff"]:hover {
+    background: #0056b3 !important;
+  }
+</style>
+{% endblock content %}

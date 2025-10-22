@@ -370,11 +370,13 @@ def customer_payment(request, booking_id):
 
             venue_schedule = booking.venue_schedule
             venue_schedule.is_booked = True
+            venue_schedule.is_available = False
             venue_schedule.save()
 
             if booking.coach_schedule:
                 coach_schedule = booking.coach_schedule
                 coach_schedule.is_booked = True
+                coach_schedule.is_available = False
                 coach_schedule.save()
 
         return redirect('my_bookings')
@@ -385,11 +387,13 @@ def customer_payment(request, booking_id):
 
         venue_schedule = booking.venue_schedule
         venue_schedule.is_booked = True
+        venue_schedule.is_available = False
         venue_schedule.save()
 
         if booking.coach_schedule:
             coach_schedule = booking.coach_schedule
             coach_schedule.is_booked = True
+            coach_schedule.is_available = False
             coach_schedule.save()
 
         return redirect('my_bookings')
@@ -588,4 +592,64 @@ def coach_schedule_delete(request):
     messages.success(request, f"{deleted} jadwal berhasil dihapus.")
     return redirect('coach_schedule')
 
+def coach_list_view(request):
+    """Menampilkan daftar semua coach"""
+    coaches = CoachProfile.objects.all().select_related(
+        'user', 'main_sport_trained'
+    ).prefetch_related('service_areas')
+    
+    # Filter berdasarkan pencarian
+    query = request.GET.get('q')
+    if query:
+        coaches = coaches.filter(
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__username__icontains=query)
+        )
+    
+    # Filter berdasarkan olahraga
+    sport_filter = request.GET.get('sport')
+    if sport_filter:
+        coaches = coaches.filter(main_sport_trained__id=sport_filter)
+    
+    # Filter berdasarkan area
+    area_filter = request.GET.get('area')
+    if area_filter:
+        coaches = coaches.filter(service_areas__id=area_filter)
+    
+    categories = SportCategory.objects.all()
+    areas = LocationArea.objects.all()
+    
+    context = {
+        'coaches': coaches,
+        'categories': categories,
+        'areas': areas,
+    }
+    return render(request, 'main/coach_list.html', context)
+
+def coach_detail_public_view(request, coach_id):
+    """Menampilkan detail coach untuk publik"""
+    coach = get_object_or_404(
+        CoachProfile.objects.select_related('user', 'main_sport_trained')
+        .prefetch_related('service_areas'),
+        id=coach_id
+    )
+    
+    # Ambil review untuk coach ini
+    reviews = Review.objects.filter(target_coach=coach).select_related('customer').order_by('-created_at')[:5]
+    
+    # Hitung rata-rata rating
+    avg_rating = reviews.aggregate(avg=Sum('rating'))['avg']
+    if avg_rating and reviews.count() > 0:
+        avg_rating = avg_rating / reviews.count()
+    else:
+        avg_rating = 0
+    
+    context = {
+        'coach': coach,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'total_reviews': reviews.count(),
+    }
+    return render(request, 'main/coach_detail.html', context)
 
