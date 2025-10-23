@@ -3,39 +3,83 @@
 {% block title %}Bookingan Saya{% endblock title %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 20px auto; padding: 25px; background-color: white; border-radius: 8px;">
-    <h2 style="text-align: center; border-bottom: 2px solid #f4f4f4; padding-bottom: 15px;">
+<div class="max-w-[900px] mx-auto my-5 p-6 bg-white rounded-lg shadow">
+    <h2 class="text-center border-b-2 border-gray-100 pb-4 mb-6 text-xl font-semibold">
         Riwayat Bookingan Saya
     </h2>
 
-    {% if bookings %}
-        <ul style="list-style: none; padding: 0;">
-            {% for booking in bookings %}
-                <li style="border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; padding: 20px; background-color: #f9f9f9;">
-                    
-                    <h4>
-                        Booking #{{ booking.id }} - 
-                        <strong>{{ booking.venue_schedule.venue.name }}</strong>
-                    </h4>
-                    
-                    <p>
-                        <strong>Jadwal:</strong> 
-                        {{ booking.venue_schedule.date|date:"l, d F Y" }}
-                        </p>
-                    <p>
-                        <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
-                    </p>
-                    <p>
-                        <strong>Status Pembayaran:</strong> 
-                        <span> 
-                            {{ booking.transaction.get_status_display|default:booking.transaction.status }}
-                        </span>
-                    </p>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p style="text-align: center;">Anda belum memiliki riwayat booking.</p>
-    {% endif %}
-</div>
+    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+        <input type="text" id="searchBooking" placeholder="Cari nama venue atau ID booking..."
+               class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        
+        <select id="statusFilter"
+                class="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Semua Status</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="PENDING">Pending</option></select>
+    </div>
+    
+    <div id="bookingListWrapper">
+        {% include "main/_booking_list.html" %}
+    </div>
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchBooking');
+    const statusFilter = document.getElementById('statusFilter');
+    const bookingListWrapper = document.getElementById('bookingListWrapper');
+    
+    const dataUrl = "{% url 'booking_history' %}"; 
+
+    let debounceTimer;
+    function debounce(func, delay) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
+    async function fetchBookings() {
+        const searchTerm = searchInput.value;
+        const statusTerm = statusFilter.value;
+
+        const url = new URL(dataUrl, window.location.origin);
+        if (searchTerm) {
+            url.searchParams.append('q', searchTerm);
+        }
+        if (statusTerm) {
+            url.searchParams.append('status', statusTerm);
+        }
+
+        try {
+            bookingListWrapper.innerHTML = '<p class="text-center text-gray-500 py-10">Memuat...</p>';
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest' 
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const html = await response.text();
+            bookingListWrapper.innerHTML = html; 
+
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            bookingListWrapper.innerHTML = '<p class="text-center text-red-500 py-10">Gagal memuat data.</p>';
+        }
+    }
+    searchInput.addEventListener('input', debounce(fetchBookings, 300));
+    statusFilter.addEventListener('change', fetchBookings);
+
+});  
+</script>
 {% endblock content %}

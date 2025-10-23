@@ -2,7 +2,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-/* --- CSS IDENTIK DENGAN VENUE SCHEDULE --- */
+/* --- MODIFIKASI CSS DIMULAI DI SINI --- */
 
 /* Base Slot Styling */
 .slot-card {
@@ -21,7 +21,7 @@
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* [WARNA BARU] Available Slot (Tema Teal) */
+/* [WARNA BARU] Available Slot (Default State) */
 .slot-card.available:hover {
     border-color: #005757; /* Sesuai tema */
     background-color: #f0f9f9; /* Light teal */
@@ -59,8 +59,8 @@
 
 
 /* Checkbox Logic (Tetap Sama) */
-.delete-checkbox { display: none; margin-right: 0.5rem; width: auto !important; }
-.selection-active .delete-checkbox { display: inline-block; }
+.delete-checkbox { display: none; }
+.selection-active .delete-checkbox { display: inline-block; margin-right: 0.5rem; }
 .hidden { display: none !important; }
 
 /* Toast Notification (Tetap Sama) */
@@ -76,28 +76,32 @@
     transform: translateX(0) !important;
     opacity: 1 !important;
 }
-/* --- AKHIR CSS --- */
+/* --- AKHIR MODIFIKASI CSS --- */
 </style>
 {% endblock extra_head %}
 
-{% block title %}Jadwal Sesi Anda{% endblock title %}
+{% block title %}Kelola Jadwal: {{ venue.name }}{% endblock title %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-10">
   
   <div class="mb-8 text-white shadow-lg" style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%); border-radius: 1.25rem; /* 20px */">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-8 md:p-10">
-      <div>
-        <h1 class="text-3xl font-extrabold">Jadwal Sesi Anda</h1>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-8 md:p-10"> <div>
+        <h1 class="text-3xl font-extrabold">Kelola Jadwal Lapangan</h1>
         <p class="mt-1 text-base opacity-90">
-          Kelola jadwal coaching Anda — tambahkan, pilih, atau hapus slot dengan mudah.
+          Lapangan: <span class="font-medium">{{ venue.name }}</span>
         </p>
       </div>
+      <div class="flex-shrink-0">
+        <a href="{% url 'venue_manage' venue_id=venue.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-sm font-medium text-white hover:bg-white/30 shadow-sm transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          Kembali ke Kelola Venue
+        </a>
       </div>
+    </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    
     <div class="lg:col-span-2 space-y-6">
 
       <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
@@ -110,7 +114,7 @@
             <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Tampilkan Semua</button>
           </div>
 
-          <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="flex-shrink-0">
+          <form method="post" action="{% url 'venue_schedule_delete' venue_id=venue.id %}" id="bulk-delete-form" class="flex-shrink-0">
             {% csrf_token %}
             <div class="flex items-center gap-3">
               <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm shadow-sm">
@@ -142,7 +146,6 @@
                   <label class="relative inline-flex items-center slot-label"> <input type="checkbox" class="delete-checkbox" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} /> {% if s.is_booked %}
                       <span class="slot-card booked"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
                         <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
-                        <span style="font-size:0.75rem; font-weight: 700; margin-left: 4px;">(BOOKED)</span>
                       </span>
                     {% else %}
                       <span class="slot-card available"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
@@ -173,42 +176,39 @@
           <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
           <p class="text-sm text-gray-500 mb-5">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
 
-          <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'coach_schedule' %}">
+          <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'venue_manage_schedule' venue_id=venue.id %}">
             {% csrf_token %}
             
             <div>
-              <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date.label }}</label>
-              {{ form.date|cut:"form-input-style" }}
-              <style>#{{ form.date.id_for_label }} { {{ form.date.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.date.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.date.help_text }}</p>
+              <label for="{{ schedule_form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.date.label }}</label>
+              {{ schedule_form.date }} 
+              {% if schedule_form.date.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.date.help_text }}</p>
               {% endif %}
-              {% if form.date.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.date.errors %} <div>{{ error }}</div> {% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.start_time.label }}</label>
-              {{ form.start_time|cut:"form-input-style" }}
-              <style>#{{ form.start_time.id_for_label }} { {{ form.start_time.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.start_time.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.start_time.help_text }}</p>
-              {% endif %}
-              {% if form.start_time.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.start_time.errors %} <div>{{ error }}</div> {% endfor %}</div>
+              {% if schedule_form.date.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.date.errors %} <div>{{ error }}</div> {% endfor %}</div>
               {% endif %}
             </div>
 
             <div>
-              <label for="{{ form.end_time_global.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.end_time_global.label }}</label>
-              {{ form.end_time_global|cut:"form-input-style" }}
-              <style>#{{ form.end_time_global.id_for_label }} { {{ form.end_time_global.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.end_time_global.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.end_time_global.help_text }}</p>
+              <label for="{{ schedule_form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.start_time.label }}</label>
+              {{ schedule_form.start_time }} 
+              {% if schedule_form.start_time.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.start_time.help_text }}</p>
               {% endif %}
-              {% if form.end_time_global.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.end_time_global.errors %} <div>{{ error }}</div> {% endfor %}</div>
+              {% if schedule_form.start_time.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.start_time.errors %} <div>{{ error }}</div> {% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="{{ schedule_form.end_time_global.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.end_time_global.label }}</label>
+              {{ schedule_form.end_time_global }}
+              {% if schedule_form.end_time_global.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.end_time_global.help_text }}</p>
+              {% endif %}
+              {% if schedule_form.end_time_global.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.end_time_global.errors %} <div>{{ error }}</div> {% endfor %}</div>
               {% endif %}
             </div>
 
@@ -472,7 +472,6 @@ document.addEventListener('DOMContentLoaded',function(){
                             label.remove(); 
 
                             if (groupContainer && groupContainer.querySelectorAll('label.slot-label').length === 0) {
-                                // [MODIFIKASI] Selector diubah ke .group
                                 const card = groupContainer.closest('.group[data-date]');
                                 if (card) card.remove();
                             }
@@ -492,7 +491,6 @@ document.addEventListener('DOMContentLoaded',function(){
     
     // --- LOGIC FILTER (Adaptasi) ---
     function applyFilterValue(val) {
-      // [MODIFIKASI] Selector diubah ke .group
       const allGroups = document.querySelectorAll('.group[data-date]');
       allGroups.forEach(g => {
         g.style.display = (!val || g.getAttribute('data-date') === val) ? '' : 'none';
@@ -517,8 +515,9 @@ document.addEventListener('DOMContentLoaded',function(){
     function enterSelectionMode() {
         selectionActive = true;
         bodyEl.classList.add('selection-active');
-        deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Konfirmasi Hapus';
-        deleteToggleBtn.style.backgroundColor = '#2563eb'; // Biru
+        deleteToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Konfirmasi Hapus';
+        deleteToggleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        deleteToggleBtn.classList.add('bg-blue-600', 'hover:bg-blue-700'); // Ganti warna tombol
         document.getElementById('delete-controls-container').classList.remove('hidden');
         
         document.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => { 
@@ -529,8 +528,9 @@ document.addEventListener('DOMContentLoaded',function(){
     function exitSelectionMode() {
         selectionActive = false;
         bodyEl.classList.remove('selection-active');
-        deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Hapus Jadwal';
-        deleteToggleBtn.style.backgroundColor = '#dc2626'; // Merah
+        deleteToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Hapus Jadwal';
+        deleteToggleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        deleteToggleBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
         document.getElementById('delete-controls-container').classList.add('hidden');
         
         document.querySelectorAll('.delete-checkbox').forEach(cb => {
@@ -553,7 +553,6 @@ document.addEventListener('DOMContentLoaded',function(){
     
     selectAllBtn?.addEventListener('click', function(){
         const visibleChecks = Array.from(document.querySelectorAll('.delete-checkbox')).filter(c => {
-            // [MODIFIKASI] Selector diubah ke .group
             const grp = c.closest('.group[data-date]');
             return grp && grp.style.display !== 'none' && !c.disabled;
         });

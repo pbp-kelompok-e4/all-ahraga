@@ -3,7 +3,7 @@
 {% block title %}Profil Pelatih{% endblock title %}
 
 {% block content %}
-<div style="min-height: 100vh; background: linear-gradient(135deg, #e8f4f4 0%, #f8fafa 100%); padding: 40px 20px; font-family: 'Poppins', sans-serif;">
+<div style="min-height: 100vh; background: #ffffff; padding: 40px 20px; font-family: 'Poppins', sans-serif;">
   
   <!-- Back Button -->
   <div style="max-width: 1000px; margin: 0 auto 20px;">
@@ -26,7 +26,7 @@
                 box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
       
       <!-- Profile Picture -->
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 20px; display: flex; justify-content: center;">
         {% if coach_profile %}
           {% if coach_profile.profile_picture %}
             <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil" 
@@ -205,17 +205,11 @@
         <a href="{% url 'manage_coach_profile' %}" 
           style="display: flex; align-items: center; justify-content: center; gap: 8px;
                   padding: 14px 24px; 
-                  
-                  /* === GANTI BAGIAN INI === */
                   background: linear-gradient(135deg, #003F3F 0%, #005757 100%); 
                   color: #FFFFFF; 
-                  /* === GANTI BAGIAN INI === */
-                  
                   text-decoration: none; border-radius: 10px;
                   font-weight: 600; font-size: 15px; transition: all 0.3s ease;
-                  
-                  /* === GANTI BOX-SHADOW === */
-                  box-shadow: 0 4px 12px rgba(0,63,63,0.3);">
+                  box-shadow: 0 4px 12px rgba(0,63,63,0.3); cursor: pointer;">
           <span>✏️</span> Kelola Profil
         </a>
 
@@ -223,16 +217,10 @@
             <button onclick="showDeleteModal()" 
               style="display: flex; align-items: center; justify-content: center; gap: 8px;
                       padding: 14px 24px; 
-                      
-                      /* === GANTI BAGIAN INI === */
                       background: #C53030; 
                       color: #fff; 
-                      /* === GANTI BAGIAN INI === */
-                      
                       border: none; border-radius: 10px; cursor: pointer;
                       font-weight: 600; font-size: 15px; transition: all 0.3s ease;
-                      
-                      /* === GANTI BOX-SHADOW === */
                       box-shadow: 0 4px 12px rgba(197, 48, 48, 0.3);">
               <span>🗑️</span> Hapus Profil
             </button>
@@ -365,13 +353,14 @@
 
   a[href*="manage_coach_profile"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(245,184,0,0.4) !important;
+    box-shadow: 0 6px 16px rgba(0,63,63,0.4) !important;
   }
   
   button[onclick*="showDeleteModal"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(220,53,69,0.4) !important;
     background: #c82333 !important;
+    cursor: pointer !important;
   }
   
   a[href*="home"]:hover {
@@ -380,19 +369,22 @@
   }
 
   #confirmDeleteBtn:not(:disabled) {
-    cursor: pointer;
-    opacity: 1;
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    cursor: pointer !important;
+    opacity: 1 !important;
+    background: #C53030 !important;
   }
 
   #confirmDeleteBtn:not(:disabled):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(220,53,69,0.4);
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(220,53,69,0.4) !important;
+    background: #a02020 !important;
+    cursor: pointer !important;
   }
 
   button[onclick*="hideDeleteModal"]:hover {
     background: #5a6268 !important;
     transform: translateY(-2px);
+    cursor: pointer !important;
   }
 </style>
 
@@ -434,6 +426,11 @@
     if (checkbox && deleteBtn) {
       checkbox.addEventListener('change', function() {
         deleteBtn.disabled = !this.checked;
+        if (!this.checked) {
+          deleteBtn.style.cursor = 'not-allowed';
+        } else {
+          deleteBtn.style.cursor = 'pointer';
+        }
       });
     }
 
@@ -448,9 +445,12 @@
 
   function confirmDelete() {
     const deleteBtn = document.getElementById('confirmDeleteBtn');
+    if (deleteBtn.disabled) return;
+    
     deleteBtn.disabled = true;
     deleteBtn.textContent = 'Menghapus...';
     deleteBtn.style.opacity = '0.7';
+    deleteBtn.style.cursor = 'not-allowed';
 
     const csrftoken = getCookie('csrftoken');
     
@@ -475,8 +475,8 @@
         setTimeout(() => {
           window.location.href = "{% url 'coach_profile' %}";
         }, 2000);
-      } else {
-        throw new Error('Gagal menghapus profil');
+      } else { 
+        throw new Error('Gagal menghapus profil');  
       }
     })
     .catch(error => {
@@ -484,6 +484,7 @@
       deleteBtn.disabled = false;
       deleteBtn.textContent = 'Ya, Hapus Profil';
       deleteBtn.style.opacity = '1';
+      deleteBtn.style.cursor = 'pointer';
     });
   }
 </script>
