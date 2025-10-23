@@ -171,11 +171,11 @@ def venue_revenue_view(request):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_create_view(request):
     if request.method == 'POST':
-        form = VenueForm(request.POST)
+        form = VenueForm(request.POST, request.FILES)  # Tambahkan request.FILES
         if form.is_valid():
             user = request.user
             venue = form.save(commit=False)
-            venue.owner = user  # Set owner
+            venue.owner = user
             venue.save()
             messages.success(request, f"Lapangan '{venue.name}' berhasil ditambahkan.")
             return redirect('venue_dashboard')
@@ -195,7 +195,7 @@ def venue_manage_view(request, venue_id):
 
     if request.method == 'POST':
         if 'submit_venue_edit' in request.POST:
-            venue_edit_form = VenueForm(request.POST, instance=venue)
+            venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)  # Tambahkan request.FILES
             if venue_edit_form.is_valid():
                 venue_edit_form.save()
                 messages.success(request, "Data lapangan berhasil diperbarui.")
