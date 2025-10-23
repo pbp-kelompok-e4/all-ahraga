@@ -23,7 +23,6 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
-    <!-- Main Content -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <h3 class="text-lg font-semibold mb-4">Pilih Jadwal</h3>
       <p class="text-slate-600 mb-6">Klik satu slot yang tersedia. Sistem akan menggunakan durasi 1 jam sesuai slot.</p>
@@ -71,10 +70,10 @@
         </div>
         {% endif %}
 
-        {% if coaches %}
         <div>
           <h3 class="text-lg font-semibold mb-4">Pilih Coach (opsional)</h3>
-          <div class="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+          <div id="coach-list-wrapper" class="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+            
             <label class="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center font-bold text-slate-600">—</div>
@@ -83,36 +82,18 @@
                   <div class="text-sm text-slate-600">Lebih hemat</div>
                 </div>
               </div>
-              <input type="radio" name="coach" value="" checked class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
+              <input id="no-coach-radio" type="radio" name="coach" value="" checked class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
             </label>
 
-            {% for c in coaches %}
-            <label class="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-200 transition-colors">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-700">
-                  {{ c.user.get_full_name|slice:":1"|upper }}
-                </div>
-                <div>
-                  <div class="font-medium">{{ c.user.get_full_name|default:c.user.username }}</div>
-                  <div class="text-sm text-slate-600">
-                    {{ c.main_sport_trained.name }}
-                    {% with areas=c.service_areas.all %}
-                      {% if areas %}• {{ areas|join:", " }}{% endif %}
-                    {% endwith %}
-                  </div>
-                </div>
+            <div id="dynamic-coach-list" class="space-y-3">
               </div>
-              <div class="text-right">
-                <div class="text-sm text-slate-600">Rp {{ c.rate_per_hour|default:0|floatformat:0 }}/jam</div>
-                <input type="radio" name="coach" value="{{ c.id }}" data-rate="{{ c.rate_per_hour|default:0 }}" 
-                  class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
-              </div>
-            </label>
-            {% endfor %}
+
+            <div id="coach-placeholder" class="text-slate-500 p-4 text-center" style="display: none;">
+              Pilih jadwal untuk melihat coach yang tersedia.
+            </div>
+
           </div>
         </div>
-        {% endif %}
-
         <input type="hidden" name="payment_method" id="payment-method-input" value="CASH">
       </form>
       {% else %}
@@ -120,7 +101,6 @@
       {% endif %}
     </div>
 
-    <!-- Sidebar -->
     <div class="sticky top-6">
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 class="text-lg font-semibold mb-2">Ringkasan Booking</h3>
@@ -175,7 +155,11 @@
 
   const slotLabels = Array.from(document.querySelectorAll('.slot-card'));
   const eqBoxes = Array.from(document.querySelectorAll('input[type="checkbox"][name="equipment"]') || []);
-  const coachRadios = Array.from(document.querySelectorAll('input[type="radio"][name="coach"]') || []);
+  const coachListWrapper = document.getElementById('coach-list-wrapper');
+  const dynamicCoachList = document.getElementById('dynamic-coach-list');
+  const coachPlaceholder = document.getElementById('coach-placeholder');
+  const noCoachRadio = document.getElementById('no-coach-radio');
+  let coachRadios = []; 
   const summaryBase = document.getElementById('summary-base');
   const summaryEq = document.getElementById('summary-eq');
   const summaryCoach = document.getElementById('summary-coach');
@@ -190,6 +174,7 @@
     let eqTotal = 0;
     if (eqBoxes.length) eqBoxes.forEach(cb => { if (cb.checked) eqTotal += parseFloat(cb.dataset.price || 0); });
     let coachFee = 0;
+    coachRadios = Array.from(coachListWrapper.querySelectorAll('input[type="radio"][name="coach"]') || []);
     if (coachRadios.length) {
       const checkedCoach = coachRadios.find(r => r.checked);
       if (checkedCoach && checkedCoach.dataset && checkedCoach.dataset.rate) {
@@ -203,22 +188,103 @@
     if (summaryTotal) summaryTotal.textContent = formatRp(total);
   }
 
+  function loadCoaches(scheduleId) {
+    if (!scheduleId) {
+      dynamicCoachList.innerHTML = '';
+      coachPlaceholder.style.display = 'block';
+      coachRadios = [];
+      if (noCoachRadio) noCoachRadio.checked = true;
+      calc();
+      return;
+    }
+
+    coachPlaceholder.style.display = 'none';
+    dynamicCoachList.innerHTML = '<div class="text-slate-500 p-4 text-center">Memuat coach...</div>';
+
+    fetch(`/api/schedule/${scheduleId}/coaches/`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        dynamicCoachList.innerHTML = '';
+        
+        if (data.error) {
+          dynamicCoachList.innerHTML = `<div class="text-red-500 p-4 text-center">${data.error}</div>`;
+          if (noCoachRadio) noCoachRadio.checked = true;
+          calc();
+          return;
+        }
+        
+        if (data.coaches && data.coaches.length > 0) {
+          data.coaches.forEach(coach => {
+            const coachCard = document.createElement('label');
+            coachCard.className = 'flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200 hover:border-blue-300 cursor-pointer transition-all';
+            coachCard.innerHTML = `
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white">
+                  ${coach.avatar_initial}
+                </div>
+                <div>
+                  <div class="font-medium">${coach.name}</div>
+                  <div class="text-sm text-slate-600">${coach.sport}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-medium">${formatRp(coach.rate_per_hour)}/jam</span>
+                <input type="radio" name="coach" value="${coach.id}" data-rate="${coach.rate_per_hour}" 
+                  class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
+              </div>
+            `;
+            dynamicCoachList.appendChild(coachCard);
+          });
+
+          coachRadios = Array.from(document.querySelectorAll('input[type="radio"][name="coach"]'));
+          coachRadios.forEach(r => r.addEventListener('change', calc));
+        } else {
+          dynamicCoachList.innerHTML = '<div class="text-slate-500 p-4 text-center">Tidak ada coach tersedia untuk jadwal ini.</div>';
+        }
+        
+        if (noCoachRadio) noCoachRadio.checked = true;
+        calc();
+      })
+      .catch(error => {
+        console.error('Error loading coaches:', error);
+        dynamicCoachList.innerHTML = '<div class="text-red-500 p-4 text-center">Gagal memuat daftar coach. Silakan coba lagi.</div>';
+        if (noCoachRadio) noCoachRadio.checked = true;
+        calc();
+      });
+  }
+
   // UI: clicking slot label selects radio and highlights
   slotLabels.forEach(lbl => {
     lbl.addEventListener('click', function (e) {
       const radio = this.querySelector('input[type="radio"][name="schedule_id"]');
-      if (radio) radio.checked = true;
-      slotLabels.forEach(l => l.classList.remove('border-blue-400', 'shadow-md'));
-      this.classList.add('border-blue-400', 'shadow-md');
+      if (radio && !radio.closest('.slot-card').classList.contains('bg-red-50')) {
+        radio.checked = true;
+        slotLabels.forEach(l => l.classList.remove('border-blue-400', 'shadow-md'));
+        this.classList.add('border-blue-400', 'shadow-md');
+        
+        // Load coaches for selected schedule
+        loadCoaches(radio.value);
+      }
     });
   });
 
-  // mark first selected
-  const first = slotLabels.find(l => l.querySelector('input[type="radio"][name="schedule_id"]').checked);
-  if (first) first.classList.add('border-blue-400', 'shadow-md');
+  // mark first selected and load coaches
+  const first = slotLabels.find(l => {
+    const radio = l.querySelector('input[type="radio"][name="schedule_id"]');
+    return radio && radio.checked;
+  });
+  if (first) {
+    first.classList.add('border-blue-400', 'shadow-md');
+    const firstRadio = first.querySelector('input[type="radio"][name="schedule_id"]');
+    if (firstRadio) loadCoaches(firstRadio.value);
+  }
 
   if (eqBoxes.length) eqBoxes.forEach(cb => cb.addEventListener('change', calc));
-  if (coachRadios.length) coachRadios.forEach(r => r.addEventListener('change', calc));
   if (paymentSelect) paymentSelect.addEventListener('change', () => { if (paymentInput) paymentInput.value = paymentSelect.value; });
 
   calc();

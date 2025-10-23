@@ -30,4 +30,5 @@ urlpatterns = [
     path('coach/revenue-report/', views.coach_revenue_report, name='coach_revenue_report'),
     path('venue/<int:venue_id>/schedules/delete/', views.venue_schedule_delete, name='venue_schedule_delete'),
     path('dashboard/venue/<int:venue_id>/schedules/manage/', views.venue_manage_schedule_view, name='venue_manage_schedule'),
+    path('api/schedule/<int:schedule_id>/coaches/', views.get_available_coaches, name='get_available_coaches'),
 ]

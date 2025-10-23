@@ -5,46 +5,18 @@
 {% block content %}
 <div class="max-w-3xl mx-auto my-8 bg-white p-6 rounded-lg shadow">
   <h2 class="text-2xl font-semibold mb-6">Konfirmasi Pembayaran</h2>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <p class="mb-3"><strong>Booking #</strong> {{ booking.id }}</p>
-      <p class="mb-3"><strong>Venue:</strong> {{ booking.venue_schedule.venue.name }}</p>
-      <p class="mb-3">
-        <strong>Jadwal:</strong> 
-        {{ booking.venue_schedule.date|date:"D, d M Y" }} — 
-        {{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}
-      </p>
-      {% if booking.coach_schedule %}
-        <p class="mb-3"><strong>Coach:</strong> {{ booking.coach_schedule.coach.user.username }}</p>
-      {% endif %}
-    </div>
-
-    <div>
-      <p class="mb-3"><strong>Total:</strong> Rp {{ booking.total_price }}</p>
-      <p class="mb-3">
-        <strong>Metode Pembayaran:</strong> 
-        {{ transaction.payment_method|default:"-" }}
-      </p>
-      <p class="mb-3">
-        <strong>Status Transaksi:</strong> 
-        <span class="{% if transaction.status == 'CONFIRMED' %}text-green-600{% elif transaction.status == 'PENDING' %}text-yellow-600{% else %}text-red-600{% endif %}">
-          {{ transaction.status }}
-        </span>
-      </p>
-    </div>
-  </div>
-
   <hr class="my-6 border-gray-200">
 
   {% if transaction.payment_method|default:""|upper == "TRANSFER" %}
     <p class="text-gray-600 mb-4">
       Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.
     </p>
-    <form method="post" class="mt-4">
+    
+    <form method="post" class="mt-4" id="payment-form">
       {% csrf_token %}
       <div class="flex gap-3">
         <button type="submit" 
+                id="submit-button"
                 class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
           Sudah bayar
         </button>
@@ -55,52 +27,60 @@
       </div>
     </form>
   {% else %}
-    <p class="text-gray-600 mb-4">
-      Metode pembayaran bukan transfer. Jika metode CASH, seharusnya sudah otomatis terkonfirmasi dan Anda akan diarahkan.
-    </p>
-    <a href="{% url 'my_bookings' %}" 
-       class="inline-block px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700 transition-colors">
-      Kembali ke Booking Saya
-    </a>
-  {% endif %}
+    {% endif %}
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Confirm payment without reload
-    document.getElementById('payment-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
+document.addEventListener('DOMContentLoaded', function() {
+  const paymentForm = document.getElementById('payment-form');
+  const submitButton = document.getElementById('submit-button');
+
+  if (paymentForm) {
+    paymentForm.addEventListener('submit', function(e) {
+        e.preventDefault(); 
         
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Memproses...';
+        }
+
+        const csrfToken = this.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
         fetch(this.action, {
             method: 'POST',
-            body: formData,
+            body: new FormData(this), 
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showSuccessMessage(data.message);
-                setTimeout(() => window.location.href = '/my-bookings/', 2000);
+        .then(response => {
+            return response.json().then(data => ({ 
+                ok: response.ok, 
+                data 
+            }));
+        })
+        .then(({ ok, data }) => {
+            if (ok) {
+                // SUKSES (status 200)
+                alert(data.message); 
+                window.location.href = data.redirect_url;
             } else {
-                showErrorMessage(data.message);
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+            
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Sudah bayar';
             }
         });
     });
+  }
 
-    // File upload preview
-    document.getElementById('payment-proof').addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('proof-preview').src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
 });
 </script>
 {% endblock content %}
