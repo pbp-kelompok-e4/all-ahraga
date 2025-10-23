@@ -71,12 +71,27 @@ class EquipmentForm(forms.ModelForm):
         # 'venue' akan diisi otomatis oleh view
 
 class CoachProfileForm(forms.ModelForm):
+    profile_picture_url = forms.URLField(
+        required=False,
+        label="URL Foto Profil",
+        help_text="Masukkan URL gambar untuk foto profil Anda (opsional)"
+    )
+
     class Meta:
         model = CoachProfile
-        fields = ['age', 'experience_desc', 'rate_per_hour', 'main_sport_trained', 'service_areas']
+        fields = ['age', 'experience_desc', 'rate_per_hour', 'main_sport_trained', 'service_areas']  # sesuaikan jika ada field lain
         widgets = {
             'service_areas': forms.CheckboxSelectMultiple(),
+            'experience_desc': forms.Textarea(attrs={'rows': 4}),
         }
+
+    def clean_profile_picture_url(self):
+        url = self.cleaned_data.get('profile_picture_url')
+        if url:
+            valid_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
+            if not url.lower().endswith(valid_extensions):
+                raise forms.ValidationError("URL harus mengarah ke file gambar (jpg, jpeg, png, gif, webp).")
+        return url
 
 class CoachScheduleForm(forms.ModelForm):
     class Meta:
