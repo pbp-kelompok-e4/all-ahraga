@@ -132,7 +132,7 @@
             </div>
             {% endif %}
 
-            <!-- Messages -->
+            <!-- Messages (visible fallback) -->
             {% if messages %}
             <div class="mb-6 space-y-3">
                 {% for message in messages %}
@@ -236,4 +236,50 @@
         </p>
     </div>
 </div>
+
+{# TOAST container (hidden by default) #}
+<div id="mc-toast" aria-live="polite" style="display:none; position: fixed; right: 24px; bottom: 24px; z-index: 9999; min-width: 280px; border-radius: 10px; padding: 14px 16px; color: #fff; box-shadow: 0 10px 30px rgba(2,6,23,0.35);"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
+        // build messages array from Django messages (if any)
+        var django_messages = [{% for message in messages %} {
+            message: "{{ message|escapejs }}",
+            tags: "{{ message.tags }}"
+        }{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+        if (!django_messages || django_messages.length === 0) return;
+
+        var toast = document.getElementById('mc-toast');
+
+        function showToast(text, type){
+            var bg = 'linear-gradient(135deg,#2563eb 0%,#1e40af 100%)'; // info
+            var icon = 'ℹ️';
+            if (type === 'success') { bg = 'linear-gradient(135deg,#16a34a 0%,#065f46 100%)'; icon = '✅'; }
+            if (type === 'error')   { bg = 'linear-gradient(135deg,#dc3545 0%,#c1121f 100%)'; icon = '❌'; }
+
+            toast.style.background = bg;
+            toast.innerHTML = '<div style="display:flex; gap:12px; align-items:center;">' +
+                              '<div style="font-size:20px;">' + icon + '</div>' +
+                              '<div style="font-weight:600; line-height:1.2;">' + text + '</div>' +
+                              '</div>';
+            toast.style.display = 'block';
+            toast.style.opacity = '0';
+            setTimeout(function(){ toast.style.opacity = '1'; }, 20);
+            setTimeout(function(){ toast.style.opacity = '0'; }, 3200);
+            setTimeout(function(){ toast.style.display = 'none'; }, 3600);
+        }
+
+        // show all messages sequentially
+        (function showSequential(i){
+            if (i >= django_messages.length) return;
+            var m = django_messages[i];
+            var type = 'info';
+            if (m.tags.indexOf('success') !== -1) type = 'success';
+            if (m.tags.indexOf('error') !== -1) type = 'error';
+            showToast(m.message, type);
+            setTimeout(function(){ showSequential(i+1); }, 1200);
+        })(0);
+    });
+</script>
 {% endblock content %}

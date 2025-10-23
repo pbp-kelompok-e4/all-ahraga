@@ -243,39 +243,42 @@
   </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                               background: rgba(0,0,0,0.6); z-index: 9999; 
-                               align-items: center; justify-content: center; 
-                               backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;">
-  <div style="background: #fff; border-radius: 20px; max-width: 500px; width: 90%; 
+                            background: rgba(0,0,0,0.6); z-index: 9999; 
+                            align-items: center; justify-content: center; 
+                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;">
+  
+  <div style="background: #fff; border-radius: 20px; max-width: 460px; width: 90%; 
               box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
-              animation: slideUp 0.3s ease; overflow: hidden;">
+              animation: slideUp 0.3s ease; overflow: hidden; position: relative;">
     
-    <!-- Modal Header -->
-    <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); 
-                padding: 30px; text-align: center;">
-      <div style="font-size: 64px; margin-bottom: 16px; animation: pulse 2s infinite;">⚠️</div>
-      <h2 style="color: #fff; margin: 0; font-size: 24px; font-weight: 600;">
+    <button onclick="hideDeleteModal()" 
+            style="position: absolute; top: 15px; right: 20px; z-index: 10;
+                   background: transparent; border: none; color: white; 
+                   font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1;
+                   text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
+      &times;
+    </button>
+    <div style="background: linear-gradient(135deg, #C53030 0%, #A02020 100%); 
+                padding: 24px 30px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 12px; animation: pulse 2s infinite;">⚠️</div>
+      <h2 style="color: #fff; margin: 0; font-size: 22px; font-weight: 600;">
         Konfirmasi Penghapusan
       </h2>
     </div>
 
-    <!-- Modal Body -->
-    <div style="padding: 30px;">
-      <p style="color: #333; margin: 0 0 20px; line-height: 1.6; font-size: 15px; text-align: center;">
+    <div style="padding: 24px 30px;">
+      <p style="color: #333; margin: 0 0 16px; line-height: 1.6; font-size: 14px; text-align: center;">
         Apakah Anda yakin ingin menghapus profil pelatih Anda? 
-        <strong style="color: #dc3545;">Tindakan ini tidak dapat dibatalkan</strong> 
-        dan akan menghapus semua data yang terkait.
+        <strong style="color: #C53030;">Tindakan ini tidak dapat dibatalkan.</strong>
       </p>
 
-      <!-- Consequences List -->
-      <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; 
-                  padding: 20px; margin-bottom: 24px;">
-        <div style="color: #856404; font-weight: 600; margin-bottom: 12px; font-size: 14px;">
+      <div style="background: #FEE2E2; border: 1px solid #F87171; border-radius: 12px; 
+                  padding: 16px; margin-bottom: 20px;">
+        <div style="color: #991B1B; font-weight: 600; margin-bottom: 12px; font-size: 14px;">
           ⚡ Yang akan terhapus:
         </div>
-        <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px; line-height: 1.8;">
+        <ul style="margin: 0; padding-left: 20px; color: #991B1B; font-size: 13px; line-height: 1.7;">
           <li>Informasi profil pribadi Anda</li>
           <li>Semua kelas yang Anda buat</li>
           <li>Riwayat transaksi dan pendapatan</li>
@@ -283,28 +286,26 @@
         </ul>
       </div>
 
-      <!-- Checkbox Confirmation -->
       <label style="display: flex; align-items: start; gap: 12px; 
-                    background: #f8f9fa; padding: 16px; border-radius: 10px;
-                    cursor: pointer; margin-bottom: 24px; border: 2px solid #dee2e6;
+                    background: #f8f9fa; padding: 14px; border-radius: 10px;
+                    cursor: pointer; margin-bottom: 20px; border: 1px solid #dee2e6;
                     transition: all 0.2s ease;">
         <input type="checkbox" id="confirmCheckbox" 
-               style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #dc3545;">
-        <span style="color: #495057; font-size: 14px; line-height: 1.5;">
+               style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #C53030;">
+        <span style="color: #495057; font-size: 13px; line-height: 1.5;">
           Saya memahami konsekuensinya dan ingin melanjutkan penghapusan profil pelatih
         </span>
       </label>
 
-      <!-- Action Buttons -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <button onclick="hideDeleteModal()" 
-                style="padding: 14px; background: #6c757d; color: #fff; border: none; 
+                style="padding: 12px; background: #6c757d; color: #fff; border: none; 
                        border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
                        transition: all 0.2s ease;">
           Batal
         </button>
         <button id="confirmDeleteBtn" onclick="confirmDelete()" disabled
-                style="padding: 14px; background: #dc3545; color: #fff; border: none; 
+                style="padding: 12px; background: #C53030; color: #fff; border: none; 
                        border-radius: 10px; font-weight: 600; font-size: 14px; cursor: not-allowed;
                        transition: all 0.2s ease; opacity: 0.5;">
           Ya, Hapus Profil

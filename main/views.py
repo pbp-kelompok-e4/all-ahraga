@@ -10,6 +10,7 @@ from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSched
 from django.core.files.base import ContentFile
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
+from django.urls import reverse
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
@@ -533,7 +534,6 @@ def manage_coach_profile(request):
         if form.is_valid():
             profile = form.save(commit=False)
             
-            # Handle profile picture from URL if provided (using urllib, no external libs)
             url = form.cleaned_data.get('profile_picture_url')
             if url:
                 try:
@@ -546,13 +546,14 @@ def manage_coach_profile(request):
                 except (HTTPError, URLError, ValueError, TimeoutError) as e:
                     messages.error(request, f"Gagal mengambil gambar dari URL: {e}")
 
-            # If file uploaded via form, that is already in request.FILES and will be saved by form.save()
             profile.save()
             form.save_m2m()
-            messages.success(request, "Profil pelatih berhasil disimpan.")
-            return redirect('coach_dashboard')
+            
+            profile_url = reverse('coach_profile') 
+            return redirect(f'{profile_url}?success=true')
+        
         else:
-            messages.error(request, "Mohon periksa input Anda.")
+            messages.error(request, "Perubahan gagal disimpan. Mohon periksa input Anda.")
     else:
         form = CoachProfileForm(instance=coach_profile)
 
