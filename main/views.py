@@ -11,6 +11,7 @@ from django.core.files.base import ContentFile
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from django.urls import reverse
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 def get_user_dashboard(user):
@@ -671,15 +672,15 @@ def coach_schedule_delete(request):
     return redirect('coach_schedule')
 
 def coach_list_view(request):
-    """Menampilkan daftar semua coach"""
-    coaches = CoachProfile.objects.all().select_related(
+    """Menampilkan daftar semua coach dengan pagination"""
+    coaches_list = CoachProfile.objects.all().select_related(
         'user', 'main_sport_trained'
-    ).prefetch_related('service_areas')
+    ).prefetch_related('service_areas').order_by('user__first_name')
     
     # Filter berdasarkan pencarian
     query = request.GET.get('q')
     if query:
-        coaches = coaches.filter(
+        coaches_list = coaches_list.filter(
             Q(user__first_name__icontains=query) |
             Q(user__last_name__icontains=query) |
             Q(user__username__icontains=query)
@@ -688,18 +689,28 @@ def coach_list_view(request):
     # Filter berdasarkan olahraga
     sport_filter = request.GET.get('sport')
     if sport_filter:
-        coaches = coaches.filter(main_sport_trained__id=sport_filter)
+        coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
     
     # Filter berdasarkan area
     area_filter = request.GET.get('area')
     if area_filter:
-        coaches = coaches.filter(service_areas__id=area_filter)
+        coaches_list = coaches_list.filter(service_areas__id=area_filter)
+    
+    paginator = Paginator(coaches_list, 6)  
+    page_number = request.GET.get('page')
+    
+    try:
+        coaches = paginator.page(page_number)
+    except PageNotAnInteger:
+        coaches = paginator.page(1)
+    except EmptyPage:
+        coaches = paginator.page(paginator.num_pages)
     
     categories = SportCategory.objects.all()
     areas = LocationArea.objects.all()
     
     context = {
-        'coaches': coaches,
+        'coaches': coaches, 
         'categories': categories,
         'areas': areas,
     }
