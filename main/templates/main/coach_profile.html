@@ -26,7 +26,7 @@
                 box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
       
       <!-- Profile Picture -->
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 20px; display: flex; justify-content: center;">
         {% if coach_profile %}
           {% if coach_profile.profile_picture %}
             <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil" 
@@ -370,13 +370,14 @@
 
   #confirmDeleteBtn:not(:disabled) {
     cursor: pointer !important;
-    opacity: 1;
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    opacity: 1 !important;
+    background: #C53030 !important;
   }
 
   #confirmDeleteBtn:not(:disabled):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(220,53,69,0.4);
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(220,53,69,0.4) !important;
+    background: #a02020 !important;
     cursor: pointer !important;
   }
 
@@ -474,8 +475,8 @@
         setTimeout(() => {
           window.location.href = "{% url 'coach_profile' %}";
         }, 2000);
-      } else {
-        throw new Error('Gagal menghapus profil');
+      } else { 
+        throw new Error('Gagal menghapus profil');  
       }
     })
     .catch(error => {

@@ -12,7 +12,10 @@ from django.core.files.base import ContentFile
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from django.urls import reverse
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import json
 from django.http import JsonResponse
+
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
@@ -239,54 +242,82 @@ def venue_manage_view(request, venue_id):
 def venue_manage_schedule_view(request, venue_id):
     """View baru untuk membuat dan menampilkan jadwal venue."""
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
-    schedule_form = VenueScheduleForm()
     
     if request.method == 'POST':
-        # Logic submit_schedule dipindahkan dari venue_manage_view
-        if 'submit_schedule' in request.POST:
-            schedule_form = VenueScheduleForm(request.POST)
-            if schedule_form.is_valid():
-                cd = schedule_form.cleaned_data
-                schedule_date = cd['date']
-                start_time = cd['start_time']
-                end_time = cd['end_time']
-                is_available = cd.get('is_available', True)
+        # --- LOGIKA AJAX DIMULAI DI SINI ---
+        schedule_form = VenueScheduleForm(request.POST)
+        
+        if schedule_form.is_valid():
+            # Ambil end_time_global dari form yang valid
+            end_time_global_str = schedule_form.cleaned_data.get('end_time_global')
 
+            cd = schedule_form.cleaned_data
+            schedule_date = cd['date']
+            start_time = cd['start_time']
+            is_available = cd.get('is_available', True)
+
+            try:
                 start_dt = datetime.combine(schedule_date, start_time)
-                end_dt = datetime.combine(schedule_date, end_time)
-                if end_dt <= start_dt:
-                    messages.error(request, "Waktu selesai harus setelah waktu mulai.")
-                    return redirect('venue_manage_schedule', venue_id=venue.id)
+                # Ubah end_time_global_str menjadi objek datetime
+                end_dt_time = datetime.strptime(end_time_global_str, '%H:%M').time()
+                end_dt = datetime.combine(schedule_date, end_dt_time)
+            except (ValueError, TypeError):
+                return JsonResponse({"success": False, "message": "Format jam atau tanggal tidak valid."}, status=400)
 
-                created = 0
-                skipped = 0
-                current = start_dt
-                while current < end_dt:
-                    slot_start = current.time()
-                    next_dt = current + timedelta(hours=1)
-                    slot_end = next_dt.time() if next_dt <= end_dt else end_time
+            if end_dt <= start_dt:
+                return JsonResponse({"success": False, "message": "Waktu selesai harus setelah waktu mulai."}, status=400)
 
-                    exists = VenueSchedule.objects.filter(
-                        venue=venue, date=schedule_date, start_time=slot_start
-                    ).exists()
+            created = 0
+            new_slots_data = [] # List untuk data slot baru
 
-                    if not exists:
-                        VenueSchedule.objects.create(
-                            venue=venue,
-                            date=schedule_date,
-                            start_time=slot_start,
-                            end_time=slot_end,
-                            is_available=is_available
-                        )
-                        created += 1
-                    else:
-                        skipped += 1
+            current = start_dt
+            while current < end_dt:
+                slot_start = current.time()
+                next_dt = current + timedelta(hours=1)
+                slot_end = next_dt.time()
+                
+                # Handle jika slot terakhir > end_dt
+                if next_dt > end_dt:
+                    slot_end = end_dt.time()
 
-                    current = next_dt
+                exists = VenueSchedule.objects.filter(
+                    venue=venue, date=schedule_date, start_time=slot_start
+                ).exists()
 
-                messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
-                return redirect('venue_manage_schedule', venue_id=venue.id)
+                if not exists:
+                    new_schedule = VenueSchedule.objects.create(
+                        venue=venue,
+                        date=schedule_date,
+                        start_time=slot_start,
+                        end_time=slot_end,
+                        is_available=is_available
+                    )
+                    created += 1
+                    # Tambahkan data untuk dikirim kembali ke frontend
+                    new_slots_data.append({
+                        'id': new_schedule.id,
+                        'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
+                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'), # Format: "l, d M Y"
+                        'start_time': new_schedule.start_time.strftime('%H:%M'),
+                        'end_time': new_schedule.end_time.strftime('%H:%M'),
+                        'is_booked': False,
+                    })
+                
+                current = next_dt
             
+            # Kirim respons JSON
+            return JsonResponse({
+                "success": True, 
+                "message": f"{created} slot jadwal berhasil ditambahkan.",
+                "new_slots": new_slots_data
+            }, status=200)
+
+        else:
+            # Form tidak valid
+            return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": schedule_form.errors}, status=400)
+            
+    # --- LOGIKA GET (Menampilkan halaman) ---
+    schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
 
     context = {
@@ -720,66 +751,83 @@ def delete_coach_profile(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_schedule(request):
-    """
-    Tampilkan dan tambahkan jadwal pelatih (per jam). 
-    Jika belum ada CoachProfile, arahkan ke manage_coach_profile.
-    """
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
-        messages.info(request, "Silakan buat profil pelatih terlebih dahulu.")
-        return redirect('manage_coach_profile')
+        return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan."}, status=400)
 
-    form = CoachScheduleForm()
+    form = CoachScheduleForm(request.POST or None) 
     schedules = coach_profile.schedules.all().order_by('date', 'start_time')
 
     if request.method == 'POST':
-        form = CoachScheduleForm(request.POST)
+        form = CoachScheduleForm(request.POST) 
         if form.is_valid():
+            end_time_global_str = request.POST.get('end_time_global') 
+
             cd = form.cleaned_data
             schedule_date = cd['date']
-            start_time = cd['start_time']
-            end_time = cd['end_time']
+            start_time_slot = cd['start_time']
             is_available = cd.get('is_available', True)
+            
+            try:
+                start_dt = datetime.combine(schedule_date, start_time_slot)
+                end_dt = datetime.strptime(end_time_global_str, '%H:%M')
+                end_dt = datetime.combine(schedule_date, end_dt.time())
+            except (ValueError, TypeError):
+                return JsonResponse({"success": False, "message": "Format jam atau tanggal tidak valid."}, status=400)
 
-            start_dt = datetime.combine(schedule_date, start_time)
-            end_dt = datetime.combine(schedule_date, end_time)
             if end_dt <= start_dt:
-                messages.error(request, "Waktu selesai harus setelah waktu mulai.")
-                return redirect('coach_schedule')
+                return JsonResponse({"success": False, "message": "Waktu selesai harus setelah waktu mulai."}, status=400)
 
             created = 0
-            skipped = 0
+            
+            # --- INI BAGIAN PENTING YANG HARUS DIPERBARUI ---
+            new_slots_data = [] # Array untuk menampung slot baru
             current = start_dt
+            
             while current < end_dt:
                 slot_start = current.time()
                 next_dt = current + timedelta(hours=1)
-                slot_end = next_dt.time() if next_dt <= end_dt else end_time
-
+                slot_end = next_dt.time()
+                
+                if next_dt > end_dt:
+                    slot_end = end_dt.time()
+                    
                 exists = CoachSchedule.objects.filter(
                     coach=coach_profile, date=schedule_date, start_time=slot_start
                 ).exists()
 
                 if not exists:
-                    CoachSchedule.objects.create(
-                        coach=coach_profile,
-                        date=schedule_date,
-                        start_time=slot_start,
-                        end_time=slot_end,
-                        is_available=is_available
+                    # Simpan objek yang baru dibuat
+                    new_schedule = CoachSchedule.objects.create(
+                        coach=coach_profile, date=schedule_date, start_time=slot_start,
+                        end_time=slot_end, is_available=is_available
                     )
                     created += 1
-                else:
-                    skipped += 1
+                    # Tambahkan data yang relevan untuk frontend
+                    new_slots_data.append({
+                        'id': new_schedule.id,
+                        'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
+                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'), # Format: "l, d M Y"
+                        'start_time': new_schedule.start_time.strftime('%H:%M'),
+                        'end_time': new_schedule.end_time.strftime('%H:%M'),
+                        'is_booked': False,
+                    })
 
                 current = next_dt
 
-            messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
-            return redirect('coach_schedule')
+            # Ganti respons JSON untuk menyertakan data slot baru
+            return JsonResponse({
+                "success": True, 
+                "message": f"{created} slot jadwal berhasil ditambahkan.",
+                "new_slots": new_slots_data # <-- INI KUNCINYA
+            }, status=200)
+            # --- PERUBAHAN SELESAI ---
         else:
-            messages.error(request, "Mohon periksa input jadwal.")
-            return redirect('coach_schedule')
+            return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": form.errors}, status=400)
 
+
+    # LOGIC GET (Menampilkan halaman)
     context = {
         'coach_profile': coach_profile,
         'schedules': schedules,
@@ -791,40 +839,50 @@ def coach_schedule(request):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_schedule_delete(request):
     if request.method != 'POST':
-        return redirect('coach_schedule')
+        return JsonResponse({"message": "Metode tidak diizinkan."}, status=405)
 
+    # ... (Logic validasi profil dan mendapatkan data JSON) ...
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
-        messages.error(request, "Profil pelatih tidak ditemukan.")
-        return redirect('coach_schedule')
+        return JsonResponse({"message": "Profil pelatih tidak ditemukan."}, status=400)
 
-    ids = request.POST.getlist('selected_schedules')
+    try:
+        data = json.loads(request.body)
+        ids = data.get('selected_schedules', [])
+    except json.JSONDecodeError:
+        return JsonResponse({"message": "Format data JSON tidak valid."}, status=400)
+
     deleted = 0
-    for sid in ids:
-        try:
-            cs = CoachSchedule.objects.get(id=sid, coach=coach_profile)
-            if cs.is_booked:
-                messages.warning(request, f"Slot {cs.date} {cs.start_time.strftime('%H:%M')} tidak dapat dihapus (sudah dibooking).")
-                continue
-            cs.delete()
-            deleted += 1
-        except CoachSchedule.DoesNotExist:
-            continue
+    warning_count = 0
+    
+    deletable_qs = CoachSchedule.objects.filter(id__in=ids, coach=coach_profile)
 
-    messages.success(request, f"{deleted} jadwal berhasil dihapus.")
-    return redirect('coach_schedule')
+    for cs in deletable_qs:
+        if cs.is_booked:
+            warning_count += 1
+            continue
+        
+        cs.delete()
+        deleted += 1
+
+    message = f"{deleted} jadwal berhasil dihapus."
+    if warning_count > 0:
+        message += f" ({warning_count} slot dibatalkan karena sudah dibooking)."
+
+    # FINAL FIX: GANTI REDIRECT DENGAN JSON RESPONSE
+    return JsonResponse({"success": True, "message": message}, status=200)
 
 def coach_list_view(request):
-    """Menampilkan daftar semua coach"""
-    coaches = CoachProfile.objects.all().select_related(
+    """Menampilkan daftar semua coach dengan pagination"""
+    coaches_list = CoachProfile.objects.all().select_related(
         'user', 'main_sport_trained'
-    ).prefetch_related('service_areas')
+    ).prefetch_related('service_areas').order_by('user__first_name')
     
     # Filter berdasarkan pencarian
     query = request.GET.get('q')
     if query:
-        coaches = coaches.filter(
+        coaches_list = coaches_list.filter(
             Q(user__first_name__icontains=query) |
             Q(user__last_name__icontains=query) |
             Q(user__username__icontains=query)
@@ -833,18 +891,28 @@ def coach_list_view(request):
     # Filter berdasarkan olahraga
     sport_filter = request.GET.get('sport')
     if sport_filter:
-        coaches = coaches.filter(main_sport_trained__id=sport_filter)
+        coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
     
     # Filter berdasarkan area
     area_filter = request.GET.get('area')
     if area_filter:
-        coaches = coaches.filter(service_areas__id=area_filter)
+        coaches_list = coaches_list.filter(service_areas__id=area_filter)
+    
+    paginator = Paginator(coaches_list, 6)  
+    page_number = request.GET.get('page')
+    
+    try:
+        coaches = paginator.page(page_number)
+    except PageNotAnInteger:
+        coaches = paginator.page(1)
+    except EmptyPage:
+        coaches = paginator.page(paginator.num_pages)
     
     categories = SportCategory.objects.all()
     areas = LocationArea.objects.all()
     
     context = {
-        'coaches': coaches,
+        'coaches': coaches, 
         'categories': categories,
         'areas': areas,
     }
@@ -897,45 +965,31 @@ def coach_revenue_report(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_schedule_delete(request, venue_id):
-    """
-    Hapus jadwal terpilih untuk venue (POST dengan selected_schedules[]=id).
-    Hanya menghapus slot yang:
-     - termasuk dalam selected_schedules
-     - terkait dengan venue_id
-     - belum dibooking (is_booked == False)
-    """
     venue = get_object_or_404(Venue, id=venue_id)
 
-    # Periksa kepemilikan venue (berbagai kemungkinan nama field owner)
-    allowed = request.user.is_staff
-    if not allowed:
-        if hasattr(venue, 'owner') and venue.owner == request.user:
-            allowed = True
-        elif hasattr(venue, 'user') and venue.user == request.user:
-            allowed = True
-        elif hasattr(venue, 'created_by') and venue.created_by == request.user:
-            allowed = True
-
-    if not allowed:
-        messages.error(request, "Anda tidak memiliki izin untuk mengelola venue ini.")
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+    # Cek kepemilikan
+    if venue.owner != request.user:
+        return JsonResponse({"success": False, "message": "Anda tidak memiliki izin."}, status=403)
 
     if request.method != 'POST':
-        messages.error(request, "Permintaan tidak valid.")
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
 
-    selected = request.POST.getlist('selected_schedules')
-    if not selected:
-        messages.error(request, "Tidak ada jadwal yang dipilih.")
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+    # --- LOGIKA AJAX DELETE ---
+    try:
+        data = json.loads(request.body)
+        ids = data.get('selected_schedules', [])
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "Format data JSON tidak valid."}, status=400)
 
-    deletable_qs = VenueSchedule.objects.filter(id__in=selected, venue_id=venue.id, is_booked=False)
+    if not ids:
+        return JsonResponse({"success": False, "message": "Tidak ada jadwal yang dipilih."}, status=400)
+
+    deletable_qs = VenueSchedule.objects.filter(id__in=ids, venue_id=venue.id, is_booked=False)
     count = deletable_qs.count()
+    
     if count == 0:
-        messages.info(request, "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking).")
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+         return JsonResponse({"success": True, "message": "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking)."})
 
     deletable_qs.delete()
-    messages.success(request, f"{count} jadwal berhasil dihapus.")
-    return redirect(request.META.get('HTTP_REFERER', '/'))
-
+    return JsonResponse({"success": True, "message": f"{count} jadwal berhasil dihapus."})
+    # --- AKHIR LOGIKA AJAX DELETE ---
