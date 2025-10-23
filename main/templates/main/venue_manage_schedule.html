@@ -2,14 +2,81 @@
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-/* opsional: buat input date/time sedikit lebih lebar pada mobile */
-.flatpickr-input { width: 100%; }
+/* --- MODIFIKASI CSS DIMULAI DI SINI --- */
 
-/* Styling Tambahan dari Coach Schedule */
+/* Base Slot Styling */
+.slot-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* 8px */
+    padding: 0.5rem 0.75rem; /* 8px 12px */
+    border-radius: 0.5rem; /* 8px */
+    border: 1px solid #d1d5db; /* gray-300 */
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
+    color: #374151; /* gray-700 */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* [WARNA BARU] Available Slot (Default State) */
+.slot-card.available:hover {
+    border-color: #005757; /* Sesuai tema */
+    background-color: #f0f9f9; /* Light teal */
+    color: #003F3F; /* Dark teal */
+}
+.slot-card.available .icon {
+    color: #005757; /* Sesuai tema */
+}
+.slot-card.available:hover .icon {
+    color: #003F3F; /* Dark teal */
+}
+
+/* Booked Slot (Tetap Sama) */
+.slot-card.booked {
+    background-color: #f9fafb; /* gray-50 */
+    border-color: #e5e7eb; /* gray-200 */
+    color: #9ca3af; /* gray-400 */
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+.slot-card.booked .icon {
+    color: #9ca3af; /* gray-400 */
+}
+
+/* Slot yang dipilih untuk dihapus (Tetap Sama) */
+.slot-card.selected {
+    border-color: #ef4444 !important; /* red-500 */
+    background-color: #fef2f2 !important; /* red-50 */
+    color: #b91c1c !important; /* red-700 */
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+.slot-card.selected .icon {
+    color: #dc2626 !important; /* red-600 */
+}
+
+
+/* Checkbox Logic (Tetap Sama) */
 .delete-checkbox { display: none; }
 .selection-active .delete-checkbox { display: inline-block; margin-right: 0.5rem; }
-/* visual selected state for a slot */
-.slot-card.selected { box-shadow: 0 0 0 3px rgba(220,38,38,0.12); background-color: rgba(254, 226, 226, 0.8); border-color: rgba(239,68,68,0.2); }
+.hidden { display: none !important; }
+
+/* Toast Notification (Tetap Sama) */
+#custom-toast {
+    position: fixed; bottom: 20px; right: 20px;
+    min-width: 280px; padding: 12px 18px; border-radius: 8px;
+    color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 10000; transition: all 0.3s ease-out;
+    transform: translateX(120%); opacity: 0;
+    display: flex; align-items: center; gap: 10px;
+}
+.show-toast {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+}
+/* --- AKHIR MODIFIKASI CSS --- */
 </style>
 {% endblock extra_head %}
 
@@ -17,58 +84,73 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-10">
-  <div class="bg-gradient-to-r from-orange-500 to-amber-400 text-white rounded-2xl p-6 shadow-lg mb-8">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold">Kelola Jadwal Lapangan</h1>
-        <p class="mt-1 text-sm md:text-base opacity-90">
-          Lapangan: {{ venue.name }} | Kelola slot jam (1 jam per slot).
+  
+  <div class="mb-8 text-white shadow-lg" style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%); border-radius: 1.25rem; /* 20px */">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-8 md:p-10"> <div>
+        <h1 class="text-3xl font-extrabold">Kelola Jadwal Lapangan</h1>
+        <p class="mt-1 text-base opacity-90">
+          Lapangan: <span class="font-medium">{{ venue.name }}</span>
         </p>
       </div>
-      <div class="flex items-center gap-3">
-        <label for="filter-date" class="text-sm font-medium mr-2 hidden md:inline">Pilih tanggal:</label>
-        <input id="filter-date" type="date" class="bg-white text-slate-800 rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/30" />
-        <button id="apply-filter" class="ml-1 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm">Terapkan</button>
-        <button id="clear-filter" class="ml-1 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm hidden">Tampilkan Semua</button>
+      <div class="flex-shrink-0">
+        <a href="{% url 'venue_manage' venue_id=venue.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-sm font-medium text-white hover:bg-white/30 shadow-sm transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          Kembali ke Kelola Venue
+        </a>
       </div>
     </div>
   </div>
-  
-  <p class="text-sm mb-4">
-    <a href="{% url 'venue_manage' venue_id=venue.id %}" class="text-gray-600 hover:text-gray-800">&larr; Kembali ke Kelola Venue</a>
-  </p>
-
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <div class="lg:col-span-2">
-      <div class="space-y-6" id="schedules-container">
+    <div class="lg:col-span-2 space-y-6">
+
+      <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          
+          <div class="flex items-center gap-2">
+            <label for="filter-date" class="text-sm font-medium text-gray-600 flex-shrink-0">Tampilkan Tanggal:</label>
+            <input id="filter-date" type="date" class="datepicker bg-gray-50 border border-gray-300 text-slate-800 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Pilih tanggal" />
+            <button id="apply-filter" class="px-3 py-2 bg-teal-800 text-white hover:bg-teal-900 rounded-lg text-sm font-medium transition">Terapkan</button>
+            <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Tampilkan Semua</button>
+          </div>
+
+          <form method="post" action="{% url 'venue_schedule_delete' venue_id=venue.id %}" id="bulk-delete-form" class="flex-shrink-0">
+            {% csrf_token %}
+            <div class="flex items-center gap-3">
+              <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                Hapus Jadwal
+              </button>
+              <div id="delete-controls-container" class="hidden flex items-center gap-3">
+                  <button type="button" id="select-all" class="px-3 py-2 bg-slate-50 border rounded-lg text-sm">Pilih Semua</button>
+                  <button type="button" id="cancel-delete-btn" class="px-3 py-2 bg-gray-100 border rounded-lg text-sm">Batal</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="space-y-6" id="schedules-list-container">
         {% if schedules %}
           {% regroup schedules by date as grouped_schedules %}
           {% for group in grouped_schedules %}
             <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="{{ group.grouper|date:'Y-m-d' }}">
-              <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
                 <div>
                   <h3 class="text-lg font-semibold text-slate-800">{{ group.grouper|date:"l, d M Y" }}</h3>
-                  <p class="text-sm text-gray-500 mt-0.5">{{ group.list|length }} slot</p>
-                </div>
-                <div class="text-sm text-gray-500">Tanggal: {{ group.grouper|date:"Y-m-d" }}</div>
+                  <p class="text-sm text-gray-500 mt-0.5 slot-count">{{ group.list|length }} slot</p> </div>
               </div>
 
-              <div class="flex flex-wrap gap-3">
+              <div class="flex flex-wrap gap-3 slot-container">
                 {% for s in group.list %}
-                  <label class="relative inline-flex items-center slot-label">
-                    <input type="checkbox" class="delete-checkbox rounded border-gray-300" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} />
-                    {% if s.is_booked %}
-                      <span class="slot-card flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-100 shadow-sm cursor-not-allowed select-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
-                        <span class="text-sm font-medium">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
+                  <label class="relative inline-flex items-center slot-label"> <input type="checkbox" class="delete-checkbox" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} /> {% if s.is_booked %}
+                      <span class="slot-card booked"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
+                        <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
                       </span>
                     {% else %}
-                      <span class="slot-card flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 hover:scale-[1.02] transition transform shadow-sm cursor-pointer select-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                        <span class="text-sm font-medium">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
-                        
-                        </span>
+                      <span class="slot-card available"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                        <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
+                      </span>
                     {% endif %}
                   </label>
                 {% endfor %}
@@ -77,213 +159,412 @@
             </div>
           {% endfor %}
         {% else %}
-          <div class="bg-white border border-gray-100 rounded-xl p-8 shadow-sm text-center">
+          <div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message">
             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3>
-            <p class="mt-1 text-sm text-gray-500">Tambahkan jadwal menggunakan form di kanan.</p>
+            <p class="mt-1 text-sm text-gray-500">Tambahkan jadwal menggunakan form di samping.</p>
           </div>
         {% endif %}
       </div>
-
-      <form method="post" action="{% url 'venue_schedule_delete' venue_id=venue.id %}" id="bulk-delete-form" class="mt-6">
-        {% csrf_token %}
-        <div class="flex items-center gap-3">
-          <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Hapus Jadwal</button>
-          <button type="button" id="select-all" class="px-3 py-2 bg-slate-50 border rounded-lg text-sm hidden">Pilih Semua pada Tampilan</button>
-          <button type="button" id="cancel-delete-btn" class="px-3 py-2 bg-gray-100 border rounded-lg text-sm hidden">Batal</button>
-          <span class="text-sm text-gray-500 ml-auto">Pastikan slot yang dipilih belum dibooking.</span>
-        </div>
-      </form>
     </div>
 
     <aside class="lg:col-span-1">
-      <div class="sticky top-24 bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
-        <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
-        <p class="text-sm text-gray-500 mb-4">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
+      <div class="sticky top-6 bg-white border-t-4 border-teal-800 rounded-xl shadow-lg">
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
+          <p class="text-sm text-gray-500 mb-5">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
 
-        <form method="post" class="space-y-4">
-          {% csrf_token %}
-          <input type="hidden" name="submit_schedule" value="1"> 
-          
-          {% for field in schedule_form %}
+          <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'venue_manage_schedule' venue_id=venue.id %}">
+            {% csrf_token %}
+            
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-              <div>
-                {{ field }}
-              </div>
-              {% if field.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>
+              <label for="{{ schedule_form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.date.label }}</label>
+              {{ schedule_form.date }} 
+              {% if schedule_form.date.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.date.help_text }}</p>
               {% endif %}
-              {% if field.errors %}
-                <div class="text-red-500 text-sm mt-1">
-                  {% for error in field.errors %} <div>{{ error }}</div> {% endfor %}
-                </div>
+              {% if schedule_form.date.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.date.errors %} <div>{{ error }}</div> {% endfor %}</div>
               {% endif %}
             </div>
-          {% endfor %}
 
-          <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
-            Tambah Jadwal
-          </button>
-        </form>
+            <div>
+              <label for="{{ schedule_form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.start_time.label }}</label>
+              {{ schedule_form.start_time }} 
+              {% if schedule_form.start_time.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.start_time.help_text }}</p>
+              {% endif %}
+              {% if schedule_form.start_time.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.start_time.errors %} <div>{{ error }}</div> {% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="{{ schedule_form.end_time_global.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ schedule_form.end_time_global.label }}</label>
+              {{ schedule_form.end_time_global }}
+              {% if schedule_form.end_time_global.help_text %}
+                <p class="text-xs text-gray-400 mt-1">{{ schedule_form.end_time_global.help_text }}</p>
+              {% endif %}
+              {% if schedule_form.end_time_global.errors %}
+                <div class="text-red-500 text-sm mt-1">{% for error in schedule_form.end_time_global.errors %} <div>{{ error }}</div> {% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div classs="pt-2">
+              <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-800 text-white rounded-lg hover:bg-teal-900 transition font-semibold shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
+                Tambah Jadwal
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </aside>
   </div>
 </div>
+
+<div id="custom-toast" style="background-color: #333;">
+    <span id="toast-icon"></span>
+    <span id="toast-message"></span>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded',function(){
-  // elements
-  const filter = document.getElementById('filter-date');
-  const applyBtn = document.getElementById('apply-filter');
-  const clearBtn = document.getElementById('clear-filter');
-  const groups = document.querySelectorAll('[data-date]');
-  const bodyEl = document.body;
-
-  // filter by chosen date when user clicks Terapkan
-  function applyFilterValue(val) {
-    groups.forEach(g => {
-      g.style.display = (!val || g.getAttribute('data-date') === val) ? '' : 'none';
-    });
-  }
-
-  applyBtn?.addEventListener('click', function(){
-    const v = filter.value;
-    applyFilterValue(v);
-    if (v) {
-      clearBtn.classList.remove('hidden');
-      applyBtn.classList.add('opacity-70');
-    } else {
-      clearBtn.classList.add('hidden');
-      applyBtn.classList.remove('opacity-70');
-    }
-  });
-
-  clearBtn?.addEventListener('click', function(){
-    filter.value = '';
-    applyFilterValue('');
-    clearBtn.classList.add('hidden');
-    applyBtn.classList.remove('opacity-70');
-  });
-
-  // delete-selection logic
-  const deleteToggleBtn = document.getElementById('delete-toggle-btn');
-  const cancelBtn = document.getElementById('cancel-delete-btn');
-  const selectAllBtn = document.getElementById('select-all');
-  const bulkForm = document.getElementById('bulk-delete-form');
-
-  let selectionActive = false;
-
-  function enterSelectionMode() {
-    selectionActive = true;
-    bodyEl.classList.add('selection-active');
-    deleteToggleBtn.textContent = 'Konfirmasi Hapus';
-    cancelBtn.classList.remove('hidden');
-    selectAllBtn.classList.remove('hidden');
-    // make checkboxes focusable
-    document.querySelectorAll('.delete-checkbox').forEach(cb => cb.disabled = cb.hasAttribute('disabled') ? true : false);
-    // attach change listeners to update visuals
-    document.querySelectorAll('.delete-checkbox').forEach(cb => {
-      cb.addEventListener('change', onCheckboxChange);
-    });
-  }
-
-  function exitSelectionMode() {
-    selectionActive = false;
-    bodyEl.classList.remove('selection-active');
-    deleteToggleBtn.textContent = 'Hapus Jadwal';
-    cancelBtn.classList.add('hidden');
-    selectAllBtn.classList.add('hidden');
-    // uncheck all and remove visual selected classes
-    document.querySelectorAll('.delete-checkbox').forEach(cb => {
-      cb.checked = false;
-      const span = cb.closest('label')?.querySelector('.slot-card');
-      if (span) span.classList.remove('selected');
-    });
-  }
-
-  function onCheckboxChange(e) {
-    const cb = e.target;
-    const span = cb.closest('label')?.querySelector('.slot-card');
-    if (!span) return;
-    if (cb.checked) span.classList.add('selected');
-    else span.classList.remove('selected');
-  }
-
-  deleteToggleBtn?.addEventListener('click', function(){
-    if (!selectionActive) {
-      // enter selection mode
-      enterSelectionMode();
-      return;
-    }
-    // if already in selection mode, confirm & submit
-    const checked = Array.from(document.querySelectorAll('.delete-checkbox:checked')).filter(c => !c.disabled);
-    if (checked.length === 0) {
-      alert('Pilih minimal satu jadwal untuk dihapus.');
-      return;
-    }
-    if (!confirm(`Anda yakin ingin menghapus ${checked.length} jadwal terpilih?`)) return;
-
-    // remove previous hidden inputs
-    Array.from(bulkForm.querySelectorAll('input[name="selected_schedules"]')).forEach(n=>n.remove());
-    // append hidden inputs
-    checked.forEach(ch => {
-      const hi = document.createElement('input');
-      hi.type = 'hidden'; hi.name = 'selected_schedules'; hi.value = ch.getAttribute('data-id');
-      bulkForm.appendChild(hi);
-    });
-    // submit form
-    bulkForm.submit();
-  });
-
-  cancelBtn?.addEventListener('click', function(){
-    exitSelectionMode();
-  });
-
-  selectAllBtn?.addEventListener('click', function(){
-    // select all visible and not disabled
-    const visibleChecks = Array.from(document.querySelectorAll('.delete-checkbox')).filter(c => {
-      const grp = c.closest('[data-date]');
-      return grp && grp.style.display !== 'none' && !c.disabled;
-    });
-    visibleChecks.forEach(c => {
-      c.checked = true;
-      const span = c.closest('label')?.querySelector('.slot-card');
-      if (span) span.classList.add('selected');
-    });
-  });
-
-  // ensure UI resets on page load
-  exitSelectionMode();
-});
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  // datepicker for date field (calendar)
-  flatpickr(".datepicker", {
-    altInput: true,
-    altFormat: "d M Y",
-    dateFormat: "Y-m-d",
-    minDate: "today"
-  });
+// --- UTILITY: GET CSRF TOKEN ---
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 
-  // timepicker for time fields (time-only, 24h, 15-min step)
-  flatpickr(".timepicker", {
-    enableTime: true,
-    noCalendar: true,
-    dateFormat: "H:i",
-    time_24hr: true,
-    minuteIncrement: 15,
-    static: true
-  });
+// --- UTILITY: TOAST NOTIFICATION ---
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('custom-toast');
+    const msgEl = document.getElementById('toast-message');
+    const iconEl = document.getElementById('toast-icon');
 
+    let color = '';
+    let icon = '';
+    if (type === 'success') {
+        color = '#10b981'; // Hijau
+        icon = '✅';
+    } else if (type === 'error') {
+        color = '#ef4444'; // Merah
+        icon = '❌';
+    } else {
+        color = '#f97316'; // Oranye
+        icon = '⚠️';
+    }
+
+    toast.style.backgroundColor = color;
+    msgEl.textContent = message;
+    iconEl.textContent = icon;
+    toast.classList.add('show-toast');
+
+    setTimeout(() => {
+        toast.classList.remove('show-toast');
+    }, 3000);
+}
+
+// --- FUNGSI HELPER BARU UNTUK DOM (VENUE VERSION) ---
+function createSlotHtml(slot) {
+    // HTML ini disesuaikan dengan styling baru
+    return `
+    <label class="relative inline-flex items-center slot-label">
+        <input type="checkbox" class="delete-checkbox rounded border-gray-300" data-id="${slot.id}" />
+        <span class="slot-card available">
+            <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            <span>${slot.start_time} - ${slot.end_time}</span>
+        </span>
+    </label>
+    `;
+}
+
+function createGroupCardHtmlForAjax(firstSlot, allSlots) {
+    let slotsHtml = '';
+    allSlots.forEach(slot => {
+        slotsHtml += createSlotHtml(slot);
+    });
+    
+    const count = allSlots.length;
+    const slotText = count > 1 ? 'slots' : 'slot';
+
+    // HTML ini disesuaikan dengan styling baru
+    return `
+    <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="${firstSlot.date_str_iso}">
+        <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-800">${firstSlot.date_str_display}</h3>
+                <p class="text-sm text-gray-500 mt-0.5 slot-count">${count} ${slotText}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-3 slot-container">
+            ${slotsHtml}
+        </div>
+    </div>
+    `;
+}
+
+
+// --- LOGIC UTAMA (DOM & AJAX) ---
+document.addEventListener('DOMContentLoaded',function(){
+    // Inisialisasi Flatpickr
+    flatpickr(".datepicker", { altInput: true, altFormat: "d M Y", dateFormat: "Y-m-d", minDate: "today" });
+    flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, minuteIncrement: 15, static: true });
+
+    // Elemen
+    const filter = document.getElementById('filter-date');
+    const applyBtn = document.getElementById('apply-filter');
+    const clearBtn = document.getElementById('clear-filter');
+    const bodyEl = document.body;
+    const deleteToggleBtn = document.getElementById('delete-toggle-btn');
+    const cancelBtn = document.getElementById('cancel-delete-btn');
+    const selectAllBtn = document.getElementById('select-all');
+    const bulkForm = document.getElementById('bulk-delete-form');
+    const addScheduleForm = document.getElementById('add-schedule-form');
+
+    let selectionActive = false;
+    
+    // --- AJAX TAMBAH JADWAL (Venue Add Schedule Form Submit) ---
+    addScheduleForm?.addEventListener('submit', async function(e){
+        e.preventDefault(); 
+        const formData = new FormData(this);
+
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken') 
+                }
+            });
+            
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(data.message || 'Jadwal berhasil ditambahkan!', 'success');
+
+                if (data.new_slots && data.new_slots.length > 0) {
+                    
+                    const mainContainer = document.getElementById('schedules-list-container');
+                    if (!mainContainer) return;
+
+                    const noScheduleMsg = document.getElementById('no-schedule-message');
+                    if (noScheduleMsg) {
+                        noScheduleMsg.remove(); 
+                    }
+
+                    const slotsByDate = data.new_slots.reduce((acc, slot) => {
+                        const date = slot.date_str_iso;
+                        if (!acc[date]) acc[date] = [];
+                        acc[date].push(slot);
+                        return acc;
+                    }, {});
+
+                    for (const dateISO in slotsByDate) {
+                        const slotsForThisDate = slotsByDate[dateISO];
+                        if (slotsForThisDate.length === 0) continue;
+
+                        const firstSlot = slotsForThisDate[0];
+                        let groupCard = mainContainer.querySelector(`.group[data-date="${dateISO}"]`);
+
+                        if (groupCard) {
+                            const slotContainer = groupCard.querySelector('.slot-container');
+                            if (slotContainer) {
+                                let slotsHtml = '';
+                                slotsForThisDate.forEach(slot => {
+                                    slotsHtml += createSlotHtml(slot);
+                                });
+                                slotContainer.insertAdjacentHTML('beforeend', slotsHtml);
+                                
+                                const countEl = groupCard.querySelector('.slot-count');
+                                if (countEl) {
+                                    const newCount = slotContainer.querySelectorAll('label.slot-label').length;
+                                    const slotText = newCount > 1 ? 'slots' : 'slot';
+                                    countEl.textContent = `${newCount} ${slotText}`;
+                                }
+                            }
+                        } else {
+                            const newGroupHtml = createGroupCardHtmlForAjax(firstSlot, slotsForThisDate);
+                            
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = newGroupHtml.trim();
+                            const newGroupCard = tempDiv.firstChild;
+
+                            let allCards = Array.from(mainContainer.querySelectorAll('.group[data-date]'));
+                            allCards.push(newGroupCard);
+
+                            allCards.sort((a, b) => a.getAttribute('data-date').localeCompare(b.getAttribute('data-date')));
+                            
+                            mainContainer.innerHTML = '';
+                            allCards.forEach(card => mainContainer.appendChild(card));
+                        }
+                    }
+                }
+                
+                addScheduleForm.reset();
+                document.querySelectorAll('.datepicker').forEach(fp => {
+                    if (fp._flatpickr) fp._flatpickr.clear();
+                });
+                document.querySelectorAll('.timepicker').forEach(fp => {
+                    if (fp._flatpickr) fp._flatpickr.clear();
+                });
+
+            } else {
+                const errorMessage = data.message || (data.errors ? JSON.stringify(data.errors) : 'Gagal menambahkan jadwal. Cek input.');
+                showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            console.error('AJAX Error:', error);
+            showToast('Terjadi kesalahan koneksi.', 'error');
+        }
+    });
+
+    // --- AJAX HAPUS JADWAL (Venue Bulk Delete Logic) ---
+    deleteToggleBtn?.addEventListener('click', function(){
+        if (!selectionActive) {
+          enterSelectionMode();
+          return;
+        }
+        
+        const checked = Array.from(document.querySelectorAll('.delete-checkbox:checked')).filter(c => !c.disabled);
+        if (checked.length === 0) {
+          alert('Pilih minimal satu jadwal untuk dihapus.');
+          return;
+        }
+        if (!confirm(`Anda yakin ingin menghapus ${checked.length} jadwal terpilih?`)) return;
+
+        const idsToDelete = Array.from(checked).map(ch => ch.getAttribute('data-id'));
+        
+        fetch(bulkForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ selected_schedules: idsToDelete })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Jadwal berhasil dihapus!', 'success');
+                
+                idsToDelete.forEach(id => {
+                    const checkbox = document.querySelector(`.delete-checkbox[data-id="${id}"]`);
+                    if (checkbox) {
+                        const label = checkbox.closest('label.slot-label');
+                        if (label) {
+                            const groupContainer = label.parentElement; // .slot-container
+                            label.remove(); 
+
+                            if (groupContainer && groupContainer.querySelectorAll('label.slot-label').length === 0) {
+                                const card = groupContainer.closest('.group[data-date]');
+                                if (card) card.remove();
+                            }
+                        }
+                    }
+                });
+
+            } else {
+                showToast(data.message || 'Gagal menghapus jadwal.', 'error');
+            }
+        })
+        .catch(() => showToast('Kesalahan koneksi saat menghapus.', 'error'))
+        .finally(() => {
+            exitSelectionMode(); 
+        });
+    });
+    
+    // --- LOGIC FILTER (Adaptasi) ---
+    function applyFilterValue(val) {
+      const allGroups = document.querySelectorAll('.group[data-date]');
+      allGroups.forEach(g => {
+        g.style.display = (!val || g.getAttribute('data-date') === val) ? '' : 'none';
+      });
+    }
+
+    applyBtn?.addEventListener('click', function(){
+      const v = filter.value;
+      applyFilterValue(v);
+      if (v) { clearBtn.classList.remove('hidden'); } 
+      else { clearBtn.classList.add('hidden'); }
+    });
+
+    clearBtn?.addEventListener('click', function(){
+      filter.value = '';
+      if(filter._flatpickr) filter._flatpickr.clear(); // Clear flatpickr
+      applyFilterValue('');
+      clearBtn.classList.add('hidden');
+    });
+
+    // --- LOGIC SELEKSI (Adaptasi) ---
+    function enterSelectionMode() {
+        selectionActive = true;
+        bodyEl.classList.add('selection-active');
+        deleteToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Konfirmasi Hapus';
+        deleteToggleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        deleteToggleBtn.classList.add('bg-blue-600', 'hover:bg-blue-700'); // Ganti warna tombol
+        document.getElementById('delete-controls-container').classList.remove('hidden');
+        
+        document.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => { 
+            cb.addEventListener('change', onCheckboxChange); 
+        });
+    }
+
+    function exitSelectionMode() {
+        selectionActive = false;
+        bodyEl.classList.remove('selection-active');
+        deleteToggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Hapus Jadwal';
+        deleteToggleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        deleteToggleBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        document.getElementById('delete-controls-container').classList.add('hidden');
+        
+        document.querySelectorAll('.delete-checkbox').forEach(cb => {
+            cb.checked = false;
+            cb.removeEventListener('change', onCheckboxChange);
+            const span = cb.closest('label')?.querySelector('.slot-card');
+            if (span) span.classList.remove('selected');
+        });
+    }
+
+    function onCheckboxChange(e) {
+        const cb = e.target;
+        const span = cb.closest('label')?.querySelector('.slot-card');
+        if (!span) return;
+        if (cb.checked) span.classList.add('selected');
+        else span.classList.remove('selected');
+    }
+    
+    cancelBtn?.addEventListener('click', function(){ exitSelectionMode(); });
+    
+    selectAllBtn?.addEventListener('click', function(){
+        const visibleChecks = Array.from(document.querySelectorAll('.delete-checkbox')).filter(c => {
+            const grp = c.closest('.group[data-date]');
+            return grp && grp.style.display !== 'none' && !c.disabled;
+        });
+        
+        visibleChecks.forEach(c => {
+            c.checked = true;
+            c.dispatchEvent(new Event('change'));
+        });
+    });
+
+    // ensure UI resets on page load
+    exitSelectionMode(); 
 });
 </script>
 {% endblock extra_js %}
