@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Konfirmasi Pembayaran - Booking #{{ booking.id }}{% endblock title %}
+
+{% block content %}
+<style>
+  .payment-card{max-width:800px;margin:30px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+  .row{display:flex;gap:18px;flex-wrap:wrap}
+  .col{flex:1;min-width:220px}
+  .btn{padding:10px 14px;border-radius:8px;text-decoration:none;color:#fff;border:none;cursor:pointer}
+  .btn-confirm{background:#28a745}
+  .btn-cancel{background:#6c757d}
+  .note{color:#666;margin-top:8px}
+</style>
+
+<div class="payment-card">
+  <h2>Konfirmasi Pembayaran</h2>
+
+  <div class="row">
+    <div class="col">
+      <p><strong>Booking #</strong> {{ booking.id }}</p>
+      <p><strong>Venue:</strong> {{ booking.venue_schedule.venue.name }}</p>
+      <p><strong>Jadwal:</strong> {{ booking.venue_schedule.date|date:"D, d M Y" }} — {{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}</p>
+      {% if booking.coach_schedule %}
+        <p><strong>Coach:</strong> {{ booking.coach_schedule.coach.user.username }}</p>
+      {% endif %}
+    </div>
+
+    <div class="col">
+      <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
+      <p><strong>Metode Pembayaran:</strong> {{ transaction.payment_method|default:"-" }}</p>
+      <p><strong>Status Transaksi:</strong> {{ transaction.status }}</p>
+    </div>
+  </div>
+
+  <hr>
+
+  {% if transaction.payment_method|default:""|upper == "TRANSFER" %}
+    <p class="note">Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.</p>
+    <form method="post" style="margin-top:12px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-confirm">Sudah bayar</button>
+      <a href="{% url 'my_bookings' %}" class="btn btn-cancel" style="margin-left:8px;display:inline-block;background:#6c757d;">Kembali</a>
+    </form>
+  {% else %}
+    <p class="note">Metode pembayaran bukan transfer. Jika metode CASH, seharusnya sudah otomatis terkonfirmasi dan Anda akan diarahkan.</p>
+    <a href="{% url 'my_bookings' %}" class="btn btn-cancel" style="display:inline-block;background:#6c757d;">Kembali ke Booking Saya</a>
+  {% endif %}
+</div>
+{% endblock content %}

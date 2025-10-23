@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Hapus Profil Pelatih{% endblock title %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Konfirmasi Hapus Profil Pelatih</h2>
+  <p>Apakah Anda yakin ingin menghapus profil pelatih Anda? Tindakan ini tidak dapat dibatalkan.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+    <a href="{% url 'coach_profile' %}" class="btn btn-secondary">Batal</a>
+  </form>
+</div>
+{% endblock content %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Venue Dashboard{% endblock title %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 20px auto;">
+    <h2>Venue Owner Dashboard</h2>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>Your Venues</h3>
+        <a href="{% url 'venue_create' %}" style="padding: 8px 12px; background-color: #28a848; color: white; text-decoration: none; border-radius: 5px;">
+            + Add New Venue
+        </a>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; background-color: white;">
+        <thead style="background-color: #f4f4f4;">
+            <tr>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Name</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Category</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Location</th>
+                <th style="padding: 10px; border: 1px solid #ddd;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for venue in venues %}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ venue.name }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ venue.sport_category.name }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ venue.location.name }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                    <a href="{% url 'venue_manage' venue.id %}">Manage</a>
+                    <br></br>
+                    <a href="{% url 'delete_venue' venue.id %}">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="padding: 15px; text-align: center; color: #777;">
+                    You have no venues yet. <a href="{% url 'venue_create' %}">Add your venue now.</a>.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

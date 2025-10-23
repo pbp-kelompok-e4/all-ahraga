@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Detail Pelatih - {{ coach.user.get_full_name|default:coach.user.username }}{% endblock title %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl mx-auto">
+
+    <div id="page-header" class="mb-6">
+      <a href="{% url 'coach_list' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 
+                bg-gradient-to-br from-[#003F3F] to-[#005757] 
+                text-white rounded-lg shadow-md hover:opacity-90 transition-opacity">
+        <span class="text-lg">←</span> Kembali
+      </a>
+      
+      <div class="mt-4">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+          Detail Pelatih
+        </h1>
+      </div>
+    </div>
+
+    <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+      
+      {% if coach.profile_picture %}
+        <img src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}" 
+             class="w-full h-64 md:h-80 object-cover">
+      {% elif coach.profile_picture_url %}
+         <img src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}" 
+              class="w-full h-64 md:h-80 object-cover">
+      {% else %}
+        <div class="w-full h-64 md:h-80 bg-gray-200 flex items-center justify-center">
+          <span class="text-gray-500 text-lg">Tidak ada foto</span>
+        </div>
+      {% endif %}
+
+      <div class="p-6 md:p-8">
+        
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <h2 class="text-3xl font-bold text-[#003F3F]">
+            {{ coach.user.get_full_name|default:coach.user.username }}
+          </h2>
+          {% if coach.is_verified %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+            Terverifikasi
+          </span>
+          {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t pt-6">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Olahraga Utama</p>
+            <p class="text-lg font-semibold text-gray-800">{{ coach.main_sport_trained.name }}</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Umur</p>
+            <p class="text-lg font-semibold text-gray-800">{{ coach.age|default:"-" }} tahun</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Tarif per Jam</p>
+            <p class="text-3xl font-bold text-green-600">
+              Rp {{ coach.rate_per_hour|floatformat:0 }}
+            </p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">Rating</p>
+            {% if avg_rating > 0 %}
+              <p class="text-2xl font-bold text-yellow-500 flex items-center gap-2">
+                ⭐ {{ avg_rating|floatformat:1 }} 
+                <span class="text-sm font-normal text-gray-600">({{ total_reviews }} ulasan)</span>
+              </p>
+            {% else %}
+              <p class="text-lg text-gray-500">Belum ada ulasan</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mt-6 border-t pt-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-3">Area Layanan</h3>
+          <div class="flex flex-wrap gap-2">
+            {% for area in coach.service_areas.all %}
+            <span class="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium inline-flex items-center gap-2">
+              📍 {{ area.name }}
+            </span>
+            {% empty %}
+            <span class="text-gray-500">Belum ada area layanan</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="mt-6 border-t pt-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-3">Pengalaman</h3>
+          <div class="bg-gray-50 border-l-4 border-[#005757] p-4 rounded-r-lg">
+            <p class="text-gray-700 italic whitespace-pre-wrap">
+              {{ coach.experience_desc|default:"Belum ada deskripsi pengalaman." }}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 border-t pt-6">
+          <h3 class="text-xl font-semibold text-gray-800 mb-3">Kontak</h3>
+          <div class="space-y-2 text-gray-700">
+            <p><strong>Email:</strong> {{ coach.user.email|default:"-" }}</p>
+            {% if coach.user.profile.phone_number %}
+            <p><strong>Telepon:</strong> {{ coach.user.profile.phone_number }}</p>
+            {% endif %}
+          </div>
+        </div>
+        
+        {% if user.is_authenticated and user.profile.is_customer %}
+        <div class="mt-8 pt-6 border-t">
+          <a href="{% url 'home' %}" 
+             class="block w-full text-center px-6 py-3 
+                    bg-gradient-to-br from-[#003F3F] to-[#005757] 
+                    text-white text-lg font-semibold rounded-lg shadow-md hover:opacity-90 transition-all">
+            Booking Pelatih Ini
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    
+    {% if reviews %}
+    <div class="mt-8 bg-white shadow-xl rounded-2xl p-6 md:p-8">
+      <h3 class="text-2xl font-semibold text-gray-800 mb-4">Ulasan ({{ total_reviews }})</h3>
+      <div class="space-y-5">
+        {% for review in reviews %}
+        <div class="border-b border-gray-200 pb-4 last:border-b-0">
+          <div class="flex justify-between items-center mb-1">
+            <h4 class="font-semibold text-gray-800">
+              {{ review.customer.get_full_name|default:review.customer.username }}
+            </h4>
+            <span class="text-yellow-500 text-lg">
+              {% for i in "12345" %}{% if forloop.counter <= review.rating %}⭐{% else %}
+              <span class="text-gray-300">⭐</span>{% endif %}{% endfor %}
+            </span>
+          </div>
+          <p class="text-gray-700 my-2">{{ review.comment }}</p>
+          <small class="text-xs text-gray-500">{{ review.created_at|date:"d M Y, H:i" }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock content %}
