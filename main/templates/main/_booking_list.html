@@ -1,0 +1,35 @@
+{% if bookings %}
+    <ul class="space-y-5">
+        {% for booking in bookings %}
+            <li class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                <h4 class="text-lg mb-3">
+                    Booking #{{ booking.id }} - 
+                    <strong>{{ booking.venue_schedule.venue.name }}</strong>
+                </h4>
+                
+                <p class="mb-2">
+                    <strong>Jadwal:</strong> 
+                    {{ booking.venue_schedule.date|date:"l, d F Y" }}
+                </p>
+                <p class="mb-2">
+                    <strong>Total Biaya:</strong> 
+                    <span class="font-medium">Rp {{ booking.total_price }}</span>
+                </p>
+                <p>
+                    <strong>Status Pembayaran:</strong> 
+                    <span class="{% if booking.transaction.status == 'CONFIRMED' %}text-green-600{% elif booking.transaction.status == 'PENDING' %}text-yellow-600{% else %}text-red-600{% endif %} font-medium"> 
+                        {{ booking.transaction.get_status_display|default:booking.transaction.status }}
+                    </span>
+                </p>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-center text-gray-600 py-10">
+        {% if request.GET.q or request.GET.status %}
+            Tidak ada booking yang cocok dengan filter Anda.
+        {% else %}
+            Anda belum memiliki riwayat booking.
+        {% endif %}
+    </p>
+{% endif %}

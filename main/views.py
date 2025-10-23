@@ -1,3 +1,4 @@
+from django.db import transaction as db_transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm 
@@ -356,24 +357,6 @@ def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
     equipment_list = Equipment.objects.filter(venue=venue)
-    
-
-    availabe_coaches_map = {}
-    for schedule in schedules:
-        coaches_for_schedule = CoachProfile.objects.filter(
-            service_areas=venue.location,
-            main_sport_trained=venue.sport_category,
-            schedules__date=schedule.date,
-            schedules__start_time=schedule.start_time,
-            schedules__is_available=True,
-            schedules__is_booked=False
-        ).select_related('user').distinct()
-        availabe_coaches_map[schedule.id] = list(coaches_for_schedule)
-
-    coaches_set = set()
-    for coach_list in availabe_coaches_map.values():
-        coaches_set.update(coach_list)
-    coaches = list(coaches_set)
 
     if request.method == 'POST':
         schedule_id = request.POST.get('schedule_id')
@@ -386,72 +369,90 @@ def create_booking(request, venue_id):
             return redirect('create_booking', venue_id=venue.id)
 
         try:
-            schedule = VenueSchedule.objects.get(id=schedule_id, venue=venue, is_booked=False)
-        except VenueSchedule.DoesNotExist:
-            messages.error(request, "Jadwal tidak tersedia atau sudah dibooking.")
-            return redirect('create_booking', venue_id=venue.id)
-
-        total_price = venue.price_per_hour or 0
-
-        selected_equipment = []
-        if equipment_ids:
-            for equipment_id in equipment_ids:
+            with db_transaction.atomic():
                 try:
-                    equipment = Equipment.objects.get(id=equipment_id, venue=venue)
-                    selected_equipment.append(equipment)
-                    total_price += equipment.rental_price or 0
-                except Equipment.DoesNotExist:
-                    continue
-
-        # Buat CoachSchedule jika coach dipilih
-        coach_obj = None
-        coach_schedule_obj = None
-
-        if coach_id:
-            try:
-                coach_obj = CoachProfile.objects.get(id=coach_id)
-                coach_schedule_obj = CoachSchedule.objects.filter(
-                    coach=coach_obj,
-                    date=schedule.date,
-                    start_time=schedule.start_time,
-                    is_available=True,
-                    is_booked=False
-                ).first()
-
-                if not coach_schedule_obj:
-                    messages.error(request, f"Coach {coach_obj.user.get_full_name()} tidak tersedia pada jadwal yang dipilih ({schedule.date.strftime('%d/%m')} jam {schedule.start_time.strftime('%H:%M')}).")
+                    schedule = VenueSchedule.objects.select_for_update().get(
+                        id=schedule_id, 
+                        venue=venue, 
+                        is_booked=False
+                    )
+                except VenueSchedule.DoesNotExist:
+                    messages.error(request, "Jadwal tidak tersedia atau sudah dibooking oleh orang lain.")
                     return redirect('create_booking', venue_id=venue.id)
-            
-                total_price += coach_obj.rate_per_hour or 0
 
-            except CoachProfile.DoesNotExist:
-                messages.error(request, "Coach yang dipilih tidak valid.")
-                return redirect('create_booking', venue_id=venue.id)
+                total_price = venue.price_per_hour or 0
 
-        # Buat booking
-        booking = Booking.objects.create(
-            customer=request.user,
-            venue_schedule=schedule,
-            coach_schedule=coach_schedule_obj,
-            total_price=total_price,
-        )
+                selected_equipment = []
+                if equipment_ids:
+                    for equipment_id in equipment_ids:
+                        try:
+                            equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                            selected_equipment.append(equipment)
+                            total_price += equipment.rental_price or 0
+                        except Equipment.DoesNotExist:
+                            continue
 
-        for equipment in selected_equipment:
-            BookingEquipment.objects.create(
-                booking=booking, 
-                equipment=equipment, 
-                quantity=1, 
-                sub_total=equipment.rental_price
-            )
+                coach_obj = None
+                coach_schedule_obj = None
 
-        Transaction.objects.create(
-            booking=booking,
-            status='PENDING',
-            payment_method=payment_method,
-            revenue_venue=venue.price_per_hour or 0,
-            revenue_coach=coach_obj.rate_per_hour if coach_obj else 0,
-            revenue_platform=0
-        )
+                if coach_id:
+                    try:
+                        coach_obj = CoachProfile.objects.get(id=coach_id)
+                        coach_schedule_obj = CoachSchedule.objects.select_for_update().filter(
+                            coach=coach_obj,
+                            date=schedule.date,
+                            start_time=schedule.start_time,
+                            is_available=True,
+                            is_booked=False
+                        ).first()
+
+                        if not coach_schedule_obj:
+                            messages.error(request, f"Coach {coach_obj.user.get_full_name()} tidak tersedia pada jadwal yang dipilih.")
+                            raise IntegrityError("Coach schedule not available") 
+                    
+                        total_price += coach_obj.rate_per_hour or 0
+
+                    except CoachProfile.DoesNotExist:
+                        messages.error(request, "Coach yang dipilih tidak valid.")
+                        raise IntegrityError("Coach profile does not exist")
+
+                booking = Booking.objects.create(
+                    customer=request.user,
+                    venue_schedule=schedule,
+                    coach_schedule=coach_schedule_obj,
+                    total_price=total_price,
+                )
+
+                schedule.is_booked = True
+                schedule.is_available = False
+                schedule.save()
+
+                if coach_schedule_obj:
+                    coach_schedule_obj.is_booked = True
+                    coach_schedule_obj.is_available = False
+                    coach_schedule_obj.save()
+
+                for equipment in selected_equipment:
+                    BookingEquipment.objects.create(
+                        booking=booking, 
+                        equipment=equipment, 
+                        quantity=1, 
+                        sub_total=equipment.rental_price
+                    )
+
+                Transaction.objects.create(
+                    booking=booking,
+                    status='PENDING',
+                    payment_method=payment_method,
+                    revenue_venue=venue.price_per_hour or 0,
+                    revenue_coach=coach_obj.rate_per_hour if coach_obj else 0,
+                    revenue_platform=0
+                )
+        
+        except IntegrityError as e:
+            if "Coach" not in str(e):
+                 messages.error(request, "Terjadi kesalahan tak terduga saat booking. Silakan coba lagi.")
+            return redirect('create_booking', venue_id=venue.id)
 
         messages.success(request, "Booking dibuat. Lakukan pembayaran untuk mengonfirmasi.")
         return redirect('my_bookings')
@@ -460,67 +461,155 @@ def create_booking(request, venue_id):
         'venue': venue,
         'schedules': schedules,
         'equipment_list': equipment_list,
-        'coaches': coaches,
+        'coaches': [],
     }
     return render(request, 'main/create_booking.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def get_available_coaches(request, schedule_id):
+    try:
+        schedule = VenueSchedule.objects.select_related('venue__location', 'venue__sport_category').get(id=schedule_id, is_booked=False)
+        venue = schedule.venue
+    except VenueSchedule.DoesNotExist:
+        return JsonResponse({'error': 'Jadwal tidak ditemukan atau sudah dibooking.'}, status=404)
+    
+    coaches_for_schedule = CoachProfile.objects.filter(
+        service_areas=venue.location,
+        main_sport_trained=venue.sport_category,
+        schedules__date=schedule.date,
+        schedules__start_time=schedule.start_time,
+        schedules__is_available=True,
+        schedules__is_booked=False
+    ).select_related('user', 'main_sport_trained').distinct()
+
+    coaches_data = []
+    for coach in coaches_for_schedule:
+        full_name = coach.user.get_full_name() or coach.user.username
+        coaches_data.append({
+            'id': coach.id,
+            'name': full_name,
+            'avatar_initial': full_name[:1].upper(),
+            'sport': coach.main_sport_trained.name,
+            'rate_per_hour': float(coach.rate_per_hour or 0), 
+        })
+
+    return JsonResponse({'coaches': coaches_data})
+        
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_payment(request, booking_id):
-    # Konfirmasi pembayaran
     booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
     transaction = booking.transaction
 
-    if transaction.payment_method and transaction.payment_method.upper() == 'CASH':
-        if transaction.status != 'CONFIRMED':
-            transaction.status = 'CONFIRMED'
-            transaction.save()
-
-            venue_schedule = booking.venue_schedule
-            venue_schedule.is_booked = True
-            venue_schedule.is_available = False
-            venue_schedule.save()
-
-            if booking.coach_schedule:
-                coach_schedule = booking.coach_schedule
-                coach_schedule.is_booked = True
-                coach_schedule.is_available = False
-                coach_schedule.save()
-
+    if transaction.status == 'CONFIRMED':
+        messages.success(request, "Booking ini sudah dikonfirmasi.")
         return redirect('my_bookings')
+
+    if transaction.status == 'CANCELLED':
+        messages.error(request, "Booking ini sudah dibatalkan atau kedaluwarsa.")
+        return redirect('booking_history')
+
+    if transaction.status != 'PENDING':
+        messages.error(request, "Status booking tidak valid untuk pembayaran.")
+        return redirect('my_bookings')
+
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     
-    if request.method == 'POST':
-        transaction.status = 'CONFIRMED'
-        transaction.save()
+    if request.method == 'POST' or (transaction.payment_method and transaction.payment_method.upper() == 'CASH'):
+        is_cash_auto_confirm = not request.method == 'POST'
+        
+        try:
+            with db_transaction.atomic():
+                venue_schedule = VenueSchedule.objects.select_for_update().get(id=booking.venue_schedule.id)
+                already_booked_by_others = Booking.objects.filter(
+                    venue_schedule=venue_schedule,
+                    transaction__status='CONFIRMED'
+                ).exclude(id=booking.id).exists()
 
-        venue_schedule = booking.venue_schedule
-        venue_schedule.is_booked = True
-        venue_schedule.is_available = False
-        venue_schedule.save()
+                if already_booked_by_others:
+                    transaction.status = 'CANCELLED'
+                    transaction.save()
+                    error_msg = "Maaf, jadwal ini baru saja dikonfirmasi oleh pengguna lain."
+                    
+                    if is_ajax and not is_cash_auto_confirm:
+                        return JsonResponse({'success': False, 'message': error_msg}, status=400)
+                    
+                    messages.error(request, error_msg)
+                    return redirect('booking_history')
 
-        if booking.coach_schedule:
-            coach_schedule = booking.coach_schedule
-            coach_schedule.is_booked = True
-            coach_schedule.is_available = False
-            coach_schedule.save()
+                venue_schedule.is_booked = True
+                venue_schedule.is_available = False
+                venue_schedule.save()
+                
+                if booking.coach_schedule:
+                    coach_schedule = CoachSchedule.objects.select_for_update().get(id=booking.coach_schedule.id)
+                    coach_schedule.is_booked = True
+                    coach_schedule.is_available = False
+                    coach_schedule.save()
 
+                transaction.status = 'CONFIRMED'
+                transaction.save()
+
+                other_pending = Booking.objects.filter(
+                    venue_schedule=venue_schedule,
+                    transaction__status='PENDING'
+                ).exclude(id=booking.id)
+
+                for pending in other_pending:
+                    pending.transaction.status = 'CANCELLED'
+                    pending.transaction.save()
+
+        except IntegrityError:
+            error_msg = "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
+            if is_ajax and not is_cash_auto_confirm:
+                return JsonResponse({'success': False, 'message': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return redirect('my_bookings')
+        
+        success_msg = "Pembayaran berhasil. Booking Anda telah dikonfirmasi."
+        if is_ajax and not is_cash_auto_confirm:
+            return JsonResponse({
+                'success': True,
+                'message': success_msg,
+                'redirect_url': reverse('my_bookings')
+            })
+
+        messages.success(request, success_msg)
         return redirect('my_bookings')
+
     context = {
         'booking': booking,
         'transaction': transaction,
     }
-
     return render(request, 'main/customer_payment.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
-    bookings = Booking.objects.filter(customer=request.user).select_related('venue_schedule__venue', 'transaction').order_by(
-        '-venue_schedule__date')
+    bookings = Booking.objects.filter(customer=request.user).select_related(
+        'venue_schedule__venue', 'transaction'
+    ).order_by('-venue_schedule__date')
+
+    query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    if query:
+        bookings = bookings.filter(
+            Q(venue_schedule__venue__name__icontains=query) |
+            Q(id__icontains=query) 
+        )
+
+    if status:
+        bookings = bookings.filter(transaction__status=status)
+
     context = {
-        'bookings' : bookings
+        'bookings': bookings
     }
 
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'main/_booking_list.html', context)
+    
     return render(request, 'main/booking_history.html', context)
 
 @login_required(login_url='login')
@@ -533,21 +622,77 @@ def my_bookings(request):
         'venue_schedule__venue', 'transaction'
     ).order_by('-venue_schedule__date')
 
+    query = request.GET.get('q', '').strip()
+    if query:
+        bookings = bookings.filter(
+            Q(venue_schedule__venue__name__icontains=query) |
+            Q(id__icontains=query) 
+        )
+
     context = {
         'bookings' : bookings
     }
 
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'main/_my_booking_list.html', context)
+    
     return render(request, 'main/my_bookings.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def delete_booking(request, booking_id):
-    booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
+    if request.method != 'POST':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Metode tidak diizinkan.'}, status=405)
+        messages.error(request, "Metode tidak valid.")
+        return redirect('my_bookings')
 
-    if booking.transaction and booking.transaction.status == 'PENDING':
-        booking.transaction.delete()
-        booking.delete()
-    return redirect('home')
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    
+    try:
+        booking = get_object_or_404(
+            Booking.objects.select_related('transaction', 'venue_schedule', 'coach_schedule'), 
+            id=booking_id, 
+            customer=request.user
+        )
+
+        if booking.transaction and booking.transaction.status == 'PENDING':
+            venue_schedule = booking.venue_schedule
+            coach_schedule = booking.coach_schedule
+
+            if venue_schedule:
+                venue_schedule.is_booked = False
+                venue_schedule.is_available = True
+                venue_schedule.save()
+            
+            if coach_schedule:
+                coach_schedule.is_booked = False
+                coach_schedule.is_available = True
+                coach_schedule.save()
+
+            booking.transaction.delete()
+            booking.delete()
+            
+            if is_ajax:
+                return JsonResponse({'success': True, 'message': 'Booking berhasil dibatalkan dan jadwal telah dikembalikan.'})
+            
+            messages.success(request, 'Booking berhasil dibatalkan dan jadwal telah dikembalikan.')
+            return redirect('my_bookings')
+        else:
+            error_msg = 'Booking ini tidak dapat dibatalkan (status bukan PENDING).'
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg}, status=400)
+            
+            messages.error(request, error_msg)
+            return redirect('my_bookings')
+
+    except Booking.DoesNotExist:
+        error_msg = 'Booking tidak ditemukan.'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_msg}, status=404)
+        
+        messages.error(request, error_msg)
+        return redirect('my_bookings')
   
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_profile_view(request):
