@@ -7,6 +7,9 @@ from django.db.models import Q, Sum
 from datetime import date, datetime, timedelta
 from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm, CoachScheduleForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment, CoachSchedule
+from django.core.files.base import ContentFile
+from urllib.request import urlopen, Request
+from urllib.error import URLError, HTTPError
 from django.urls import reverse
 
 def get_user_dashboard(user):
@@ -543,17 +546,18 @@ def manage_coach_profile(request):
         coach_profile = CoachProfile(user=request.user)
 
     if request.method == 'POST':
-        form = CoachProfileForm(request.POST, instance=coach_profile)
+        form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Profil pelatih berhasil disimpan.")
-            return redirect('coach_dashboard')
+            profile = form.save()
+            messages.success(request, "Perubahan profil berhasil disimpan.")
+            return redirect('coach_profile') 
+        
         else:
-            messages.error(request, "Mohon periksa input Anda.")
+            messages.error(request, "Perubahan gagal disimpan. Mohon periksa input Anda.")
     else:
         form = CoachProfileForm(instance=coach_profile)
 
-    return render(request, 'main/manage_coach_profile.html', {'form': form})
+    return render(request, 'main/manage_coach_profile.html', {'form': form, 'coach_profile': coach_profile})
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
@@ -729,9 +733,13 @@ def coach_detail_public_view(request, coach_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_revenue_report(request):
-    coach_profile = get_object_or_404(CoachProfile, user=request.user)
-    transactions = Transaction.objects.filter(booking__coach_schedule__coach=coach_profile, status='CONFIRMED')
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        messages.info(request, "Silakan lengkapi profil pelatih terlebih dahulu sebelum melihat laporan pendapatan.")
+        return redirect('manage_coach_profile')
 
+    transactions = Transaction.objects.filter(booking__coach_schedule__coach=coach_profile, status='CONFIRMED')
     total_revenue = transactions.aggregate(Sum('revenue_coach'))['revenue_coach__sum'] or 0
 
     context = {

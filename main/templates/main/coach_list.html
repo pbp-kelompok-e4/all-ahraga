@@ -3,23 +3,36 @@
 
 {% block content %}
 <div style="padding: 20px; max-width: 1200px; margin: auto;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h2>Daftar Pelatih</h2>
-    <a href="{% url 'home' %}" 
-       style="padding: 8px 16px; background: #6c757d; color: #fff; 
-              text-decoration: none; border-radius: 6px;">
-      ← Kembali
+
+  <div id="page-header" 
+       style="margin-bottom: 20px;">
+    
+    <a href="{% url 'home' %}"
+       style="display:inline-flex; align-items:center; gap:8px;
+              padding:10px 18px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%);
+              color:#fff; text-decoration:none; border-radius:10px; font-weight:500;
+              box-shadow:0 6px 18px rgba(0,63,63,0.18);">
+      <span style="font-size:18px;">←</span> Kembali
     </a>
+    
+    <div style="margin-top: 20px;">
+      <h2 style="margin: 0; font-size: 28px; font-weight: 700; color:#003F3F;">
+        Daftar Pelatih
+      </h2>
+      <p style="margin: 4px 0 0; font-size: 16px; color: #6B7280;">
+        Daftar semua pelatih yang ter register
+      </p>
+    </div>
   </div>
 
-  <!-- Filter Section -->
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-    <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap;">
-      <input type="text" name="q" placeholder="Cari nama pelatih..." 
+  <div id="filter-box" 
+       style="background: #fff; padding: 18px; border-radius: 12px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+    <form method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+      <input type="text" name="q" placeholder="Cari nama pelatih..."
              value="{{ request.GET.q }}"
-             style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-      
-      <select name="sport" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+             style="flex:1; min-width:200px; padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
+
+      <select name="sport" style="padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
         <option value="">-- Semua Olahraga --</option>
         {% for cat in categories %}
           <option value="{{ cat.id }}" {% if request.GET.sport == cat.id|stringformat:"s" %}selected{% endif %}>
@@ -28,7 +41,7 @@
         {% endfor %}
       </select>
 
-      <select name="area" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <select name="area" style="padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
         <option value="">-- Semua Area --</option>
         {% for area in areas %}
           <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:"s" %}selected{% endif %}>
@@ -37,65 +50,60 @@
         {% endfor %}
       </select>
 
-      <button type="submit" style="padding: 8px 20px; background: #007bff; color: #fff; 
-                                    border: none; border-radius: 4px; cursor: pointer;">
+      <button type="submit" style="padding:10px 18px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%); color:#fff; border:none; border-radius:8px; cursor:pointer;">
         Cari
       </button>
-      
-      <a href="{% url 'coach_list' %}" 
-         style="padding: 8px 20px; background: #6c757d; color: #fff; 
-                text-decoration: none; border-radius: 4px; display: inline-block;">
+
+      <a href="{% url 'coach_list' %}" style="padding:10px 14px; background:#6c757d; color:#fff; border-radius:8px; text-decoration:none;">
         Reset
       </a>
     </form>
   </div>
 
-  <!-- Coach List -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+  <div id="coach-grid" 
+       style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">
+    
     {% for coach in coaches %}
-    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; 
-                background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                transition: transform 0.2s;">
-      <h3 style="margin-top: 0; color: #007bff;">
-        {{ coach.user.get_full_name|default:coach.user.username }}
-      </h3>
+    <div style="border:1px solid #eef2f2; border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); transition:transform .18s;">
       
-      <div style="margin: 15px 0;">
-        <p style="margin: 5px 0;">
-          <strong>Umur:</strong> {{ coach.age|default:"-" }} tahun
-        </p>
-        <p style="margin: 5px 0;">
-          <strong>Olahraga:</strong> {{ coach.main_sport_trained.name }}
-        </p>
-        <p style="margin: 5px 0;">
-          <strong>Tarif:</strong> Rp {{ coach.rate_per_hour|floatformat:0 }}/jam
-        </p>
-        <p style="margin: 5px 0;">
-          <strong>Area Layanan:</strong>
-          {% for area in coach.service_areas.all %}
-            {{ area.name }}{% if not forloop.last %}, {% endif %}
-          {% endfor %}
-        </p>
-      </div>
+      {% if coach.profile_picture %}
+        <img src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}"
+             style="width:100%; height:200px; object-fit:cover;">
+      {% elif coach.profile_picture_url %}
+        <img src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}"
+             style="width:100%; height:200px; object-fit:cover;">
+      {% else %}
+        <div style="width:100%; height:200px; display:flex; align-items:center; justify-content:center; background:#f5f7f7; color:#999;">
+          Tidak ada gambar
+        </div>
+      {% endif %}
 
-      <div style="margin-top: 10px;">
-        <p style="color: #666; font-size: 14px; 
-                  display: -webkit-box; -webkit-line-clamp: 3; 
-                  -webkit-box-orient: vertical; overflow: hidden;">
+      <div style="padding:18px;">
+        <h3 style="margin:0 0 8px; color:#003F3F; font-size:18px;">
+          {{ coach.user.get_full_name|default:coach.user.username }}
+        </h3>
+
+        <div style="margin:10px 0; color:#475569; font-size:14px;">
+          <p style="margin:4px 0;"><strong>Umur:</strong> {{ coach.age|default:"-" }} tahun</p>
+          <p style="margin:4px 0;"><strong>Olahraga:</strong> {{ coach.main_sport_trained.name }}</p>
+          <p style="margin:4px 0;"><strong>Tarif:</strong> Rp {{ coach.rate_per_hour|floatformat:0 }}/jam</p>
+          <p style="margin:4px 0;"><strong>Area Layanan:</strong>
+            {% for area in coach.service_areas.all %}{{ area.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+          </p>
+        </div>
+
+        <p style="color:#6b7280; font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
           {{ coach.experience_desc|default:"Belum ada deskripsi pengalaman." }}
         </p>
-      </div>
 
-      <a href="{% url 'coach_detail_public' coach.id %}" 
-         style="display: block; margin-top: 15px; padding: 10px; 
-                background: #28a745; color: white; text-align: center; 
-                text-decoration: none; border-radius: 4px;
-                transition: background 0.2s;">
-        Lihat Detail
-      </a>
+        <a href="{% url 'coach_detail_public' coach.id %}" 
+           style="display:block; margin-top:14px; padding:12px 14px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%); color:#fff; text-align:center; text-decoration:none; border-radius:8px; font-weight:600;">
+          Lihat Detail
+        </a>
+      </div>
     </div>
     {% empty %}
-    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">
+    <div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">
       <p>Belum ada pelatih yang tersedia.</p>
     </div>
     {% endfor %}
@@ -103,13 +111,26 @@
 </div>
 
 <style>
-  div[style*="box-shadow"]:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+  /* Efek hover HANYA untuk card pelatih */
+  #coach-grid > div:hover { 
+    transform: translateY(-6px); 
+    box-shadow:0 12px 30px rgba(0,0,0,0.08) !important; 
   }
   
-  a[style*="background: #28a745"]:hover {
-    background: #218838 !important;
+  /* Transisi untuk tombol gradient */
+  a[style*="linear-gradient(135deg,#003F3F"] { 
+    transition: transform .12s, box-shadow .12s; 
+  }
+  
+  /* Efek hover untuk tombol gradient (seperti "Lihat Detail") */
+  a[style*="linear-gradient(135deg,#003F3F"]:hover { 
+    transform: translateY(-3px); 
+    box-shadow:0 10px 24px rgba(0,63,63,0.14) !important; 
+  }
+
+  /* Menonaktifkan hover-transform pada tombol kembali */
+  #page-header a:hover {
+    transform: none !important;
   }
 </style>
 {% endblock content %}
