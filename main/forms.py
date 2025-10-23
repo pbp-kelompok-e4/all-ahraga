@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User 
 from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory, CoachProfile, CoachSchedule
+from django.forms.widgets import DateInput, TextInput
 
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
@@ -54,9 +55,23 @@ class VenueForm(forms.ModelForm):
 
 
 class VenueScheduleForm(forms.ModelForm):
+    # Tambahkan field ini, sama seperti di CoachScheduleForm
+    end_time_global = forms.CharField(
+        label="Waktu Selesai Harian",
+        help_text="Waktu terakhir sesi (mis. 22:00). Slot dibuat per jam hingga waktu ini.",
+        widget=TextInput(
+            attrs={
+                'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                'placeholder': 'HH:MM (Akhir Rentang)'
+            }
+        ),
+        required=True
+    )
+
     class Meta:
         model = VenueSchedule
-        fields = ['date', 'start_time', 'end_time', 'is_available']
+        # Hapus 'end_time' dari fields, kita ganti dengan 'end_time_global'
+        fields = ['date', 'start_time', 'is_available']
         widgets = {
             'date': forms.DateInput(
                 attrs={
@@ -68,13 +83,7 @@ class VenueScheduleForm(forms.ModelForm):
             'start_time': forms.TextInput(
                 attrs={
                     'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
-                    'placeholder': 'HH:MM'
-                }
-            ),
-            'end_time': forms.TextInput(
-                attrs={
-                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
-                    'placeholder': 'HH:MM'
+                    'placeholder': 'HH:MM (Mulai Slot Pertama)'
                 }
             ),
             'is_available': forms.CheckboxInput(
@@ -87,12 +96,11 @@ class VenueScheduleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['date'].label = "Tanggal"
-        self.fields['start_time'].label = "Waktu Mulai"
-        self.fields['end_time'].label = "Waktu Selesai"
+        self.fields['start_time'].label = "Waktu Mulai Slot Pertama"
         self.fields['is_available'].label = "Tersedia"
         self.fields['date'].help_text = "Pilih tanggal untuk jadwal venue"
         self.fields['start_time'].help_text = "Format 24 jam (mis. 09:00)"
-        self.fields['end_time'].help_text = "Format 24 jam (mis. 10:00)"
+        # Hapus label/help_text untuk 'end_time' yang sudah tidak ada
 
 class EquipmentForm(forms.ModelForm):
     class Meta:
@@ -147,27 +155,33 @@ class CoachProfileForm(forms.ModelForm):
             raise forms.ValidationError("Tarif harus berupa angka")
 
 class CoachScheduleForm(forms.ModelForm):
+    end_time_global = forms.CharField(
+        label="Waktu Selesai Harian",
+        help_text="Waktu terakhir sesi (mis. 22:00). Slot dibuat per jam hingga waktu ini.",
+        widget=TextInput(
+            attrs={
+                'class': 'timepicker form-input-style', 
+                'placeholder': 'HH:MM (Akhir Rentang)'
+            }
+        ),
+        required=True
+    )
+
     class Meta:
         model = CoachSchedule
-        fields = ['date', 'start_time', 'end_time', 'is_available']
+        fields = ['date', 'start_time', 'is_available'] 
         widgets = {
-            'date': forms.DateInput(
+            'date': DateInput(
                 attrs={
-                    'type': 'text',               
-                    'class': 'datepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'type': 'text',
+                    'class': 'datepicker form-input-style',
                     'placeholder': 'Pilih tanggal'
                 }
             ),
-            'start_time': forms.TextInput(
+            'start_time': TextInput(
                 attrs={
-                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
-                    'placeholder': 'HH:MM'
-                }
-            ),
-            'end_time': forms.TextInput(
-                attrs={
-                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
-                    'placeholder': 'HH:MM'
+                    'class': 'timepicker form-input-style',
+                    'placeholder': 'HH:MM (Mulai Slot Pertama)'
                 }
             ),
             'is_available': forms.CheckboxInput(
@@ -176,13 +190,11 @@ class CoachScheduleForm(forms.ModelForm):
                 }
             ),
         }
-
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['date'].label = "Tanggal Sesi"
-        self.fields['start_time'].label = "Waktu Mulai"
-        self.fields['end_time'].label = "Waktu Selesai"
+        self.fields['start_time'].label = "Waktu Mulai Slot Pertama"
         self.fields['is_available'].label = "Tersedia"
         self.fields['date'].help_text = "Pilih tanggal sesi"
-        self.fields['start_time'].help_text = "Format 24 jam (mis. 14:30)"
-        self.fields['end_time'].help_text = "Format 24 jam (mis. 15:30)"
+        self.fields['start_time'].help_text = "Format 24 jam (mis. 08:00)"
