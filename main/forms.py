@@ -6,15 +6,15 @@ from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, 
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
     ('VENUE_OWNER', 'Venue Owner'),
-    ('COACH', 'Pelatih'),
+    ('COACH', 'Coach'),
 ]
 
 class CustomUserCreationForm(UserCreationForm):
-    role_type = forms.ChoiceField(choices=ROLE_CHOICES, label="Daftar Sebagai")
-    phone_number = forms.CharField(max_length=15, required=True, label="Nomor Telepon")
+    role_type = forms.ChoiceField(choices=ROLE_CHOICES, label="Sign Up As")
+    phone_number = forms.CharField(max_length=15, required=True, label="Phone Number")
     email = forms.EmailField(required=True, label="Email Address") 
-    profile_picture = forms.ImageField(required=False, label="Upload Profile Picture")
-    service_area = forms.ModelChoiceField(queryset=LocationArea.objects.all(), required=False, label="Wilayah Layanan")
+    profile_picture = forms.ImageField(required=False, label="Profile Picture")
+    service_area = forms.ModelChoiceField(queryset=LocationArea.objects.all(), required=False, label="Service Area")
     selected_venues_json = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
@@ -36,7 +36,6 @@ class CustomUserCreationForm(UserCreationForm):
             is_coach=(role == 'COACH'),
         )
 
-        # If coach, create CoachProfile and optional CoachVenue entries
         if role == 'COACH':
             from .models import CoachProfile, CoachVenue, Venue
 
@@ -44,18 +43,15 @@ class CustomUserCreationForm(UserCreationForm):
                 user=user,
             )
 
-            # save profile picture if provided
             pic = self.cleaned_data.get('profile_picture')
             if pic:
                 coach.profile_picture = pic
                 coach.save()
 
-            # service area
             area = self.cleaned_data.get('service_area')
             if area:
                 coach.service_areas.add(area)
 
-            # parse selected venues json and create CoachVenue entries
             import json
             sv = self.cleaned_data.get('selected_venues_json')
             if sv:

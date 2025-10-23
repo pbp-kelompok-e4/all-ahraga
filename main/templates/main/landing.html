@@ -6,15 +6,27 @@
 {% block content %}
 <section id="feedback" style="padding: 30px 20px;">
     <div class="container">
-        <h2>Feedback Pengguna</h2>
+        <h3>Featured Venues</h3>
+        <div id="featured-venues" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+            {% for v in featured_venues %}
+                <div style="width:180px; padding:8px; background:white; border-radius:6px; box-shadow:0 0 4px rgba(0,0,0,0.05);">
+                    <a href="{% url 'venue_detail' v.id %}"><strong>{{ v.name }}</strong></a>
+                    <div style="font-size:0.85em; color:#666;">{{ v.location }}</div>
+                    <div style="font-size:0.8em; color:#888;">{{ v.review_count }} review(s)</div>
+                </div>
+            {% empty %}
+                <div>No featured venues yet.</div>
+            {% endfor %}
+        </div>
+        <h2>Customer Feedback</h2>
         {% if feedback_contributors %}
         <div id="feedback-contributors" style="margin-bottom: 16px;">
-            <h4>Kontributor Terbaru</h4>
+            <h4>New Contributor</h4>
             <ul>
                 {% for c in feedback_contributors %}
                     <li>
                         <strong>{{ c.username }}</strong>
-                        — rata-rata: {{ c.avg_rating }}/5
+                        — Average: {{ c.avg_rating }}/5
                         ({{ c.count }} feedback)
                         <div style="font-style:italic;">"{{ c.last_message }}"</div>
                     </li>
@@ -30,18 +42,18 @@
                         <p>{{ fb.comment }}</p>
                         {% if user == fb.customer %}
                             <a href="{% url 'edit_feedback' fb.id %}">Edit</a> |
-                            <a href="{% url 'delete_feedback' fb.id %}">Hapus</a>
+                            <a href="{% url 'delete_feedback' fb.id %}">Delete</a>
                         {% endif %}
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p>Belum ada feedback.</p>
+            <p>No feedback yet.</p>
         {% endif %}
 
         {# Quick link to full feedback form if needed #}
         {% if user.is_authenticated %}
-            <a href="{% url 'add_feedback' %}" class="btn">Tambah Feedback</a>
+            <a href="{% url 'add_feedback' %}" class="btn">Add Feedback</a>
         {% endif %}
     </div>
 </section>
@@ -50,28 +62,30 @@
 {% if user.is_authenticated and user_bookings %}
 <section id="my-bookings" style="padding: 20px 20px; background-color: #f9f9f9;">
     <div class="container">
-        <h3>Riwayat Booking Anda</h3>
+        <h3>Booking History</h3>
         <ul id="booking-list">
             {% for booking in user_bookings %}
                 <li data-booking-id="{{ booking.id }}">
                     <strong>{{ booking.venue_schedule.venue.name }}</strong>
+                    <br>
+                    <small style="color: #666;">{{ booking.venue_schedule.venue.location }}</small>
                     - {{ booking.booking_time|date:'Y-m-d H:i' }}
                     <div>
-                        <label>Berikan Feedback:</label>
+                        <label>Add Feedback:</label>
                         <select class="rating-select">
-                            <option value="">Pilih rating</option>
+                            <option value="">Select rating</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
                             <option value="4">4</option>
                             <option value="5">5</option>
                         </select>
-                        <input type="text" class="fb-message" placeholder="Tulis pesan...">
-                        <button class="btn btn-sm btn-primary send-feedback">Kirim</button>
+                        <input type="text" class="fb-message" placeholder="Write a message...">
+                        <button class="btn btn-sm btn-primary send-feedback">Send</button>
                     </div>
                 </li>
             {% empty %}
-                <li>Tidak ada riwayat booking.</li>
+                <li>No booking history.</li>
             {% endfor %}
         </ul>
     </div>
@@ -87,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const message = li.querySelector('.fb-message').value.trim();
 
             if (!rating || !message) {
-                alert('Rating dan pesan wajib diisi.');
+                alert('Rating and message are required.');
                 return;
             }
 
@@ -116,11 +130,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (xhr.status === 200) {
                     const resp = JSON.parse(xhr.responseText);
                     if (resp.success) {
-                        alert('Feedback berhasil dikirim!');
-                        // reset inputs
+                        alert('Feedback sent successfully!');
                         li.querySelector('.rating-select').value = '';
                         li.querySelector('.fb-message').value = '';
-                        // append to feedback list if present
                         const fbList = document.querySelector('#global-feedback-list');
                         if (fbList) {
                             const item = document.createElement('li');
@@ -131,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Error: ' + (resp.error || 'Unknown'));
                     }
                 } else {
-                    alert('Terjadi error saat mengirim feedback.');
+                    alert('An error occurred while sending feedback.');
                 }
             };
             const body = 'booking_id=' + encodeURIComponent(bookingId) + '&rating=' + encodeURIComponent(rating) + '&message=' + encodeURIComponent(message);

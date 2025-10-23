@@ -3,7 +3,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from datetime import date
 from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment
@@ -41,10 +43,10 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
 
-            messages.success(request, "Pendaftaran berhasil! Silakan masuk.")
+            messages.success(request, "Registration successful! Please log in.")
             return redirect('login') 
         else:
-            messages.error(request, "Mohon periksa input Anda.")
+            messages.error(request, "Please check your input.")
     else:
         form = CustomUserCreationForm()
     venues = Venue.objects.all().select_related('location')
@@ -63,10 +65,10 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            messages.info(request, f"Selamat datang kembali, {user.username}.")
+            messages.info(request, f"Welcome back, {user.username}.")
             return get_user_dashboard(user)
         else:
-            messages.error(request, "Username atau password salah.")
+            messages.error(request, "Invalid username or password.")
     else:
         form = AuthenticationForm()
 
@@ -75,7 +77,7 @@ def login_view(request):
 @login_required(login_url='login')
 def logout_view(request):
     logout(request)
-    messages.info(request, "Anda telah berhasil keluar.")
+    messages.info(request, "You have been logged out.")
     return redirect('home') 
 
 def main_view(request):
@@ -231,7 +233,6 @@ def coach_dashboard_view(request):
 def delete_venue_view(request, venue_id):
     venue = get_object_or_404(Venue, pk=venue_id)
     
-    # Security check: ensure user owns this venue
     if venue.owner != request.user:
         messages.error(request, "Anda tidak memiliki izin untuk menghapus lapangan ini.")
         return redirect('venue_dashboard')
@@ -253,7 +254,7 @@ def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
     equipment_list = Equipment.objects.filter(venue=venue)
-    coaches = CoachProfile.objects.filter(service_area=venue.location, is_verified=True)
+    coaches = CoachProfile.objects.filter(service_areas=venue.location, is_verified=True)
 
     # Jika user book 
     if request.method == 'POST':
@@ -371,3 +372,136 @@ def my_bookings(request):
     }
 
     return render(request, 'main/my_bookings.html', context)
+
+
+def landing_view(request):
+    feedback_list = Review.objects.select_related('customer', 'target_venue').order_by('-created_at')
+
+    contributors = {}
+    for fb in feedback_list:
+        uid = fb.customer.id
+        if uid not in contributors:
+            contributors[uid] = {
+                'username': fb.customer.username,
+                'count': 0,
+                'sum': 0,
+                'last_message': fb.comment,
+            }
+        contributors[uid]['count'] += 1
+        contributors[uid]['sum'] += fb.rating
+        contributors[uid]['last_message'] = fb.comment
+
+    feedback_contributors = []
+    for v in contributors.values():
+        avg = round(v['sum'] / v['count'], 2) if v['count'] else 0
+        feedback_contributors.append({'username': v['username'], 'count': v['count'], 'avg_rating': avg, 'last_message': v['last_message']})
+
+    featured_venues = Venue.objects.annotate(review_count=Count('reviews')).order_by('-review_count')[:6]
+
+    user_bookings = None
+    if request.user.is_authenticated:
+        user_bookings = Booking.objects.filter(customer=request.user).select_related('venue_schedule__venue').order_by('-booking_time')
+
+    context = {
+        'feedback_list': feedback_list,
+        'feedback_contributors': feedback_contributors,
+        'featured_venues': featured_venues,
+        'user_bookings': user_bookings,
+    }
+    return render(request, 'main/landing.html', context)
+
+
+@login_required(login_url='login')
+@require_POST
+def add_review_ajax(request):
+    booking_id = request.POST.get('booking_id')
+    rating = request.POST.get('rating')
+    message = request.POST.get('message')
+
+    if not booking_id or not rating or not message:
+        return JsonResponse({'success': False, 'error': 'Missing parameters'}, status=400)
+
+    try:
+        booking = Booking.objects.select_related('venue_schedule__venue').get(id=booking_id, customer=request.user)
+    except Booking.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Booking not found'}, status=404)
+
+    venue = booking.venue_schedule.venue
+
+    if Review.objects.filter(customer=request.user, target_venue=venue).exists():
+        return JsonResponse({'success': False, 'error': 'You have already reviewed this venue'}, status=400)
+
+    try:
+        rating_int = int(rating)
+        if rating_int < 1 or rating_int > 5:
+            raise ValueError()
+    except (ValueError, TypeError):
+        return JsonResponse({'success': False, 'error': 'Invalid rating'}, status=400)
+
+    review = Review.objects.create(customer=request.user, target_venue=venue, rating=rating_int, comment=message)
+
+    resp = {
+        'success': True,
+        'review': {
+            'id': review.id,
+            'customer': request.user.username,
+            'rating': review.rating,
+            'comment': review.comment,
+        }
+    }
+    return JsonResponse(resp)
+
+
+@login_required(login_url='login')
+def add_feedback(request):
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        message = request.POST.get('message')
+        booking = Booking.objects.filter(customer=request.user).select_related('venue_schedule__venue').first()
+        if not booking:
+            messages.error(request, 'No booking found to leave feedback.')
+            return redirect('home')
+        try:
+            rating_int = int(rating)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid rating.')
+            return redirect('add_feedback')
+        Review.objects.create(customer=request.user, target_venue=booking.venue_schedule.venue, rating=rating_int, comment=message)
+        messages.success(request, 'Feedback added successfully.')
+        return redirect('landing')
+    return render(request, 'main/add_feedback.html')
+
+
+@login_required(login_url='login')
+def edit_feedback(request, feedback_id):
+    fb = get_object_or_404(Review, id=feedback_id)
+    if fb.customer != request.user:
+        messages.error(request, 'You do not have permission to edit this feedback.')
+        return redirect('landing')
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        message = request.POST.get('message')
+        try:
+            rating_int = int(rating)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid rating.')
+            return redirect('edit_feedback', feedback_id=fb.id)
+        fb.rating = rating_int
+        fb.comment = message
+        fb.save()
+        messages.success(request, 'Feedback updated successfully.')
+        return redirect('landing')
+    return render(request, 'main/edit_feedback.html', {'feedback': fb})
+
+
+@login_required(login_url='login')
+def delete_feedback(request, feedback_id):
+    fb = get_object_or_404(Review, id=feedback_id)
+    if fb.customer != request.user:
+        messages.error(request, 'You do not have permission to delete this feedback.')
+        return redirect('landing')
+    if request.method == 'POST':
+        fb.delete()
+        messages.success(request, 'Feedback deleted successfully.')
+        return redirect('landing')
+    return render(request, 'main/edit_feedback.html', {'feedback': fb})

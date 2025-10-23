@@ -1,190 +1,302 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Daftar Akun{% endblock title %}
+{% block title %}Sign Up{% endblock title %}
+
+{% block extra_head %}
+<style>
+  body {
+    background-image: url("{% static 'image/bg-court.jpg' %}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .page-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 95vh;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 2;
+    padding: 2rem;
+  }
+
+  .bg-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .register-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-register {
+    background-color: #4c8c78;
+  }
+  .btn-register:hover {
+    background-color: #3c7b69;
+  }
+
+  input, select {
+    background-color: rgba(243, 244, 246, 0.9);
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    width: 100%;
+    padding: 10px;
+  }
+
+  #coach-fields {
+    display: none;
+    margin-top: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.7);
+  }
+  #coach-fields.show-coach { display: block; }
+
+  h1.title-main {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    color: white;
+    text-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  }
+
+  h3.form-title {
+    font-weight: 600;
+    text-align: center;
+    color: #374151;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+
+  /* Venue item styling (checkbox + text sejajar rapi) */
+  .venue-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.5rem 0;
+    gap: 1rem;
+  }
+
+  .venue-item .left {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .venue-item input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .venue-item label {
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .venue-item .text-gray-600 {
+    font-size: 0.75rem;
+  }
+
+  .venue-rate-input {
+    width: 110px;
+  }
+</style>
+{% endblock extra_head %}
 
 {% block content %}
-<div style="max-width: 500px; margin: 50px auto; padding: 25px; border: 1px solid #ddd; background-color: white; border-radius: 8px;">
-    <h2 style="text-align: center;">Daftar Akun</h2>
+<div class="bg-overlay"></div>
 
-    <form method="post" enctype="multipart/form-data" id="register-form">
-        {% csrf_token %}
-        {{ form.username.label_tag }} {{ form.username }}
-        {{ form.email.label_tag }} {{ form.email }}
-        {{ form.phone_number.label_tag }} {{ form.phone_number }}
-        {{ form.role_type.label_tag }} {{ form.role_type }}
+<div class="page-center">
+  <h1 class="title-main">Create Your Account</h1>
 
-        {# Coach-only fields container (hidden by default) #}
-    <style>
-        /* helper class for server-side show */
-        #coach-fields { display: none; }
-        #coach-fields.show-coach { display: block; }
-    </style>
+  <div class="register-card w-full max-w-lg px-10 py-8 text-center">
+    <h3 class="form-title">SIGN UP</h3>
+    <hr class="border-gray-300 mb-6">
 
-    <div id="coach-fields" class="{% if show_coach_fields %}show-coach{% endif %}" style="margin-top:12px; padding:8px; border:1px solid #eee;">
-            <label for="id_service_area">Pilih Wilayah Layanan</label>
-            {{ form.service_area }}
+    <form method="post" enctype="multipart/form-data" id="register-form" class="space-y-4 text-left">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
 
-            <div style="margin-top:8px;">
-                <input type="search" id="venue-search" placeholder="Cari venue berdasarkan nama atau daerah" style="width:100%; padding:6px; box-sizing:border-box;">
-            </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Username</label>
+        {{ form.username }}
+        <small class="text-gray-500 text-xs">Enter your username</small>
+      </div>
 
-            <div style="margin-top:8px;">
-                <label>Choose venues where you can teach</label>
-                <div id="venue-list" style="max-height:200px; overflow:auto; border:1px solid #ddd; padding:6px;">
-                    {% for v in venues %}
-                        <div class="venue-item" data-venue-id="{{ v.id }}" data-venue-name="{{ v.name|lower }}" data-venue-location="{{ v.location.id }}" style="display:flex; align-items:center; justify-content:space-between; padding:4px;">
-                            <div>
-                                <input type="checkbox" class="venue-check" data-venue-id="{{ v.id }}" id="venue-{{ v.id }}"> 
-                                <label for="venue-{{ v.id }}">{{ v.name }} ({{ v.location }})</label>
-                            </div>
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <input type="number" min="0" class="venue-rate-input" data-venue-id="{{ v.id }}" placeholder="Enter your rate" style="width:120px; display:none;">
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Email</label>
+        {{ form.email }}
+        <small class="text-gray-500 text-xs">Enter your email address</small>
+      </div>
 
-            <div style="margin-top:8px;">
-                {{ form.profile_picture.label_tag }} {{ form.profile_picture }}
-            </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+        {{ form.phone_number }}
+        <small class="text-gray-500 text-xs">Enter your phone number</small>
+      </div>
 
-            {# hidden field to hold JSON of selected venues+rates #}
-            {{ form.selected_venues_json }}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Sign Up As</label>
+        {{ form.role_type }}
+      </div>
+
+      <!-- COACH FIELDS -->
+      <div id="coach-fields" class="{% if show_coach_fields %}show-coach{% endif %}">
+        <label class="block text-sm font-semibold text-gray-800 mb-2">Service Area (Coach)</label>
+        {{ form.service_area }}
+
+        <div class="mt-3">
+          <input type="search" id="venue-search" placeholder="Search venues by name or area"
+                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
         </div>
 
-        {{ form.password1.label_tag }} {{ form.password1 }}
-        {{ form.password2.label_tag }} {{ form.password2 }}
+        <div class="mt-3">
+          <label class="text-sm font-medium text-gray-700 mb-1">Choose Venues to Teach At:</label>
+          <div id="venue-list" class="max-h-60 overflow-auto border border-gray-300 rounded-md p-3 bg-white/60 text-sm">
+            {% for v in venues %}
+              <div class="venue-item"
+                   data-venue-id="{{ v.id }}" data-venue-name="{{ v.name|lower }}" data-venue-location="{{ v.location.id }}">
+                <div class="left">
+                  <input type="checkbox" class="venue-check" data-venue-id="{{ v.id }}" id="venue-{{ v.id }}">
+                  <div>
+                    <label for="venue-{{ v.id }}">{{ v.name }}</label>
+                    <div class="text-gray-600">{{ v.location }}</div>
+                    <div class="text-teal-600 text-xs"><a href="{% url 'venue_detail' v.id %}">View details</a></div>
+                  </div>
+                </div>
+                <input type="number" min="0" class="venue-rate-input border border-gray-300 rounded-md px-2 py-1 text-sm hidden"
+                       data-venue-id="{{ v.id }}" placeholder="Your rate (Rp)">
+              </div>
+            {% endfor %}
+          </div>
+        </div>
 
-        <button type="submit" id="register-submit" style="width: 100%; padding: 10px; background-color: #28a848; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Daftar
-        </button>
+        <div class="mt-3">
+          <label class="block text-sm font-medium text-gray-700">Profile Picture</label>
+          {{ form.profile_picture }}
+        </div>
+
+        {{ form.selected_venues_json }}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          {{ form.password1 }}
+          <small class="text-gray-500 text-xs">Enter a strong password</small>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Confirm Password</label>
+          {{ form.password2 }}
+          <small class="text-gray-500 text-xs">Re-enter your password</small>
+        </div>
+      </div>
+
+      <button type="submit" id="register-submit"
+        class="btn-register w-full py-2 mt-3 text-white rounded-full font-medium transition shadow">
+        Sign Up
+      </button>
     </form>
-    
-    <script>
-    document.addEventListener('DOMContentLoaded', function(){
-        // role field may be rendered as <select id="id_role_type"> or as radio inputs
-        let roleField = document.getElementById('id_role_type');
-        if(!roleField){
-            // try radio buttons / other inputs by name
-            const byName = document.getElementsByName('role_type');
-            if(byName && byName.length) roleField = byName;
-        }
-        const coachFields = document.getElementById('coach-fields');
-        const registerForm = document.getElementById('register-form');
-        const selectedInput = document.getElementById('id_selected_venues_json');
-        const venueSearch = document.getElementById('venue-search');
-        const serviceAreaSelect = document.getElementById('id_service_area');
 
-        function venueChecksList(){
-            return Array.from(document.querySelectorAll('.venue-check'));
-        }
+    <p class="text-sm text-gray-700 mt-6 text-center">
+      Already have an account?
+      <a href="{% url 'login' %}" class="text-teal-600 hover:underline font-medium">Log in here</a>
+    </p>
+  </div>
+</div>
 
-        function getRoleValue(){
-            if(!roleField) return null;
-            // NodeList of radio inputs
-            if(roleField instanceof NodeList || roleField instanceof HTMLCollection || Array.isArray(roleField)){
-                for(const el of roleField){
-                    if(el.checked) return el.value;
-                }
-                return null;
-            }
-            // single select/input
-            return roleField.value;
-        }
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const roleField = document.getElementById('id_role_type');
+    const coachFields = document.getElementById('coach-fields');
+    const registerForm = document.getElementById('register-form');
+    const selectedInput = document.getElementById('id_selected_venues_json');
+    const venueSearch = document.getElementById('venue-search');
+    const serviceAreaSelect = document.getElementById('id_service_area');
 
-        function toggleCoachFields(){
-            if(!roleField || !coachFields) return;
-            const val = getRoleValue();
-            if(val === 'COACH'){
-                coachFields.classList.add('show-coach');
-            } else {
-                coachFields.classList.remove('show-coach');
-            }
-        }
+    function venueChecksList(){
+        return Array.from(document.querySelectorAll('.venue-check'));
+    }
 
-        if(roleField){
-            // attach listeners appropriately
-            if(roleField instanceof NodeList || roleField instanceof HTMLCollection || Array.isArray(roleField)){
-                for(const el of roleField){
-                    el.addEventListener('change', toggleCoachFields);
-                }
-            } else {
-                roleField.addEventListener('change', toggleCoachFields);
-            }
-            // initial check
-            toggleCoachFields();
+    function toggleCoachFields(){
+        if(roleField && roleField.value === 'COACH'){
+            coachFields.classList.add('show-coach');
+        } else {
+            coachFields.classList.remove('show-coach');
         }
+    }
+    if(roleField){
+        roleField.addEventListener('change', toggleCoachFields);
+        toggleCoachFields();
+    }
 
-        // Show/hide rate input when checkbox toggled
-        function attachCheckboxHandlers(){
-            venueChecksList().forEach(function(chk){
-                chk.removeEventListener('change', null);
-                chk.addEventListener('change', function(){
-                    const vid = this.dataset.venueId;
-                    const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
-                    if(!rateEl) return;
+    function attachCheckboxHandlers(){
+        venueChecksList().forEach(chk => {
+            chk.addEventListener('change', function(){
+                const vid = this.dataset.venueId;
+                const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
+                if(rateEl){
                     if(this.checked){
-                        rateEl.style.display = 'inline-block';
+                        rateEl.classList.remove('hidden');
                         rateEl.required = true;
                     } else {
-                        rateEl.style.display = 'none';
+                        rateEl.classList.add('hidden');
                         rateEl.required = false;
                         rateEl.value = '';
                     }
-                });
-            });
-        }
-        attachCheckboxHandlers();
-
-        // Filter venue list by search term and selected area
-        function filterVenues(){
-            const term = venueSearch ? venueSearch.value.trim().toLowerCase() : '';
-            const areaId = serviceAreaSelect ? serviceAreaSelect.value : '';
-            const items = Array.from(document.querySelectorAll('.venue-item'));
-            items.forEach(function(it){
-                const name = it.dataset.venueName || '';
-                const loc = String(it.dataset.venueLocation || '');
-                const matchesTerm = term === '' || name.indexOf(term) !== -1;
-                const matchesArea = !areaId || areaId === '' || loc === areaId;
-                if(matchesTerm && matchesArea){
-                    it.style.display = 'flex';
-                } else {
-                    it.style.display = 'none';
-                    // uncheck and hide rate if it's hidden
-                    const chk = it.querySelector('.venue-check');
-                    const rateEl = it.querySelector('.venue-rate-input');
-                    if(chk && !matchesTerm){ chk.checked = false; }
-                    if(rateEl){ rateEl.style.display = 'none'; rateEl.required = false; rateEl.value = ''; }
                 }
             });
-        }
+        });
+    }
+    attachCheckboxHandlers();
 
-        if(venueSearch){ venueSearch.addEventListener('input', filterVenues); }
-        if(serviceAreaSelect){ serviceAreaSelect.addEventListener('change', filterVenues); }
+    function filterVenues(){
+        const term = venueSearch.value.trim().toLowerCase();
+        const areaId = serviceAreaSelect ? serviceAreaSelect.value : '';
+        document.querySelectorAll('.venue-item').forEach(it=>{
+            const name = it.dataset.venueName || '';
+            const loc = String(it.dataset.venueLocation || '');
+            const matchesTerm = !term || name.includes(term);
+            const matchesArea = !areaId || areaId === loc;
+            it.style.display = (matchesTerm && matchesArea) ? 'flex' : 'none';
+            if(!matchesTerm || !matchesArea){
+                const chk = it.querySelector('.venue-check');
+                const rateEl = it.querySelector('.venue-rate-input');
+                if(chk){ chk.checked = false; }
+                if(rateEl){ rateEl.classList.add('hidden'); rateEl.required = false; rateEl.value = ''; }
+            }
+        });
+    }
 
-        // Before submit, serialize selected venues+rates into hidden input
-        if(registerForm){
-            registerForm.addEventListener('submit', function(){
-                const selected = [];
-                venueChecksList().forEach(function(chk){
-                    if(chk.checked && chk.offsetParent !== null){ // only consider visible checks
-                        const vid = chk.dataset.venueId;
-                        const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
-                        const rateVal = rateEl ? rateEl.value : '';
-                        selected.push({venue_id: vid, rate: rateVal});
-                    }
-                });
-                if(selectedInput){
-                    selectedInput.value = JSON.stringify(selected);
-                }
-            });
-        }
+    if(venueSearch){ venueSearch.addEventListener('input', filterVenues); }
+    if(serviceAreaSelect){ serviceAreaSelect.addEventListener('change', filterVenues); }
+
+    registerForm.addEventListener('submit', function(){
+        const selected = [];
+        venueChecksList().forEach(chk=>{
+            if(chk.checked){
+                const vid = chk.dataset.venueId;
+                const rateEl = document.querySelector('.venue-rate-input[data-venue-id="'+vid+'"]');
+                selected.push({venue_id: vid, rate: rateEl ? rateEl.value : 0});
+            } 
+        });
+        if(selectedInput){ selectedInput.value = JSON.stringify(selected); }
     });
-    </script>
-    
-    <p style="text-align: center; margin-top: 15px;">
-        Sudah punya akun? <a href="{% url 'login' %}">Masuk di sini</a>
-    </p>
-</div>
+});
+</script>
 {% endblock content %}

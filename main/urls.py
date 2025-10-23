@@ -19,4 +19,9 @@ urlpatterns = [
     path('customer/payment/<int:booking_id>/', views.customer_payment, name='customer_payment'),
     path('history/', views.booking_history, name='booking_history'),
     path('my-bookings/', views.my_bookings, name='my_bookings'),
+    path('landing/', views.landing_view, name='landing'),
+    path('feedback/add/ajax/', views.add_review_ajax, name='add_review_ajax'),
+    path('feedback/add/', views.add_feedback, name='add_feedback'),
+    path('feedback/<int:feedback_id>/edit/', views.edit_feedback, name='edit_feedback'),
+    path('feedback/<int:feedback_id>/delete/', views.delete_feedback, name='delete_feedback'),
 ]
