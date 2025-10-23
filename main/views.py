@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm 
 from django.contrib import messages
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date, datetime, timedelta
@@ -19,7 +20,7 @@ from django.http import JsonResponse
 
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
-        return redirect('admin_dashboard_view') # Arahkan ke admin dashboard
+        return redirect('home') # Arahkan ke admin dashboard
 
     try:
         profile = user.profile 
@@ -351,117 +352,161 @@ def admin_dashboard_view(request):
         return redirect('home')
     return redirect('home')
 
+
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def create_booking(request, venue_id):
+    """Handles the display and processing of a new booking by a customer."""
+
     venue = get_object_or_404(Venue, id=venue_id)
-    schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
     equipment_list = Equipment.objects.filter(venue=venue)
 
+    # --- Filter Jadwal yang Relevan untuk Ditampilkan (GET Request) ---
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    current_time = now.time()
+
+    schedules = VenueSchedule.objects.filter(
+        venue=venue,
+        is_booked=False,  # Hanya yang belum dibooking
+        date__gte=today   # Hanya tanggal hari ini atau masa depan
+    ).exclude(
+        # Kecualikan jadwal hari ini yang waktunya sudah lewat
+        date=today,
+        start_time__lt=current_time
+    ).order_by('date', 'start_time')
+    # --- Akhir Filter Jadwal ---
+
     if request.method == 'POST':
+        # --- Proses Pembuatan Booking (POST Request) ---
         schedule_id = request.POST.get('schedule_id')
-        equipment_ids = request.POST.getlist('equipment')
-        coach_id = request.POST.get('coach')
-        payment_method = request.POST.get('payment_method')
+        equipment_ids = request.POST.getlist('equipment') # Bisa multiple
+        coach_id = request.POST.get('coach') # Bisa kosong
+        payment_method = request.POST.get('payment_method', 'CASH') # Default ke CASH jika tidak ada
 
         if not schedule_id:
-            messages.error(request, "Pilih jadwal terlebih dahulu!")
+            messages.error(request, "Anda harus memilih jadwal terlebih dahulu!")
             return redirect('create_booking', venue_id=venue.id)
 
         try:
+            # Gunakan transaksi database atomik untuk memastikan konsistensi
             with db_transaction.atomic():
+                # 1. Ambil dan Kunci Jadwal Venue
                 try:
+                    # select_for_update() mengunci baris ini hingga transaksi selesai
                     schedule = VenueSchedule.objects.select_for_update().get(
-                        id=schedule_id, 
-                        venue=venue, 
-                        is_booked=False
+                        id=schedule_id,
+                        venue=venue,
+                        is_booked=False,
+                        date__gte=today # Validasi ulang tanggal
                     )
-                except VenueSchedule.DoesNotExist:
-                    messages.error(request, "Jadwal tidak tersedia atau sudah dibooking oleh orang lain.")
+                    # Validasi ulang waktu jika tanggalnya hari ini
+                    if schedule.date == today and schedule.start_time < current_time:
+                         raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
+
+                except VenueSchedule.DoesNotExist as e:
+                    messages.error(request, f"Jadwal tidak tersedia atau sudah dibooking. Silakan pilih jadwal lain. ({e})")
                     return redirect('create_booking', venue_id=venue.id)
 
+                # 2. Hitung Harga Awal
                 total_price = venue.price_per_hour or 0
 
+                # 3. Proses Equipment yang Dipilih
                 selected_equipment = []
                 if equipment_ids:
-                    for equipment_id in equipment_ids:
-                        try:
-                            equipment = Equipment.objects.get(id=equipment_id, venue=venue)
-                            selected_equipment.append(equipment)
-                            total_price += equipment.rental_price or 0
-                        except Equipment.DoesNotExist:
-                            continue
+                    # Ambil semua equipment valid dalam satu query
+                    equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
+                    for eq in equipment_queryset:
+                        selected_equipment.append(eq)
+                        total_price += eq.rental_price or 0
 
+                # 4. Proses Coach yang Dipilih (jika ada)
                 coach_obj = None
                 coach_schedule_obj = None
-
                 if coach_id:
                     try:
                         coach_obj = CoachProfile.objects.get(id=coach_id)
-                        coach_schedule_obj = CoachSchedule.objects.select_for_update().filter(
+                        # Ambil dan kunci jadwal coach yang sesuai
+                        coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
                             coach=coach_obj,
-                            date=schedule.date,
-                            start_time=schedule.start_time,
-                            is_available=True,
-                            is_booked=False
-                        ).first()
-
-                        if not coach_schedule_obj:
-                            messages.error(request, f"Coach {coach_obj.user.get_full_name()} tidak tersedia pada jadwal yang dipilih.")
-                            raise IntegrityError("Coach schedule not available") 
-                    
+                            date=schedule.date,         # Tanggal harus sama
+                            start_time=schedule.start_time, # Jam mulai harus sama
+                            is_booked=False              # Pastikan coach masih available
+                        )
                         total_price += coach_obj.rate_per_hour or 0
-
                     except CoachProfile.DoesNotExist:
-                        messages.error(request, "Coach yang dipilih tidak valid.")
-                        raise IntegrityError("Coach profile does not exist")
+                        messages.error(request, "Coach yang Anda pilih tidak valid.")
+                        raise IntegrityError("Coach profile does not exist.") # Batalkan transaksi
+                    except CoachSchedule.DoesNotExist:
+                        messages.error(request, f"Coach {coach_obj.user.username} tidak lagi tersedia pada jadwal yang dipilih.")
+                        raise IntegrityError("Coach schedule not available.") # Batalkan transaksi
 
+                # 5. Buat Objek Booking Utama
                 booking = Booking.objects.create(
                     customer=request.user,
                     venue_schedule=schedule,
-                    coach_schedule=coach_schedule_obj,
+                    coach_schedule=coach_schedule_obj, # Bisa None jika tanpa coach
                     total_price=total_price,
                 )
 
+                # 6. Update Status Jadwal Venue
                 schedule.is_booked = True
-                schedule.is_available = False
+                # Sebaiknya jangan ubah is_available di sini jika itu flag statis
+                # schedule.is_available = False
                 schedule.save()
 
+                # 7. Update Status Jadwal Coach (jika ada)
                 if coach_schedule_obj:
                     coach_schedule_obj.is_booked = True
-                    coach_schedule_obj.is_available = False
+                    # coach_schedule_obj.is_available = False
                     coach_schedule_obj.save()
 
+                # 8. Buat Relasi BookingEquipment
+                booking_equipment_list = []
                 for equipment in selected_equipment:
-                    BookingEquipment.objects.create(
-                        booking=booking, 
-                        equipment=equipment, 
-                        quantity=1, 
-                        sub_total=equipment.rental_price
+                    booking_equipment_list.append(
+                        BookingEquipment(
+                            booking=booking,
+                            equipment=equipment,
+                            quantity=1, # Asumsi kuantitas selalu 1
+                            sub_total=equipment.rental_price
+                        )
                     )
+                if booking_equipment_list:
+                    BookingEquipment.objects.bulk_create(booking_equipment_list)
 
+                # 9. Buat Transaksi Awal (Status PENDING)
                 Transaction.objects.create(
                     booking=booking,
                     status='PENDING',
                     payment_method=payment_method,
+                    # Bagi hasil pendapatan (sesuaikan jika ada logika platform fee)
                     revenue_venue=venue.price_per_hour or 0,
                     revenue_coach=coach_obj.rate_per_hour if coach_obj else 0,
-                    revenue_platform=0
+                    revenue_platform=0 # Ganti jika perlu
                 )
-        
+
+        # Tangani error jika terjadi konflik selama transaksi
         except IntegrityError as e:
-            if "Coach" not in str(e):
-                 messages.error(request, "Terjadi kesalahan tak terduga saat booking. Silakan coba lagi.")
-            return redirect('create_booking', venue_id=venue.id)
+            # Pesan error spesifik (misal coach/jadwal tidak tersedia) sudah ditangani di atas
+            # Tampilkan pesan generik hanya jika bukan error spesifik tersebut
+             if "Coach" not in str(e) and "Jadwal" not in str(e):
+                  messages.error(request, "Terjadi konflik saat menyimpan booking (mungkin jadwal sudah diambil). Silakan coba lagi.")
+             return redirect('create_booking', venue_id=venue.id)
+        except Exception as e: # Tangkap error tak terduga lainnya
+             messages.error(request, f"Terjadi kesalahan tidak terduga: {e}. Silakan coba lagi.")
+             return redirect('create_booking', venue_id=venue.id)
 
-        messages.success(request, "Booking dibuat. Lakukan pembayaran untuk mengonfirmasi.")
-        return redirect('my_bookings')
+        # Jika semua proses dalam 'try' berhasil
+        messages.success(request, "Booking berhasil dibuat! Segera lakukan pembayaran untuk mengonfirmasi jadwal Anda.")
+        return redirect('my_bookings') # Arahkan ke halaman daftar booking pending
 
+    # --- Konteks untuk Menampilkan Halaman (GET Request) ---
     context = {
         'venue': venue,
-        'schedules': schedules,
+        'schedules': schedules, # Gunakan jadwal yang sudah difilter
         'equipment_list': equipment_list,
-        'coaches': [],
+        'coaches': [], # List coach akan diisi oleh AJAX saat jadwal dipilih
     }
     return render(request, 'main/create_booking.html', context)
 
@@ -751,28 +796,49 @@ def delete_coach_profile(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_schedule(request):
+    """Handles displaying and AJAX creation/deletion of coach schedules."""
+
+    coach_profile = None
+    schedules = CoachSchedule.objects.none() # Default: queryset kosong
+
+    # --- Pengambilan Profil (Aman untuk GET & POST) ---
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
+        # Jika GET, ambil jadwal yang ada
+        if request.method == 'GET':
+            schedules = coach_profile.schedules.all().order_by('date', 'start_time')
     except CoachProfile.DoesNotExist:
-        return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan."}, status=400)
+        if request.method == 'POST':
+            # Untuk POST (AJAX), kembalikan error JSON jika profil tidak ada
+            return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil Anda terlebih dahulu."}, status=400)
+        else:
+            # Untuk GET, beri pesan warning tapi biarkan halaman render
+            messages.warning(request, "Anda belum melengkapi profil pelatih. Silakan lengkapi profil untuk mengelola jadwal.")
+            pass # Lanjutkan ke rendering template dengan coach_profile=None
 
-    form = CoachScheduleForm(request.POST or None) 
-    schedules = coach_profile.schedules.all().order_by('date', 'start_time')
+    # --- Inisialisasi Form ---
+    # Gunakan request.POST hanya jika metodenya POST, jika tidak None
+    form_data = request.POST if request.method == 'POST' else None
+    form = CoachScheduleForm(form_data)
 
+    # --- Logika Penambahan Jadwal (AJAX POST) ---
     if request.method == 'POST':
-        form = CoachScheduleForm(request.POST) 
-        if form.is_valid():
-            end_time_global_str = request.POST.get('end_time_global') 
+        # Pastikan profil ada sebelum memproses POST (double check)
+        if not coach_profile:
+             return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan."}, status=400)
 
-            cd = form.cleaned_data
-            schedule_date = cd['date']
-            start_time_slot = cd['start_time']
-            is_available = cd.get('is_available', True)
-            
+        # Re-inisialisasi form dengan data POST untuk validasi
+        form = CoachScheduleForm(request.POST)
+        if form.is_valid():
+            end_time_global_str = form.cleaned_data.get('end_time_global')
+            schedule_date = form.cleaned_data['date']
+            start_time_slot = form.cleaned_data['start_time']
+            # Nilai is_available dari form diabaikan saat create, selalu True
+
             try:
                 start_dt = datetime.combine(schedule_date, start_time_slot)
-                end_dt = datetime.strptime(end_time_global_str, '%H:%M')
-                end_dt = datetime.combine(schedule_date, end_dt.time())
+                end_dt_time = datetime.strptime(end_time_global_str, '%H:%M').time()
+                end_dt = datetime.combine(schedule_date, end_dt_time)
             except (ValueError, TypeError):
                 return JsonResponse({"success": False, "message": "Format jam atau tanggal tidak valid."}, status=400)
 
@@ -780,58 +846,59 @@ def coach_schedule(request):
                 return JsonResponse({"success": False, "message": "Waktu selesai harus setelah waktu mulai."}, status=400)
 
             created = 0
-            
-            # --- INI BAGIAN PENTING YANG HARUS DIPERBARUI ---
-            new_slots_data = [] # Array untuk menampung slot baru
+            new_slots_data = []
             current = start_dt
-            
+
             while current < end_dt:
                 slot_start = current.time()
                 next_dt = current + timedelta(hours=1)
                 slot_end = next_dt.time()
-                
+
                 if next_dt > end_dt:
                     slot_end = end_dt.time()
-                    
+
+                # Cek jika slot sudah ada
                 exists = CoachSchedule.objects.filter(
                     coach=coach_profile, date=schedule_date, start_time=slot_start
                 ).exists()
 
                 if not exists:
-                    # Simpan objek yang baru dibuat
+                    # Buat jadwal baru dengan is_available=True
                     new_schedule = CoachSchedule.objects.create(
-                        coach=coach_profile, date=schedule_date, start_time=slot_start,
-                        end_time=slot_end, is_available=is_available
+                        coach=coach_profile,
+                        date=schedule_date,
+                        start_time=slot_start,
+                        end_time=slot_end,
+                        is_available=True  # <-- PAKSA JADI TRUE
                     )
                     created += 1
-                    # Tambahkan data yang relevan untuk frontend
+                    # Tambahkan data untuk respons JSON
                     new_slots_data.append({
                         'id': new_schedule.id,
                         'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
-                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'), # Format: "l, d M Y"
+                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'),
                         'start_time': new_schedule.start_time.strftime('%H:%M'),
                         'end_time': new_schedule.end_time.strftime('%H:%M'),
-                        'is_booked': False,
+                        'is_booked': False, # Baru dibuat, pasti belum dibooking
                     })
-
                 current = next_dt
 
-            # Ganti respons JSON untuk menyertakan data slot baru
+            # Kirim respons sukses
             return JsonResponse({
-                "success": True, 
+                "success": True,
                 "message": f"{created} slot jadwal berhasil ditambahkan.",
-                "new_slots": new_slots_data # <-- INI KUNCINYA
+                "new_slots": new_slots_data
             }, status=200)
-            # --- PERUBAHAN SELESAI ---
         else:
+            # Jika form POST tidak valid
             return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": form.errors}, status=400)
 
-
-    # LOGIC GET (Menampilkan halaman)
+    # --- Logika Menampilkan Halaman (GET Request) ---
+    # Form sudah diinisialisasi di atas (kosong karena bukan POST)
     context = {
-        'coach_profile': coach_profile,
-        'schedules': schedules,
-        'form': form,
+        'coach_profile': coach_profile, # Bisa None
+        'schedules': schedules,         # Bisa queryset kosong
+        'form': form,                   # Form kosong
     }
     return render(request, 'main/coach_schedule.html', context)
 
