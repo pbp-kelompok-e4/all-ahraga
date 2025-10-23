@@ -15,14 +15,9 @@
       <span style="font-size:18px;">←</span> Kembali
     </a>
     
-    <div style="margin-top: 20px;">
-      <h2 style="margin: 0; font-size: 28px; font-weight: 700; color:#003F3F;">
-        Daftar Pelatih
-      </h2>
-      <p style="margin: 4px 0 0; font-size: 16px; color: #6B7280;">
-        Daftar semua pelatih yang ter register
-      </p>
-    </div>
+    <h2 style="margin-top: 16px; font-size: 22px; color:#003F3F; text-align: center;">
+      Daftar Pelatih
+    </h2>
   </div>
 
   <div id="filter-box" 
@@ -111,24 +106,25 @@
 </div>
 
 <style>
-  /* Efek hover HANYA untuk card pelatih */
+  /* Selector diubah dari [div*="box-shadow"]:hover
+    menjadi #coach-grid > div:hover
+    agar HANYA card pelatih yang bergerak, bukan filter box.
+  */
   #coach-grid > div:hover { 
     transform: translateY(-6px); 
     box-shadow:0 12px 30px rgba(0,0,0,0.08) !important; 
   }
   
-  /* Transisi untuk tombol gradient */
   a[style*="linear-gradient(135deg,#003F3F"] { 
     transition: transform .12s, box-shadow .12s; 
   }
   
-  /* Efek hover untuk tombol gradient (seperti "Lihat Detail") */
   a[style*="linear-gradient(135deg,#003F3F"]:hover { 
     transform: translateY(-3px); 
     box-shadow:0 10px 24px rgba(0,63,63,0.14) !important; 
   }
 
-  /* Menonaktifkan hover-transform pada tombol kembali */
+  /* Aturan untuk menonaktifkan hover-transform pada tombol kembali */
   #page-header a:hover {
     transform: none !important;
   }

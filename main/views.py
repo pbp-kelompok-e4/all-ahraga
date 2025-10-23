@@ -12,6 +12,7 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from django.urls import reverse
 
+
 def get_user_dashboard(user):
     if user.is_superuser or user.is_staff:
         return redirect('admin_dashboard_view') # Arahkan ke admin dashboard
