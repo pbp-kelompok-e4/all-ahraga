@@ -129,13 +129,41 @@ def venue_revenue_view(request):
     # 1. Ambil semua venue milik user ini
     venues = Venue.objects.filter(owner=request.user)
     venue_ids = venues.values_list('id', flat=True)
+    
+    # 2. Total revenue dari semua venue
     total_revenue = Transaction.objects.filter(
         booking__venue_schedule__venue__id__in=venue_ids,
         status='CONFIRMED'
     ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
 
+    # 3. Revenue per venue dengan detail bookings
+    venue_revenue_data = []
+    for venue in venues:
+        confirmed_bookings = Booking.objects.filter(
+            venue_schedule__venue=venue,
+            transaction__status='CONFIRMED'
+        ).select_related(
+            'customer',
+            'venue_schedule',
+            'transaction',
+            'coach_schedule__coach__user'
+        ).order_by('-booking_time')
+        
+        venue_total = Transaction.objects.filter(
+            booking__venue_schedule__venue=venue,
+            status='CONFIRMED'
+        ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
+        
+        venue_revenue_data.append({
+            'venue': venue,
+            'bookings': confirmed_bookings,
+            'total_revenue': venue_total,
+            'booking_count': confirmed_bookings.count()
+        })
+
     context = {
         'total_revenue': total_revenue,
+        'venue_revenue_data': venue_revenue_data,
     }
     return render(request, 'main/venue_revenue.html', context)
 
