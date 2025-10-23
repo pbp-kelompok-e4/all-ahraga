@@ -12,6 +12,7 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import JsonResponse
 
 
 def get_user_dashboard(user):
@@ -123,9 +124,26 @@ def customer_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_dashboard_view(request):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        venues = Venue.objects.filter(owner=request.user)
+        venues_data = []
+        for venue in venues:
+            venues_data.append({
+                'id': venue.id,
+                'name': venue.name,
+                'category': venue.sport_category.name,
+                'location': venue.location.name,
+            })
+        return JsonResponse({'venues': venues_data})
+    
     venues = Venue.objects.filter(owner=request.user)
+    locations = LocationArea.objects.all()
+    categories = SportCategory.objects.all()
+    
     context = {
         'venues': venues,
+        'locations': locations,
+        'categories': categories,
     }
     return render(request, 'main/venue_dashboard.html', context)
 
@@ -177,14 +195,31 @@ def venue_revenue_view(request):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_create_view(request):
     if request.method == 'POST':
-        form = VenueForm(request.POST, request.FILES)  # Tambahkan request.FILES
+        form = VenueForm(request.POST, request.FILES)
         if form.is_valid():
             user = request.user
             venue = form.save(commit=False)
             venue.owner = user
             venue.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': f"Lapangan '{venue.name}' berhasil ditambahkan.",
+                    'venue': {
+                        'id': venue.id,
+                        'name': venue.name,
+                        'category': venue.sport_category.name,
+                        'location': venue.location.name,
+                        'manage_url': reverse('venue_manage', args=[venue.id])
+                    }
+                })
+            
             messages.success(request, f"Lapangan '{venue.name}' berhasil ditambahkan.")
             return redirect('venue_dashboard')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
     else:
         form = VenueForm()
 
@@ -195,17 +230,23 @@ def venue_create_view(request):
 def venue_manage_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
-    venue_edit_form = VenueForm(instance=venue)
-    equipment_form = EquipmentForm()
-
     if request.method == 'POST':
         if 'submit_venue_edit' in request.POST:
             venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)
             if venue_edit_form.is_valid():
                 venue_edit_form.save()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Data lapangan berhasil diperbarui.'
+                    })
+                
                 messages.success(request, "Data lapangan berhasil diperbarui.")
                 return redirect('venue_manage', venue_id=venue.id)
-
+            else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'errors': venue_edit_form.errors}, status=400)
 
         elif 'submit_equipment' in request.POST:
             equipment_form = EquipmentForm(request.POST)
@@ -213,15 +254,44 @@ def venue_manage_view(request, venue_id):
                 equipment = equipment_form.save(commit=False)
                 equipment.venue = venue 
                 equipment.save()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    equipments_data = []
+                    for item in venue.equipment.all():
+                        equipments_data.append({
+                            'id': item.id,
+                            'name': item.name,
+                            'stock': item.stock_quantity,
+                            'price': float(item.rental_price)
+                        })
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Equipment baru berhasil ditambahkan.',
+                        'equipments': equipments_data
+                    })
+                
                 messages.success(request, "Equipment baru berhasil ditambahkan.")
                 return redirect('venue_manage', venue_id=venue.id)
-            
+            else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    # Format error lebih detail
+                    errors_dict = {}
+                    for field, error_list in equipment_form.errors.items():
+                        errors_dict[field] = [str(error) for error in error_list]
+                    
+                    return JsonResponse({
+                        'success': False, 
+                        'errors': errors_dict,
+                        'message': 'Validasi gagal. Periksa input Anda.'
+                    }, status=400)
+
+    venue_edit_form = VenueForm(instance=venue)
+    equipment_form = EquipmentForm()
     venue_location = venue.location 
     available_coaches = CoachProfile.objects.filter(
         service_areas=venue_location, 
         is_verified=True
     )
-
     equipments = venue.equipment.all()
 
     context = {
@@ -237,27 +307,26 @@ def venue_manage_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_manage_schedule_view(request, venue_id):
-    """View baru untuk membuat dan menampilkan jadwal venue."""
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
-    schedule_form = VenueScheduleForm()
     
-    if request.method == 'POST':
-        # Logic submit_schedule dipindahkan dari venue_manage_view
-        if 'submit_schedule' in request.POST:
-            schedule_form = VenueScheduleForm(request.POST)
-            if schedule_form.is_valid():
-                cd = schedule_form.cleaned_data
-                schedule_date = cd['date']
-                start_time = cd['start_time']
-                end_time = cd['end_time']
-                is_available = cd.get('is_available', True)
+    if request.method == 'POST' and 'submit_schedule' in request.POST:
+        schedule_form = VenueScheduleForm(request.POST)
+        if schedule_form.is_valid():
+            cd = schedule_form.cleaned_data
+            schedule_date = cd['date']
+            start_time = cd['start_time']
+            end_time = cd['end_time']
+            is_available = cd.get('is_available', True)
 
-                start_dt = datetime.combine(schedule_date, start_time)
-                end_dt = datetime.combine(schedule_date, end_time)
-                if end_dt <= start_dt:
-                    messages.error(request, "Waktu selesai harus setelah waktu mulai.")
-                    return redirect('venue_manage_schedule', venue_id=venue.id)
-
+            start_dt = datetime.combine(schedule_date, start_time)
+            end_dt = datetime.combine(schedule_date, end_time)
+            
+            if end_dt <= start_dt:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': 'Waktu selesai harus setelah waktu mulai.'}, status=400)
+                messages.error(request, "Waktu selesai harus setelah waktu mulai.")
+                schedule_form = VenueScheduleForm()
+            else:
                 created = 0
                 skipped = 0
                 current = start_dt
@@ -284,9 +353,30 @@ def venue_manage_schedule_view(request, venue_id):
 
                     current = next_dt
 
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    schedules = venue.schedules.all().order_by('date', 'start_time')
+                    schedules_data = []
+                    for sch in schedules:
+                        schedules_data.append({
+                            'id': sch.id,
+                            'date': sch.date.strftime('%Y-%m-%d'),
+                            'start_time': sch.start_time.strftime('%H:%M'),
+                            'end_time': sch.end_time.strftime('%H:%M'),
+                            'is_available': sch.is_available
+                        })
+                    return JsonResponse({
+                        'success': True,
+                        'message': f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.",
+                        'schedules': schedules_data
+                    })
+                
                 messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
                 return redirect('venue_manage_schedule', venue_id=venue.id)
-            
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': schedule_form.errors}, status=400)
+    
+    schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
 
     context = {
@@ -304,16 +394,77 @@ def coach_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def delete_venue_view(request, venue_id):
-    venue = get_object_or_404(Venue, pk=venue_id)
-    
-    if venue.owner != request.user:
-        messages.error(request, "Anda tidak memiliki izin untuk menghapus lapangan ini.")
+    try:
+        venue = get_object_or_404(Venue, pk=venue_id)
+        
+        if venue.owner != request.user:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': "You don't have permission to delete this venue."
+                }, status=403)
+            messages.error(request, "You don't have permission to delete this venue.")
+            return redirect('venue_dashboard')
+        
+        # Get statistics about what will be deleted
+        schedules_count = venue.schedules.count()
+        bookings_count = Booking.objects.filter(venue_schedule__venue=venue).count()
+        
+        # Check if there's a confirmation parameter
+        if request.method == 'POST' and not request.POST.get('confirm_delete'):
+            # If no confirmation and there are schedules/bookings, ask for confirmation
+            if schedules_count > 0 or bookings_count > 0:
+                warning_message = f"This venue has {schedules_count} schedules and {bookings_count} bookings. Deleting it will remove all associated data."
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'require_confirmation': True,
+                        'message': warning_message,
+                        'schedules_count': schedules_count,
+                        'bookings_count': bookings_count
+                    }, status=400)
+                
+                messages.warning(request, warning_message)
+                # You could render a confirmation page here instead
+                return redirect('venue_dashboard')
+        
+        # Find all related bookings to delete their transactions first
+        bookings = Booking.objects.filter(venue_schedule__venue=venue)
+        
+        # Delete all related transactions first (to avoid integrity errors)
+        Transaction.objects.filter(booking__in=bookings).delete()
+        
+        # Now delete the bookings
+        bookings.delete()
+        
+        # Finally delete the venue (this will cascade delete schedules due to FK relationship)
+        venue_name = venue.name
+        venue.delete()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f"Lapangan '{venue_name}' and all associated bookings successfully deleted."
+            })
+        
+        messages.success(request, f"Lapangan '{venue_name}' and all associated bookings successfully deleted.")
         return redirect('venue_dashboard')
-    
-    venue_name = venue.name
-    venue.delete()
-    messages.success(request, f"Lapangan '{venue_name}' berhasil dihapus.")
-    return redirect('venue_dashboard')
+        
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error deleting venue {venue_id}: {str(e)}")
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': f"Error deleting venue: {str(e)}"
+            }, status=500)
+        
+        messages.error(request, f"Error deleting venue: {str(e)}")
+        return redirect('venue_dashboard')
 
 def admin_dashboard_view(request):
     if not is_admin(request.user):
