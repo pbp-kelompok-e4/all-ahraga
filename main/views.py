@@ -532,25 +532,9 @@ def manage_coach_profile(request):
     if request.method == 'POST':
         form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
         if form.is_valid():
-            profile = form.save(commit=False)
-            
-            url = form.cleaned_data.get('profile_picture_url')
-            if url:
-                try:
-                    req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urlopen(req, timeout=10) as resp:
-                        data = resp.read()
-                        if data:
-                            filename = url.split('/')[-1].split('?')[0] or f'coach_{request.user.id}.jpg'
-                            profile.profile_picture.save(filename, ContentFile(data), save=False)
-                except (HTTPError, URLError, ValueError, TimeoutError) as e:
-                    messages.error(request, f"Gagal mengambil gambar dari URL: {e}")
-
-            profile.save()
-            form.save_m2m()
-            
-            profile_url = reverse('coach_profile') 
-            return redirect(f'{profile_url}?success=true')
+            profile = form.save()
+            messages.success(request, "Perubahan profil berhasil disimpan.")
+            return redirect('coach_profile') 
         
         else:
             messages.error(request, "Perubahan gagal disimpan. Mohon periksa input Anda.")
