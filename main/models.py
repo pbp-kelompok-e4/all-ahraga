@@ -45,6 +45,13 @@ class Venue(models.Model):
     sport_category = models.ForeignKey(SportCategory, on_delete=models.PROTECT, 
                                        related_name='venues_by_sport')
     
+    main_image = models.ImageField(
+        upload_to='venue_photos/', # Disimpan di media/venue_photos/
+        null=True, 
+        blank=True,
+        verbose_name="Foto Utama Lapangan"
+    )
+
     PAYMENT_CHOICES = [
         ('CASH', 'Bayar di Tempat'),
         ('TRANSFER', 'Transfer Manual'),
@@ -92,6 +99,13 @@ class CoachProfile(models.Model):
     experience_desc = models.TextField(blank=True)
     rate_per_hour = models.DecimalField(max_digits=10, decimal_places=0, 
                                         validators=[MinValueValidator(0)])
+    
+    profile_picture = models.ImageField(
+        upload_to='coach_photos/', # Disimpan di media/coach_photos/
+        null=True, 
+        blank=True,
+        verbose_name="Foto Profil"
+    )
     
     main_sport_trained = models.ForeignKey(SportCategory, on_delete=models.PROTECT, 
                                            related_name='coaches_by_sport') 
