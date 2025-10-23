@@ -58,11 +58,41 @@ class VenueScheduleForm(forms.ModelForm):
         model = VenueSchedule
         fields = ['date', 'start_time', 'end_time', 'is_available']
         widgets = {
-            'date': forms.DateInput(attrs={'type': 'date'}),
-            'start_time': forms.TimeInput(attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+            'date': forms.DateInput(
+                attrs={
+                    'type': 'text',
+                    'class': 'datepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'Pilih tanggal'
+                }
+            ),
+            'start_time': forms.TextInput(
+                attrs={
+                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'HH:MM'
+                }
+            ),
+            'end_time': forms.TextInput(
+                attrs={
+                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'HH:MM'
+                }
+            ),
+            'is_available': forms.CheckboxInput(
+                attrs={
+                    'class': 'h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500'
+                }
+            ),
         }
-        # 'venue' akan diisi otomatis oleh view
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['date'].label = "Tanggal"
+        self.fields['start_time'].label = "Waktu Mulai"
+        self.fields['end_time'].label = "Waktu Selesai"
+        self.fields['is_available'].label = "Tersedia"
+        self.fields['date'].help_text = "Pilih tanggal untuk jadwal venue"
+        self.fields['start_time'].help_text = "Format 24 jam (mis. 09:00)"
+        self.fields['end_time'].help_text = "Format 24 jam (mis. 10:00)"
 
 class EquipmentForm(forms.ModelForm):
     class Meta:
@@ -83,7 +113,38 @@ class CoachScheduleForm(forms.ModelForm):
         model = CoachSchedule
         fields = ['date', 'start_time', 'end_time', 'is_available']
         widgets = {
-            'date': forms.DateInput(attrs={'type': 'date'}),
-            'start_time': forms.TimeInput(attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+            'date': forms.DateInput(
+                attrs={
+                    'type': 'text',               
+                    'class': 'datepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'Pilih tanggal'
+                }
+            ),
+            'start_time': forms.TextInput(
+                attrs={
+                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'HH:MM'
+                }
+            ),
+            'end_time': forms.TextInput(
+                attrs={
+                    'class': 'timepicker mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm',
+                    'placeholder': 'HH:MM'
+                }
+            ),
+            'is_available': forms.CheckboxInput(
+                attrs={
+                    'class': 'h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500'
+                }
+            ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['date'].label = "Tanggal Sesi"
+        self.fields['start_time'].label = "Waktu Mulai"
+        self.fields['end_time'].label = "Waktu Selesai"
+        self.fields['is_available'].label = "Tersedia"
+        self.fields['date'].help_text = "Pilih tanggal sesi"
+        self.fields['start_time'].help_text = "Format 24 jam (mis. 14:30)"
+        self.fields['end_time'].help_text = "Format 24 jam (mis. 15:30)"

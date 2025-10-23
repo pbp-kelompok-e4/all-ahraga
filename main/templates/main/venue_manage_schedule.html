@@ -4,20 +4,25 @@
 <style>
 /* opsional: buat input date/time sedikit lebih lebar pada mobile */
 .flatpickr-input { width: 100%; }
+
+/* Styling Tambahan dari Coach Schedule */
+.delete-checkbox { display: none; }
+.selection-active .delete-checkbox { display: inline-block; margin-right: 0.5rem; }
+/* visual selected state for a slot */
+.slot-card.selected { box-shadow: 0 0 0 3px rgba(220,38,38,0.12); background-color: rgba(254, 226, 226, 0.8); border-color: rgba(239,68,68,0.2); }
 </style>
 {% endblock extra_head %}
 
-{% block title %}Jadwal Saya{% endblock title %}
+{% block title %}Kelola Jadwal: {{ venue.name }}{% endblock title %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-10">
-  <!-- Hero -->
-  <div class="bg-gradient-to-r from-green-500 to-emerald-400 text-white rounded-2xl p-6 shadow-lg mb-8">
+  <div class="bg-gradient-to-r from-orange-500 to-amber-400 text-white rounded-2xl p-6 shadow-lg mb-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold">Jadwal Sesi</h1>
+        <h1 class="text-2xl md:text-3xl font-extrabold">Kelola Jadwal Lapangan</h1>
         <p class="mt-1 text-sm md:text-base opacity-90">
-          Kelola jadwal coaching Anda — tambahkan, pilih, atau hapus slot dengan mudah.
+          Lapangan: {{ venue.name }} | Kelola slot jam (1 jam per slot).
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -28,9 +33,13 @@
       </div>
     </div>
   </div>
+  
+  <p class="text-sm mb-4">
+    <a href="{% url 'venue_manage' venue_id=venue.id %}" class="text-gray-600 hover:text-gray-800">&larr; Kembali ke Kelola Venue</a>
+  </p>
+
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Left: schedule list -->
     <div class="lg:col-span-2">
       <div class="space-y-6" id="schedules-container">
         {% if schedules %}
@@ -40,7 +49,7 @@
               <div class="flex items-center justify-between mb-4">
                 <div>
                   <h3 class="text-lg font-semibold text-slate-800">{{ group.grouper|date:"l, d M Y" }}</h3>
-                  <p class="text-sm text-gray-500 mt-0.5">{{ group.list|length }} slot tersedia</p>
+                  <p class="text-sm text-gray-500 mt-0.5">{{ group.list|length }} slot</p>
                 </div>
                 <div class="text-sm text-gray-500">Tanggal: {{ group.grouper|date:"Y-m-d" }}</div>
               </div>
@@ -51,22 +60,20 @@
                     <input type="checkbox" class="delete-checkbox rounded border-gray-300" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} />
                     {% if s.is_booked %}
                       <span class="slot-card flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-100 shadow-sm cursor-not-allowed select-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-1 1v6a2 2 0 002 2h8a2 2 0 002-2v-6a1 1 0 00-1-1h-1V6a4 4 0 00-4-4z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
                         <span class="text-sm font-medium">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
                       </span>
                     {% else %}
                       <span class="slot-card flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 hover:scale-[1.02] transition transform shadow-sm cursor-pointer select-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
                         <span class="text-sm font-medium">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
-                      </span>
+                        
+                        </span>
                     {% endif %}
                   </label>
                 {% endfor %}
               </div>
 
-              <div class="mt-4 flex items-center justify-end gap-3">
-                <span class="text-xs text-gray-400">Masuk ke mode Hapus untuk memilih slot.</span>
-              </div>
             </div>
           {% endfor %}
         {% else %}
@@ -80,8 +87,7 @@
         {% endif %}
       </div>
 
-      <!-- Bulk delete bar -->
-      <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="mt-6">
+      <form method="post" action="{% url 'venue_schedule_delete' venue_id=venue.id %}" id="bulk-delete-form" class="mt-6">
         {% csrf_token %}
         <div class="flex items-center gap-3">
           <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Hapus Jadwal</button>
@@ -92,15 +98,16 @@
       </form>
     </div>
 
-    <!-- Right: add schedule -->
     <aside class="lg:col-span-1">
       <div class="sticky top-24 bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
         <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
-        <p class="text-sm text-gray-500 mb-4">Tambahkan rentang waktu. Sistem akan menyimpan slot sesuai input.</p>
+        <p class="text-sm text-gray-500 mb-4">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
 
         <form method="post" class="space-y-4">
           {% csrf_token %}
-          {% for field in form %}
+          <input type="hidden" name="submit_schedule" value="1"> 
+          
+          {% for field in schedule_form %}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
               <div>
@@ -117,7 +124,7 @@
             </div>
           {% endfor %}
 
-          <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition">
+          <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
             Tambah Jadwal
           </button>
@@ -126,15 +133,9 @@
     </aside>
   </div>
 </div>
+{% endblock content %}
 
-<style>
-  /* hide checkboxes by default; show when selection mode active */
-  .delete-checkbox { display: none; }
-  .selection-active .delete-checkbox { display: inline-block; margin-right: 0.5rem; }
-  /* visual selected state for a slot */
-  .slot-card.selected { box-shadow: 0 0 0 3px rgba(220,38,38,0.12); background-color: rgba(254, 226, 226, 0.8); border-color: rgba(239,68,68,0.2); }
-</style>
-
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   // elements
@@ -261,8 +262,7 @@ document.addEventListener('DOMContentLoaded',function(){
   exitSelectionMode();
 });
 </script>
-{% endblock content %}
-{% block extra_js %}
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
@@ -284,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function(){
     static: true
   });
 
-  // jika Anda masih memiliki kode JS lainnya, biarkan tetap ada...
 });
 </script>
 {% endblock extra_js %}
