@@ -40,7 +40,7 @@ class VenueForm(forms.ModelForm):
         model = Venue
         fields = [
             'name', 'description', 'location', 'sport_category', 
-            'price_per_hour', 'payment_options'
+            'price_per_hour', 'payment_options', 'main_image'
         ]
         # 'owner' tidak dimasukkan karena akan diisi otomatis oleh view
 
