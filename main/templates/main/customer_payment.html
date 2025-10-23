@@ -3,48 +3,104 @@
 {% block title %}Konfirmasi Pembayaran - Booking #{{ booking.id }}{% endblock title %}
 
 {% block content %}
-<style>
-  .payment-card{max-width:800px;margin:30px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
-  .row{display:flex;gap:18px;flex-wrap:wrap}
-  .col{flex:1;min-width:220px}
-  .btn{padding:10px 14px;border-radius:8px;text-decoration:none;color:#fff;border:none;cursor:pointer}
-  .btn-confirm{background:#28a745}
-  .btn-cancel{background:#6c757d}
-  .note{color:#666;margin-top:8px}
-</style>
+<div class="max-w-3xl mx-auto my-8 bg-white p-6 rounded-lg shadow">
+  <h2 class="text-2xl font-semibold mb-6">Konfirmasi Pembayaran</h2>
 
-<div class="payment-card">
-  <h2>Konfirmasi Pembayaran</h2>
-
-  <div class="row">
-    <div class="col">
-      <p><strong>Booking #</strong> {{ booking.id }}</p>
-      <p><strong>Venue:</strong> {{ booking.venue_schedule.venue.name }}</p>
-      <p><strong>Jadwal:</strong> {{ booking.venue_schedule.date|date:"D, d M Y" }} — {{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <p class="mb-3"><strong>Booking #</strong> {{ booking.id }}</p>
+      <p class="mb-3"><strong>Venue:</strong> {{ booking.venue_schedule.venue.name }}</p>
+      <p class="mb-3">
+        <strong>Jadwal:</strong> 
+        {{ booking.venue_schedule.date|date:"D, d M Y" }} — 
+        {{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}
+      </p>
       {% if booking.coach_schedule %}
-        <p><strong>Coach:</strong> {{ booking.coach_schedule.coach.user.username }}</p>
+        <p class="mb-3"><strong>Coach:</strong> {{ booking.coach_schedule.coach.user.username }}</p>
       {% endif %}
     </div>
 
-    <div class="col">
-      <p><strong>Total:</strong> Rp {{ booking.total_price }}</p>
-      <p><strong>Metode Pembayaran:</strong> {{ transaction.payment_method|default:"-" }}</p>
-      <p><strong>Status Transaksi:</strong> {{ transaction.status }}</p>
+    <div>
+      <p class="mb-3"><strong>Total:</strong> Rp {{ booking.total_price }}</p>
+      <p class="mb-3">
+        <strong>Metode Pembayaran:</strong> 
+        {{ transaction.payment_method|default:"-" }}
+      </p>
+      <p class="mb-3">
+        <strong>Status Transaksi:</strong> 
+        <span class="{% if transaction.status == 'CONFIRMED' %}text-green-600{% elif transaction.status == 'PENDING' %}text-yellow-600{% else %}text-red-600{% endif %}">
+          {{ transaction.status }}
+        </span>
+      </p>
     </div>
   </div>
 
-  <hr>
+  <hr class="my-6 border-gray-200">
 
   {% if transaction.payment_method|default:""|upper == "TRANSFER" %}
-    <p class="note">Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.</p>
-    <form method="post" style="margin-top:12px;">
+    <p class="text-gray-600 mb-4">
+      Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.
+    </p>
+    <form method="post" class="mt-4">
       {% csrf_token %}
-      <button type="submit" class="btn btn-confirm">Sudah bayar</button>
-      <a href="{% url 'my_bookings' %}" class="btn btn-cancel" style="margin-left:8px;display:inline-block;background:#6c757d;">Kembali</a>
+      <div class="flex gap-3">
+        <button type="submit" 
+                class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
+          Sudah bayar
+        </button>
+        <a href="{% url 'my_bookings' %}" 
+           class="px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700 transition-colors">
+          Kembali
+        </a>
+      </div>
     </form>
   {% else %}
-    <p class="note">Metode pembayaran bukan transfer. Jika metode CASH, seharusnya sudah otomatis terkonfirmasi dan Anda akan diarahkan.</p>
-    <a href="{% url 'my_bookings' %}" class="btn btn-cancel" style="display:inline-block;background:#6c757d;">Kembali ke Booking Saya</a>
+    <p class="text-gray-600 mb-4">
+      Metode pembayaran bukan transfer. Jika metode CASH, seharusnya sudah otomatis terkonfirmasi dan Anda akan diarahkan.
+    </p>
+    <a href="{% url 'my_bookings' %}" 
+       class="inline-block px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700 transition-colors">
+      Kembali ke Booking Saya
+    </a>
   {% endif %}
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Confirm payment without reload
+    document.getElementById('payment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessMessage(data.message);
+                setTimeout(() => window.location.href = '/my-bookings/', 2000);
+            } else {
+                showErrorMessage(data.message);
+            }
+        });
+    });
+
+    // File upload preview
+    document.getElementById('payment-proof').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('proof-preview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+});
+</script>
 {% endblock content %}

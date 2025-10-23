@@ -395,9 +395,16 @@ def create_booking(request, venue_id):
             except CoachProfile.DoesNotExist:
                 messages.error(request, "Coach yang dipilih tidak valid.")
                 return redirect('create_booking', venue_id=venue.id)
-            
+
+        last_booking = Booking.objects.all().order_by('id').last()
+        next_id = 1 if not last_booking else last_booking.id + 1
+
+        used_ids = set(Booking.objects.values_list('id', flat=True))
+        available_id = next(i for i in range(1, next_id) if i not in used_ids)
+
         # Buat booking
         booking = Booking.objects.create(
+            id=available_id,
             customer=request.user,
             venue_schedule=schedule,
             coach_schedule=coach_schedule_obj,

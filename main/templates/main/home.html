@@ -3,37 +3,54 @@
 {% block title %}Halaman Utama All-Ahraga{% endblock title %}
 
 {% block content %}
-<div style="text-align: center; margin-top: 50px;">
-    <h1>Selamat Datang di All-Ahraga!</h1>
+<div class="text-center mt-12">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Selamat Datang di All-Ahraga!</h1>
     
     {% if user.is_authenticated %}
-        <p style="font-size: 1.2em; color: green;">
+        <p class="text-lg text-green-600 mb-8">
             Anda berhasil login sebagai <strong>{{ user.username }}</strong>.
         </p>
         
         {% if user.profile.is_customer %}
-            <div style="margin-top: 30px; text-align: left;">
-                <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px; text-align: center;">Daftar Lapangan</h3>
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold border-b-2 border-gray-200 pb-3 mb-6 text-center">
+                    Daftar Lapangan
+                </h3>
                 
                 {% if venues %}
-                    <div style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;">
+                    <div class="flex flex-wrap gap-6 justify-center">
                         {% for venue in venues %}
                             {% include 'main/venue_card.html' with venue=venue %}
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p>Tidak ada lapangan yang tersedia saat ini.</p>
+                    <p class="text-gray-600 text-center">Tidak ada lapangan yang tersedia saat ini.</p>
                 {% endif %}
             </div>
 
         {% elif user.profile.is_venue_owner %}
-            <p>Anda login sebagai Venue Owner. <a href="#">Tambahkan venue baru Anda</a>.</p>
+            <p class="text-gray-700">
+                Anda login sebagai Venue Owner. 
+                <a href="#" class="text-blue-600 hover:text-blue-800 underline">
+                    Tambahkan venue baru Anda
+                </a>.
+            </p>
         
         {% elif user.profile.is_coach %}
-            <p>Anda login sebagai Coach. <a href="#">Atur jadwal dan rate Anda</a>.</p>
+            <p class="text-gray-700">
+                Anda login sebagai Coach. 
+                <a href="#" class="text-blue-600 hover:text-blue-800 underline">
+                    Atur jadwal dan rate Anda
+                </a>.
+            </p>
 
         {% elif user.is_staff %}
-             <p>Anda login sebagai Admin. <a href="/admin">Masuk ke Admin Panel</a>.</p>
+            <p class="text-gray-700">
+                Anda login sebagai Admin. 
+                <a href="/admin" class="text-blue-600 hover:text-blue-800 underline">
+                    Masuk ke Admin Panel
+                </a>.
+            </p>
        
         {% endif %}
     {% endif %}
