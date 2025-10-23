@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Profil Pelatih{% endblock title %}
+
+{% block content %}
+<style>
+    /* Styling untuk form inputs agar konsisten dengan desain */
+    form input[type="text"],
+    form input[type="password"],
+    form input[type="email"],
+    form input[type="url"],
+    form input[type="number"],
+    form select,
+    form textarea {
+        display: block;
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 1px solid #E5E7EB;
+        border-radius: 0.5rem;
+        background-color: #F9FAFB;
+        font-size: 0.938rem;
+        color: #374151;
+        transition: all 0.2s ease-in-out;
+    }
+
+    form input:focus,
+    form select:focus,
+    form textarea:focus {
+        border-color: #87b2b0;
+        background-color: #ffffff;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(135, 178, 176, 0.1);
+    }
+
+    form textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    /* Styling untuk file input */
+    input[type="file"] {
+        display: block;
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        color: #4B5563;
+        border: 1px solid #E5E7EB;
+        border-radius: 0.5rem;
+        background-color: #F9FAFB;
+        cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button {
+        padding: 0.5rem 1rem;
+        margin-right: 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        background-color: #6B7280;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+        background-color: #4B5563;
+    }
+
+    /* Styling untuk error messages */
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .errorlist li {
+        color: #DC2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Styling untuk help text */
+    .helptext {
+        display: block;
+        font-size: 0.813rem;
+        color: #6B7280;
+        margin-top: 0.375rem;
+    }
+</style>
+
+<div class="relative min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+    <!-- Tombol Kembali -->
+    <div class="max-w-4xl mx-auto mb-6">
+        <a href="{% url 'coach_profile' %}" 
+           class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition duration-200 shadow-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Kembali
+        </a>
+    </div>
+
+    <!-- Main Content Card -->
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-8 py-10 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
+                Kelola Profil Pelatih
+            </h1>
+            <p class="text-teal-50 text-sm">
+                Perbarui informasi profil Anda
+            </p>
+        </div>
+
+        <!-- Form Container -->
+        <div class="p-8 md:p-12">
+            <!-- Current Profile Picture -->
+            {% if coach_profile and coach_profile.profile_picture %}
+            <div class="flex justify-center mb-10">
+                <div class="relative">
+                    <img src="{{ coach_profile.profile_picture.url }}" 
+                         alt="Foto Profil" 
+                         class="w-32 h-32 rounded-full object-cover border-4 border-teal-100 shadow-lg">
+                    <div class="absolute bottom-0 right-0 bg-teal-500 rounded-full p-2 shadow-md">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Messages (visible fallback) -->
+            {% if messages %}
+            <div class="mb-6 space-y-3">
+                {% for message in messages %}
+                <div class="{% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %} border rounded-lg px-4 py-3 text-sm">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            {% if message.tags == 'success' %}
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            {% elif message.tags == 'error' %}
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                            {% else %}
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            {% endif %}
+                        </svg>
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="post" enctype="multipart/form-data" class="space-y-8">
+                {% csrf_token %}
+
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    {% for error in form.non_field_errors %}
+                    <p class="text-red-800 text-sm">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Form Fields Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in form %}
+                    {% if field.name != 'profile_picture_url' %}
+                    <div class="{% if field.name == 'bio' or field.name == 'specialization' %}md:col-span-2{% endif %}">
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                            {{ field.label }}
+                            {% if field.field.required %}
+                            <span class="text-red-500">*</span>
+                            {% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <p class="helptext">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% if field.errors %}
+                        <ul class="errorlist">
+                            {% for error in field.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- Profile Picture URL Field (di bagian akhir) -->
+                    <div class="md:col-span-2">
+                        <label for="{{ form.profile_picture_url.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                            {{ form.profile_picture_url.label }}
+                        </label>
+                        {{ form.profile_picture_url }}
+                        {% if form.profile_picture_url.help_text %}
+                        <p class="helptext">{{ form.profile_picture_url.help_text }}</p>
+                        {% endif %}
+                        {% if form.profile_picture_url.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.profile_picture_url.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-6 border-t border-gray-200">
+                    <button type="submit" 
+                            class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-4 px-6 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-4 focus:ring-teal-300 flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer Info -->
+    <div class="max-w-4xl mx-auto mt-6 text-center">
+        <p class="text-sm text-gray-500">
+            <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Pastikan semua informasi yang Anda masukkan akurat dan terkini
+        </p>
+    </div>
+</div>
+
+{# TOAST container (hidden by default) #}
+<div id="mc-toast" aria-live="polite" style="display:none; position: fixed; right: 24px; bottom: 24px; z-index: 9999; min-width: 280px; border-radius: 10px; padding: 14px 16px; color: #fff; box-shadow: 0 10px 30px rgba(2,6,23,0.35);"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
+        // build messages array from Django messages (if any)
+        var django_messages = [{% for message in messages %} {
+            message: "{{ message|escapejs }}",
+            tags: "{{ message.tags }}"
+        }{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+        if (!django_messages || django_messages.length === 0) return;
+
+        var toast = document.getElementById('mc-toast');
+
+        function showToast(text, type){
+            var bg = 'linear-gradient(135deg,#2563eb 0%,#1e40af 100%)'; // info
+            var icon = 'ℹ️';
+            if (type === 'success') { bg = 'linear-gradient(135deg,#16a34a 0%,#065f46 100%)'; icon = '✅'; }
+            if (type === 'error')   { bg = 'linear-gradient(135deg,#dc3545 0%,#c1121f 100%)'; icon = '❌'; }
+
+            toast.style.background = bg;
+            toast.innerHTML = '<div style="display:flex; gap:12px; align-items:center;">' +
+                              '<div style="font-size:20px;">' + icon + '</div>' +
+                              '<div style="font-weight:600; line-height:1.2;">' + text + '</div>' +
+                              '</div>';
+            toast.style.display = 'block';
+            toast.style.opacity = '0';
+            setTimeout(function(){ toast.style.opacity = '1'; }, 20);
+            setTimeout(function(){ toast.style.opacity = '0'; }, 3200);
+            setTimeout(function(){ toast.style.display = 'none'; }, 3600);
+        }
+
+        // show all messages sequentially
+        (function showSequential(i){
+            if (i >= django_messages.length) return;
+            var m = django_messages[i];
+            var type = 'info';
+            if (m.tags.indexOf('success') !== -1) type = 'success';
+            if (m.tags.indexOf('error') !== -1) type = 'error';
+            showToast(m.message, type);
+            setTimeout(function(){ showSequential(i+1); }, 1200);
+        })(0);
+    });
+</script>
+{% endblock content %}

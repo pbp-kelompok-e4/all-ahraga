@@ -152,3 +152,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Direktori di mana file media (gambar, upload user) disimpan secara fisik
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
+
+# URL dasar untuk mengakses file media (misalnya: http://127.0.0.1:8000/media/venue_photos/...)
+MEDIA_URL = '/media/'

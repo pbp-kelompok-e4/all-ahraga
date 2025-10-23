@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Booking — {{ venue.name }}{% endblock title %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4">
+  <a href="{% url 'home' %}" class="inline-flex items-center mb-6 text-slate-600 hover:text-slate-800">
+    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+    </svg>
+    Kembali
+  </a>
+
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Booking — {{ venue.name }}</h1>
+      <p class="text-slate-600">{{ venue.sport_category.name }} • {{ venue.location.name }}</p>
+    </div>
+    <div class="text-right">
+      <div class="text-sm text-slate-600">Harga per jam</div>
+      <div class="text-xl font-bold text-slate-800" id="base-price">Rp {{ venue.price_per_hour|default:0|floatformat:0 }}</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-6">
+    <!-- Main Content -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h3 class="text-lg font-semibold mb-4">Pilih Jadwal</h3>
+      <p class="text-slate-600 mb-6">Klik satu slot yang tersedia. Sistem akan menggunakan durasi 1 jam sesuai slot.</p>
+
+      {% if schedules %}
+      <form id="booking-form" method="post">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {% for s in schedules %}
+          <label class="slot-card relative block p-4 rounded-lg border transition-all cursor-pointer hover:-translate-y-1 {% if s.is_booked %}bg-red-50 border-red-100{% else %}bg-gradient-to-b from-white to-slate-50 border-slate-200 hover:border-blue-400 hover:shadow-md{% endif %}" data-id="{{ s.id }}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-semibold">{{ s.date|date:"D, d M Y" }}</div>
+                <div class="text-sm text-slate-600">{{ s.start_time|time:"H:i" }} — {{ s.end_time|time:"H:i" }}</div>
+              </div>
+              {% if s.is_booked %}
+                <span class="text-sm font-medium text-red-600 line-through">Booked</span>
+              {% else %}
+                <span class="text-sm font-medium text-emerald-600">Available</span>
+              {% endif %}
+            </div>
+            <input type="radio" name="schedule_id" value="{{ s.id }}" {% if forloop.first %}checked{% endif %} class="absolute opacity-0">
+          </label>
+          {% endfor %}
+        </div>
+
+        {% if equipment_list %}
+        <div class="mb-8">
+          <h3 class="text-lg font-semibold mb-4">Equipment (opsional)</h3>
+          <div class="space-y-3 max-h-[240px] overflow-y-auto pr-2">
+            {% for eq in equipment_list %}
+            <label class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div>
+                <div class="font-medium">{{ eq.name }}</div>
+                <div class="text-sm text-slate-600">Stock: {{ eq.stock_quantity|default:0 }}</div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-sm">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
+                <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
+                  class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if coaches %}
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Pilih Coach (opsional)</h3>
+          <div class="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+            <label class="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center font-bold text-slate-600">—</div>
+                <div>
+                  <div class="font-medium">Tanpa Coach</div>
+                  <div class="text-sm text-slate-600">Lebih hemat</div>
+                </div>
+              </div>
+              <input type="radio" name="coach" value="" checked class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
+            </label>
+
+            {% for c in coaches %}
+            <label class="flex items-center justify-between p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-200 transition-colors">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                  {{ c.user.get_full_name|slice:":1"|upper }}
+                </div>
+                <div>
+                  <div class="font-medium">{{ c.user.get_full_name|default:c.user.username }}</div>
+                  <div class="text-sm text-slate-600">
+                    {{ c.main_sport_trained.name }}
+                    {% with areas=c.service_areas.all %}
+                      {% if areas %}• {{ areas|join:", " }}{% endif %}
+                    {% endwith %}
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm text-slate-600">Rp {{ c.rate_per_hour|default:0|floatformat:0 }}/jam</div>
+                <input type="radio" name="coach" value="{{ c.id }}" data-rate="{{ c.rate_per_hour|default:0 }}" 
+                  class="w-5 h-5 border-slate-300 text-blue-600 focus:ring-blue-500">
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <input type="hidden" name="payment_method" id="payment-method-input" value="CASH">
+      </form>
+      {% else %}
+      <div class="text-slate-600">Tidak ada jadwal tersedia untuk venue ini saat ini.</div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sticky top-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 class="text-lg font-semibold mb-2">Ringkasan Booking</h3>
+        <p class="text-sm text-slate-600 mb-6">Periksa ringkasan dan pilih metode pembayaran sebelum konfirmasi.</p>
+
+        <div class="space-y-4 mb-6">
+          <div class="flex justify-between py-3 border-b border-slate-100">
+            <span class="text-slate-600">Harga lapangan (1 jam)</span>
+            <span class="font-semibold" id="summary-base">Rp {{ venue.price_per_hour|default:0|floatformat:0 }}</span>
+          </div>
+          <div class="flex justify-between py-3 border-b border-slate-100">
+            <span class="text-slate-600">Equipment</span>
+            <span class="font-semibold" id="summary-eq">Rp 0</span>
+          </div>
+          <div class="flex justify-between py-3 border-b border-slate-100">
+            <span class="text-slate-600">Coach</span>
+            <span class="font-semibold" id="summary-coach">Rp 0</span>
+          </div>
+          <div class="flex justify-between py-3">
+            <span class="font-medium">Total</span>
+            <span class="text-lg font-bold text-blue-600" id="summary-total">
+              Rp {{ venue.price_per_hour|default:0|floatformat:0 }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block mb-2 text-sm font-medium">Metode Pembayaran</label>
+          <select id="payment-method" class="w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <option value="CASH">Cash</option>
+            <option value="TRANSFER">Transfer Bank</option>
+            <option value="VA">Virtual Account</option>
+          </select>
+        </div>
+
+        <button id="confirm-btn" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+          Konfirmasi & Buat Booking
+        </button>
+        <a href="{% url 'home' %}" class="block text-center py-2.5 px-4 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+          Batal
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const basePrice = Number("{{ venue.price_per_hour|default:0|floatformat:0 }}") || 0;
+  const form = document.getElementById('booking-form');
+  if (!form) return;
+
+  const slotLabels = Array.from(document.querySelectorAll('.slot-card'));
+  const eqBoxes = Array.from(document.querySelectorAll('input[type="checkbox"][name="equipment"]') || []);
+  const coachRadios = Array.from(document.querySelectorAll('input[type="radio"][name="coach"]') || []);
+  const summaryBase = document.getElementById('summary-base');
+  const summaryEq = document.getElementById('summary-eq');
+  const summaryCoach = document.getElementById('summary-coach');
+  const summaryTotal = document.getElementById('summary-total');
+  const paymentSelect = document.getElementById('payment-method');
+  const paymentInput = document.getElementById('payment-method-input');
+  const confirmBtn = document.getElementById('confirm-btn');
+
+  function formatRp(n) { return 'Rp ' + Intl.NumberFormat('id-ID').format(Math.round(n)); }
+
+  function calc() {
+    let eqTotal = 0;
+    if (eqBoxes.length) eqBoxes.forEach(cb => { if (cb.checked) eqTotal += parseFloat(cb.dataset.price || 0); });
+    let coachFee = 0;
+    if (coachRadios.length) {
+      const checkedCoach = coachRadios.find(r => r.checked);
+      if (checkedCoach && checkedCoach.dataset && checkedCoach.dataset.rate) {
+        coachFee = parseFloat(checkedCoach.dataset.rate || 0);
+      }
+    }
+    const total = basePrice + eqTotal + coachFee;
+    if (summaryBase) summaryBase.textContent = formatRp(basePrice);
+    if (summaryEq) summaryEq.textContent = formatRp(eqTotal);
+    if (summaryCoach) summaryCoach.textContent = formatRp(coachFee);
+    if (summaryTotal) summaryTotal.textContent = formatRp(total);
+  }
+
+  // UI: clicking slot label selects radio and highlights
+  slotLabels.forEach(lbl => {
+    lbl.addEventListener('click', function (e) {
+      const radio = this.querySelector('input[type="radio"][name="schedule_id"]');
+      if (radio) radio.checked = true;
+      slotLabels.forEach(l => l.classList.remove('border-blue-400', 'shadow-md'));
+      this.classList.add('border-blue-400', 'shadow-md');
+    });
+  });
+
+  // mark first selected
+  const first = slotLabels.find(l => l.querySelector('input[type="radio"][name="schedule_id"]').checked);
+  if (first) first.classList.add('border-blue-400', 'shadow-md');
+
+  if (eqBoxes.length) eqBoxes.forEach(cb => cb.addEventListener('change', calc));
+  if (coachRadios.length) coachRadios.forEach(r => r.addEventListener('change', calc));
+  if (paymentSelect) paymentSelect.addEventListener('change', () => { if (paymentInput) paymentInput.value = paymentSelect.value; });
+
+  calc();
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const chosen = form.querySelector('input[name="schedule_id"]:checked');
+      if (!chosen) { alert('Pilih jadwal terlebih dahulu.'); return; }
+      if (paymentInput && paymentSelect) paymentInput.value = paymentSelect.value;
+      form.submit();
+    });
+  }
+})();
+</script>
+{% endblock content %}
