@@ -7,7 +7,6 @@
     .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; margin: 20px auto; }
     .grid-item { background-color: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
     .grid-item h3 { margin-top: 0; }
-    /* Style untuk form yang rapi */
     form p { margin-bottom: 10px; }
     form label { display: block; margin-bottom: 5px; font-weight: bold; }
     form input, form select, form textarea { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
@@ -21,7 +20,7 @@
 <div class="grid-container">
     <div class="grid-item">
         <h3>Edit Venue</h3>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {{ venue_edit_form.as_p }}
             <button type="submit" name="submit_venue_edit" style="padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
@@ -32,25 +31,11 @@
         <hr style="margin: 25px 0;">
 
         <h3>Manage Venue Schedule</h3>
-        <form method="post">
-            {% csrf_token %}
-            {{ schedule_form.as_p }}
-            <button type="submit" name="submit_schedule" style="padding: 10px; background-color: #28a848; color: white; border: none; border-radius: 4px; margin-top: 10px; cursor: pointer;">
-                + Add Schedule
-            </button>
-        </form>
-
-        <h4 style="margin-top: 20px;">Available Schedules:</h4>
-        <ul style="max-height: 200px; overflow-y: auto; padding-left: 20px;">
-            {% for schedule in schedules %}
-                <li>
-                    {{ schedule.date|date:"d M Y" }} | {{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}
-                    {% if schedule.is_booked %}<strong>(BOOKED)</strong>{% endif %}
-                    </li>
-            {% empty %}
-                <li>There are no schedules yet.</li>
-            {% endfor %}
-        </ul>
+        <p>Kelola slot jam, ketersediaan, dan lakukan penghapusan jadwal massal di halaman terpisah.</p>
+        <a href="{% url 'venue_manage_schedule' venue_id=venue.id %}" 
+           style="display: block; text-align: center; padding: 10px; background-color: #f97316; color: white; border-radius: 4px; margin-top: 10px; text-decoration: none; font-weight: bold;">
+            Kelola Jadwal Lapangan →
+        </a>
     </div>
 
     <div class="grid-item">

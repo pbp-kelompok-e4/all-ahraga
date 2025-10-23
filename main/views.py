@@ -194,18 +194,54 @@ def venue_manage_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
     venue_edit_form = VenueForm(instance=venue)
-    schedule_form = VenueScheduleForm()
     equipment_form = EquipmentForm()
 
     if request.method == 'POST':
         if 'submit_venue_edit' in request.POST:
-            venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)  # Tambahkan request.FILES
+            venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)
             if venue_edit_form.is_valid():
                 venue_edit_form.save()
                 messages.success(request, "Data lapangan berhasil diperbarui.")
                 return redirect('venue_manage', venue_id=venue.id)
 
-        elif 'submit_schedule' in request.POST:
+
+        elif 'submit_equipment' in request.POST:
+            equipment_form = EquipmentForm(request.POST)
+            if equipment_form.is_valid():
+                equipment = equipment_form.save(commit=False)
+                equipment.venue = venue 
+                equipment.save()
+                messages.success(request, "Equipment baru berhasil ditambahkan.")
+                return redirect('venue_manage', venue_id=venue.id)
+            
+    venue_location = venue.location 
+    available_coaches = CoachProfile.objects.filter(
+        service_areas=venue_location, 
+        is_verified=True
+    )
+
+    equipments = venue.equipment.all()
+
+    context = {
+        'venue': venue,
+        'venue_edit_form': venue_edit_form,
+        'equipment_form': equipment_form,
+        'equipments': equipments,
+        'available_coaches': available_coaches,
+    }
+    return render(request, 'main/venue_manage.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_manage_schedule_view(request, venue_id):
+    """View baru untuk membuat dan menampilkan jadwal venue."""
+    venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
+    schedule_form = VenueScheduleForm()
+    
+    if request.method == 'POST':
+        # Logic submit_schedule dipindahkan dari venue_manage_view
+        if 'submit_schedule' in request.POST:
             schedule_form = VenueScheduleForm(request.POST)
             if schedule_form.is_valid():
                 cd = schedule_form.cleaned_data
@@ -218,7 +254,7 @@ def venue_manage_view(request, venue_id):
                 end_dt = datetime.combine(schedule_date, end_time)
                 if end_dt <= start_dt:
                     messages.error(request, "Waktu selesai harus setelah waktu mulai.")
-                    return redirect('venue_manage', venue_id=venue.id)
+                    return redirect('venue_manage_schedule', venue_id=venue.id)
 
                 created = 0
                 skipped = 0
@@ -247,36 +283,16 @@ def venue_manage_view(request, venue_id):
                     current = next_dt
 
                 messages.success(request, f"{created} jadwal dibuat. {skipped} dilewati karena sudah ada.")
-                return redirect('venue_manage', venue_id=venue.id)
-
-        elif 'submit_equipment' in request.POST:
-            equipment_form = EquipmentForm(request.POST)
-            if equipment_form.is_valid():
-                equipment = equipment_form.save(commit=False)
-                equipment.venue = venue # Set venue
-                equipment.save()
-                messages.success(request, "Equipment baru berhasil ditambahkan.")
-                return redirect('venue_manage', venue_id=venue.id)
+                return redirect('venue_manage_schedule', venue_id=venue.id)
             
-    venue_location = venue.location 
-    available_coaches = CoachProfile.objects.filter(
-        service_areas=venue_location, 
-        is_verified=True
-    )
-
     schedules = venue.schedules.all().order_by('date', 'start_time')
-    equipments = venue.equipment.all()
 
     context = {
         'venue': venue,
-        'venue_edit_form': venue_edit_form,
         'schedule_form': schedule_form,
-        'equipment_form': equipment_form,
         'schedules': schedules,
-        'equipments': equipments,
-        'available_coaches': available_coaches,
     }
-    return render(request, 'main/venue_manage.html', context)
+    return render(request, 'main/venue_manage_schedule.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
@@ -731,4 +747,49 @@ def coach_revenue_report(request):
         'total_revenue': total_revenue,
     }
     return render(request, 'main/coach_revenue_report.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
+def venue_schedule_delete(request, venue_id):
+    """
+    Hapus jadwal terpilih untuk venue (POST dengan selected_schedules[]=id).
+    Hanya menghapus slot yang:
+     - termasuk dalam selected_schedules
+     - terkait dengan venue_id
+     - belum dibooking (is_booked == False)
+    """
+    venue = get_object_or_404(Venue, id=venue_id)
+
+    # Periksa kepemilikan venue (berbagai kemungkinan nama field owner)
+    allowed = request.user.is_staff
+    if not allowed:
+        if hasattr(venue, 'owner') and venue.owner == request.user:
+            allowed = True
+        elif hasattr(venue, 'user') and venue.user == request.user:
+            allowed = True
+        elif hasattr(venue, 'created_by') and venue.created_by == request.user:
+            allowed = True
+
+    if not allowed:
+        messages.error(request, "Anda tidak memiliki izin untuk mengelola venue ini.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    if request.method != 'POST':
+        messages.error(request, "Permintaan tidak valid.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    selected = request.POST.getlist('selected_schedules')
+    if not selected:
+        messages.error(request, "Tidak ada jadwal yang dipilih.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    deletable_qs = VenueSchedule.objects.filter(id__in=selected, venue_id=venue.id, is_booked=False)
+    count = deletable_qs.count()
+    if count == 0:
+        messages.info(request, "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking).")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    deletable_qs.delete()
+    messages.success(request, f"{count} jadwal berhasil dihapus.")
+    return redirect(request.META.get('HTTP_REFERER', '/'))
 
