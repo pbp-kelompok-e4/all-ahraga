@@ -1,0 +1,52 @@
+{% if bookings %}
+    <ul class="space-y-5">
+        {% for booking in bookings %}
+            <li id="booking-item-{{ booking.id }}" class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                <h4 class="text-lg mb-3">
+                    Booking #{{ booking.id }} - 
+                    <strong>{{ booking.venue_schedule.venue.name }}</strong>
+                </h4>
+                
+                <p class="mb-2">
+                    <strong>Jadwal:</strong> 
+                    {{ booking.venue_schedule.date|date:"l, d F Y" }}
+                </p>
+                <p class="mb-2">
+                    <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
+                </p>
+                <p class="mb-2">
+                    <strong>Metode Pembayaran:</strong> {{ booking.transaction.payment_method }}
+                </p>
+                <p class="mb-4">
+                    <strong>Status Pembayaran:</strong> 
+                    <span class="font-bold text-orange-500">
+                        MENUNGGU PEMBAYARAN
+                    </span>
+                </p>
+                
+                <div class="flex gap-3">
+                    <a href="{% url 'customer_payment' booking.id %}" 
+                       class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
+                        Bayar Sekarang
+                    </a>
+                    
+                    <form action="{% url 'delete_booking' booking.id %}" method="POST" class="delete-booking-form m-0">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="px-4 py-2 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition-colors">
+                            Cancel Booking
+                        </button>
+                    </form>
+                    </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="text-center text-gray-600 py-10 font-medium" id="empty-message">
+        {% if request.GET.q %}
+            Tidak ada booking tertunda yang cocok dengan pencarian Anda.
+        {% else %}
+            Tidak ada booking yang menunggu pembayaran. Semua booking Anda sudah lunas! 👍
+        {% endif %}
+    </p>
+{% endif %}

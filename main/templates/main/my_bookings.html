@@ -4,85 +4,114 @@
 
 {% block content %}
 <div class="max-w-[900px] mx-auto my-5 p-6 bg-white rounded-lg shadow">
-    {% if bookings %}
-        <p class="text-center mb-6">Berikut adalah daftar booking Anda yang menunggu konfirmasi pembayaran.</p>
-        <ul class="space-y-5">
-            {% for booking in bookings %}
-                <li class="border border-gray-200 rounded-lg p-5 bg-gray-50">
-                    <h4 class="text-lg mb-3">
-                        Booking #{{ booking.id }} - 
-                        <strong>{{ booking.venue_schedule.venue.name }}</strong>
-                    </h4>
-                    
-                    <p class="mb-2">
-                        <strong>Jadwal:</strong> 
-                        {{ booking.venue_schedule.date|date:"l, d F Y" }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>Metode Pembayaran:</strong> {{ booking.transaction.payment_method }}
-                    </p>
-                    <p class="mb-4">
-                        <strong>Status Pembayaran:</strong> 
-                        <span class="font-bold text-orange-500">
-                            MENUNGGU PEMBAYARAN
-                        </span>
-                    </p>
-                    
-                    <div class="flex gap-3">
-                        <a href="{% url 'customer_payment' booking.id %}" 
-                           class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
-                            Bayar Sekarang
-                        </a>
-                        <a href="{% url 'delete_booking' booking.id %}" 
-                           class="px-4 py-2 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition-colors"
-                           onclick="return confirm('Apakah Anda yakin ingin membatalkan booking ini?');">
-                            Cancel Booking
-                        </a>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="text-center text-green-600 font-bold">
-            Tidak ada booking yang menunggu pembayaran. Semua booking Anda sudah lunas! 👍
-        </p>
-    {% endif %}
-</div>
+    
+    <p class="text-center mb-4">Berikut adalah daftar booking Anda yang menunggu konfirmasi pembayaran.</p>
+    <div class="mb-6">
+        <input type="text" id="searchMyBooking" 
+               placeholder="Cari nama venue atau ID booking..."
+               class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    </div>
+
+    <div id="bookingListWrapper"> 
+        {% include "main/_my_booking_list.html" %}
+    </div>
+
+    </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-    // Delete booking without reload
-    document.querySelectorAll('.delete-booking').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm('Yakin ingin membatalkan booking ini?')) {
-                fetch(this.href, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchMyBooking');
+    const bookingListWrapper = document.getElementById('bookingListWrapper'); 
+    
+    const dataUrl = "{% url 'my_bookings' %}"; 
+    let debounceTimer;
+    function debounce(func, delay) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
+    async function fetchMyBookings() {
+        const searchTerm = searchInput.value;
+        const url = new URL(dataUrl, window.location.origin);
+        if (searchTerm) {
+            url.searchParams.append('q', searchTerm);
+        }
+        try {
+            bookingListWrapper.innerHTML = '<p class="text-center text-gray-500 py-10">Memuat...</p>';
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) throw new Error('Network response was not ok');
+            const html = await response.text();
+            bookingListWrapper.innerHTML = html; 
+        } catch (error) {
+            console.error('Error fetching my bookings:', error);
+            bookingListWrapper.innerHTML = '<p class="text-center text-red-500 py-10">Gagal memuat data.</p>';
+        }
+    }
+    searchInput.addEventListener('input', debounce(fetchMyBookings, 300));
+   
+    bookingListWrapper.addEventListener('submit', function(e) {
+        
+        if (e.target.classList.contains('delete-booking-form')) {
+            
+            e.preventDefault(); 
+            
+            const form = e.target;
+            const deleteUrl = form.action;
+            const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+            if (!confirm('Anda yakin ingin membatalkan booking ini?')) {
+                return; 
+
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok) {
+                    
+                    alert(data.message); 
+                    
+                    const bookingItem = form.closest('li[id^="booking-item-"]');
+                    if (bookingItem) {
+                        bookingItem.style.transition = 'opacity 0.3s ease-out';
+                        bookingItem.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            bookingItem.remove();
+                            
+                            const remainingItems = bookingListWrapper.querySelectorAll('li');
+                            if (remainingItems.length === 0) {
+                                const emptyMsg = document.getElementById('empty-message') || document.createElement('p');
+                                emptyMsg.id = 'empty-message';
+                                emptyMsg.className = 'text-center text-gray-600 py-10 font-medium';
+                                emptyMsg.textContent = 'Tidak ada booking yang menunggu pembayaran. Semua booking Anda sudah lunas! 👍';
+                                bookingListWrapper.innerHTML = ''; 
+                                bookingListWrapper.appendChild(emptyMsg);
+                            }
+                        }, 300); 
                     }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        this.closest('li').remove();
-                    }
-                });
-            }
-        });
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            });
+        }
     });
 
-    // Real-time status updates using WebSocket
-    const bookingSocket = new WebSocket(
-        'ws://' + window.location.host + '/ws/bookings/'
-    );
-    
-    bookingSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        updateBookingStatus(data.booking_id, data.status);
-    };
-});
+});  
 </script>
 {% endblock content %}
