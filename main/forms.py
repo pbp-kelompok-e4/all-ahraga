@@ -71,12 +71,50 @@ class EquipmentForm(forms.ModelForm):
         # 'venue' akan diisi otomatis oleh view
 
 class CoachProfileForm(forms.ModelForm):
+    # pakai upload image sesuai CoachProfile.profile_picture
+    profile_picture = forms.ImageField(
+        required=False,
+        label="Foto Profil",
+        widget=forms.ClearableFileInput(attrs={'accept': 'image/*'})
+    )
+
     class Meta:
         model = CoachProfile
-        fields = ['age', 'experience_desc', 'rate_per_hour', 'main_sport_trained', 'service_areas']
+        # pastikan fields sesuai dengan CoachProfile model
+        fields = [
+            'age',
+            'experience_desc',
+            'rate_per_hour',
+            'main_sport_trained',
+            'service_areas',
+            'profile_picture',
+        ]
         widgets = {
             'service_areas': forms.CheckboxSelectMultiple(),
+            'experience_desc': forms.Textarea(attrs={'rows': 4}),
         }
+
+    def clean_age(self):
+        age = self.cleaned_data.get('age')
+        if age in (None, ''):
+            return age
+        try:
+            age = int(age)
+        except (TypeError, ValueError):
+            raise forms.ValidationError("Umur harus berupa angka")
+        if age < 18:
+            raise forms.ValidationError("Umur harus >= 18")
+        return age
+
+    def clean_rate_per_hour(self):
+        rp = self.cleaned_data.get('rate_per_hour')
+        if rp in (None, ''):
+            return rp
+        try:
+            # allow integer-like decimal
+            return int(rp)
+        except (TypeError, ValueError):
+            raise forms.ValidationError("Tarif harus berupa angka")
 
 class CoachScheduleForm(forms.ModelForm):
     class Meta:
