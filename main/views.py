@@ -305,11 +305,23 @@ def create_booking(request, venue_id):
     schedules = VenueSchedule.objects.filter(venue=venue, is_available=True, is_booked=False).order_by('date', 'start_time')
     equipment_list = Equipment.objects.filter(venue=venue)
     
-    # Tampilkan coach yang melayani area venue dan melatih olahraga yang sama dengan venue
-    coaches = CoachProfile.objects.filter(
-        service_areas=venue.location,
-        main_sport_trained=venue.sport_category
-    ).select_related('user', 'main_sport_trained').distinct()
+
+    availabe_coaches_map = {}
+    for schedule in schedules:
+        coaches_for_schedule = CoachProfile.objects.filter(
+            service_areas=venue.location,
+            main_sport_trained=venue.sport_category,
+            schedules__date=schedule.date,
+            schedules__start_time=schedule.start_time,
+            schedules__is_available=True,
+            schedules__is_booked=False
+        ).select_related('user').distinct()
+        availabe_coaches_map[schedule.id] = list(coaches_for_schedule)
+
+    coaches_set = set()
+    for coach_list in availabe_coaches_map.values():
+        coaches_set.update(coach_list)
+    coaches = list(coaches_set)
 
     if request.method == 'POST':
         schedule_id = request.POST.get('schedule_id')
@@ -339,50 +351,36 @@ def create_booking(request, venue_id):
                 except Equipment.DoesNotExist:
                     continue
 
-        # PERBAIKAN: Buat CoachSchedule jika coach dipilih
+        # Buat CoachSchedule jika coach dipilih
         coach_obj = None
         coach_schedule_obj = None
-        
+
         if coach_id:
             try:
-                coach_obj = CoachProfile.objects.get(
-                    id=coach_id,
-                    service_areas=venue.location,
-                    main_sport_trained=venue.sport_category
-                )
-                total_price += coach_obj.rate_per_hour or 0
-                
-                # BUAT COACH SCHEDULE
-                # Cek apakah sudah ada jadwal coach yang tersedia di tanggal & waktu yang sama
+                coach_obj = CoachProfile.objects.get(id=coach_id)
                 coach_schedule_obj = CoachSchedule.objects.filter(
                     coach=coach_obj,
                     date=schedule.date,
                     start_time=schedule.start_time,
-                    end_time=schedule.end_time,
                     is_available=True,
                     is_booked=False
                 ).first()
-                
-                # Jika belum ada, buat jadwal baru
-                if not coach_schedule_obj:
-                    coach_schedule_obj = CoachSchedule.objects.create(
-                        coach=coach_obj,
-                        date=schedule.date,
-                        start_time=schedule.start_time,
-                        end_time=schedule.end_time,
-                        is_available=True,
-                        is_booked=False
-                    )
-                    
-            except CoachProfile.DoesNotExist:
-                coach_obj = None
-                coach_schedule_obj = None
 
-        # Buat booking DENGAN coach_schedule
+                if not coach_schedule_obj:
+                    messages.error(request, f"Coach {coach_obj.user.get_full_name()} tidak tersedia pada jadwal yang dipilih ({schedule.date.strftime('%d/%m')} jam {schedule.start_time.strftime('%H:%M')}).")
+                    return redirect('create_booking', venue_id=venue.id)
+            
+                total_price += coach_obj.rate_per_hour or 0
+
+            except CoachProfile.DoesNotExist:
+                messages.error(request, "Coach yang dipilih tidak valid.")
+                return redirect('create_booking', venue_id=venue.id)
+            
+        # Buat booking
         booking = Booking.objects.create(
             customer=request.user,
             venue_schedule=schedule,
-            coach_schedule=coach_schedule_obj,  # ← TAMBAHKAN INI
+            coach_schedule=coach_schedule_obj,
             total_price=total_price,
         )
 
