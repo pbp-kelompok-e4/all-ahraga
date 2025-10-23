@@ -3,31 +3,31 @@
 {% block title %}Bookingan Saya{% endblock title %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 20px auto; padding: 25px; background-color: white; border-radius: 8px;">
-    <h2 style="text-align: center; border-bottom: 2px solid #f4f4f4; padding-bottom: 15px;">
+<div class="max-w-[900px] mx-auto my-5 p-6 bg-white rounded-lg shadow">
+    <h2 class="text-center border-b-2 border-gray-100 pb-4 mb-6 text-xl font-semibold">
         Riwayat Bookingan Saya
     </h2>
 
     {% if bookings %}
-        <ul style="list-style: none; padding: 0;">
+        <ul class="space-y-5">
             {% for booking in bookings %}
-                <li style="border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; padding: 20px; background-color: #f9f9f9;">
-                    
-                    <h4>
+                <li class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                    <h4 class="text-lg mb-3">
                         Booking #{{ booking.id }} - 
                         <strong>{{ booking.venue_schedule.venue.name }}</strong>
                     </h4>
                     
-                    <p>
+                    <p class="mb-2">
                         <strong>Jadwal:</strong> 
                         {{ booking.venue_schedule.date|date:"l, d F Y" }}
-                        </p>
-                    <p>
-                        <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Total Biaya:</strong> 
+                        <span class="font-medium">Rp {{ booking.total_price }}</span>
                     </p>
                     <p>
                         <strong>Status Pembayaran:</strong> 
-                        <span> 
+                        <span class="{% if booking.transaction.status == 'CONFIRMED' %}text-green-600{% elif booking.transaction.status == 'PENDING' %}text-yellow-600{% else %}text-red-600{% endif %} font-medium"> 
                             {{ booking.transaction.get_status_display|default:booking.transaction.status }}
                         </span>
                     </p>
@@ -35,7 +35,79 @@
             {% endfor %}
         </ul>
     {% else %}
-        <p style="text-align: center;">Anda belum memiliki riwayat booking.</p>
+        <p class="text-center text-gray-600">Anda belum memiliki riwayat booking.</p>
     {% endif %}
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchBooking');
+    const statusFilter = document.getElementById('statusFilter');
+    const bookingList = document.getElementById('bookingList');
+    const bookingItems = Array.from(document.querySelectorAll('#bookingList li'));
+    const emptyMessage = document.getElementById('emptyMessage');
+
+    function filterBookings() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusTerm = statusFilter.value.toLowerCase();
+        let visibleCount = 0;
+
+        bookingItems.forEach(item => {
+            const venueName = item.getAttribute('data-venue');
+            const status = item.getAttribute('data-status');
+            const matchesSearch = venueName.includes(searchTerm);
+            const matchesStatus = !statusTerm || status === statusTerm;
+            
+            if (matchesSearch && matchesStatus) {
+                item.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+
+        // Show/hide empty message
+        if (emptyMessage) {
+            emptyMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    // Add event listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', filterBookings);
+    }
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterBookings);
+    }
+
+    // WebSocket for real-time updates (optional)
+    try {
+        const bookingSocket = new WebSocket(
+            `ws://${window.location.host}/ws/bookings/`
+        );
+
+        bookingSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'booking_update') {
+                const bookingItem = document.querySelector(`[data-booking-id="${data.booking_id}"]`);
+                if (bookingItem) {
+                    const statusBadge = bookingItem.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.textContent = data.status;
+                        statusBadge.className = `status-badge font-medium ${
+                            data.status === 'CONFIRMED' ? 'text-green-600' :
+                            data.status === 'PENDING' ? 'text-yellow-600' : 
+                            'text-red-600'
+                        }`;
+                    }
+                    bookingItem.setAttribute('data-status', data.status.toLowerCase());
+                    filterBookings(); // Reapply filters
+                }
+            }
+        };
+    } catch (error) {
+        console.log('WebSocket connection not available');
+    }
+});  
+</script>
 {% endblock content %}
