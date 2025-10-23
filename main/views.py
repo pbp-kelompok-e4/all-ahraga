@@ -47,42 +47,47 @@ def register_view(request):
         return redirect('home')
 
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save()
-
-            messages.success(request, "Pendaftaran berhasil! Silakan masuk.")
-            return redirect('login') 
+            form.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True, 'redirect': reverse('login')})
+            messages.success(request, "Registration successful! Please log in.")
+            return redirect('login')
         else:
-            messages.error(request, "Mohon periksa input Anda.")
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+            messages.error(request, "Please check your input.")
     else:
         form = CustomUserCreationForm()
-    
     return render(request, 'main/register.html', {'form': form})
 
 def login_view(request):
     if request.user.is_authenticated:
         return get_user_dashboard(request.user)
-    
+
     if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST) 
-        
+        form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            messages.info(request, f"Selamat datang kembali, {user.username}.")
+            # AJAX
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True, 'redirect': reverse('home')})
+            messages.info(request, f"Welcome back, {user.username}.")
             return get_user_dashboard(user)
         else:
-            messages.error(request, "Username atau password salah.")
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+            messages.error(request, "Invalid username or password.")
     else:
         form = AuthenticationForm()
-
     return render(request, 'main/login.html', {'form': form})
 
 @login_required(login_url='login')
 def logout_view(request):
     logout(request)
-    messages.info(request, "Anda telah berhasil keluar.")
+    messages.info(request, "You have been logged out.")
     return redirect('home') 
 
 def main_view(request):
