@@ -1,14 +1,77 @@
 {% extends "base.html" %}
 
-{% block title %}Venue Dashboard{% endblock title %}
+{% block title %}Venue Revenue Report{% endblock title %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 20px auto;">
+<div style="max-width: 1100px; margin: 20px auto;">
     <h2>Revenue Report</h2>
+    
+    <!-- Total Revenue Summary -->
     <div style="padding: 20px; background-color: #f0f9ff; border: 1px solid #d1eaff; border-radius: 8px; margin-bottom: 25px;">
-        <h3 style="margin-top: 0;">Revenue Report</h3>
-        <p style="font-size: 1.5em; font-weight: bold;">Rp {{ total_revenue|floatformat:0 }}</p>
+        <h3 style="margin-top: 0;">Total Revenue (Semua Venue)</h3>
+        <p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Rp {{ total_revenue|floatformat:0 }}</p>
         <small>*Total net revenue from all 'CONFIRMED' bookings.</small>
     </div>
+
+    <!-- Revenue per Venue -->
+    {% for data in venue_revenue_data %}
+    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px;">
+            <div>
+                <h3 style="margin: 0 0 5px 0;">{{ data.venue.name }}</h3>
+                <small style="color: #666;">{{ data.venue.sport_category.name }} | {{ data.venue.location.name }}</small>
+            </div>
+            <div style="text-align: right;">
+                <p style="margin: 0; font-size: 1.3em; font-weight: bold; color: #28a745;">
+                    Rp {{ data.total_revenue|floatformat:0 }}
+                </p>
+                <small style="color: #666;">{{ data.booking_count }} booking{{ data.booking_count|pluralize }}</small>
+            </div>
+        </div>
+
+        {% if data.bookings %}
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Booking History (Confirmed)</h4>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: #f8f9fa;">
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Booking #</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Customer</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Jadwal</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Coach</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in data.bookings %}
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">#{{ booking.id }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ booking.customer.username }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">
+                        {{ booking.venue_schedule.date|date:"D, d M Y" }}<br>
+                        <small style="color: #666;">{{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}</small>
+                    </td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">
+                        {% if booking.coach_schedule %}
+                            {{ booking.coach_schedule.coach.user.username }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">
+                        Rp {{ booking.transaction.revenue_venue|floatformat:0 }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="text-align: center; color: #999; padding: 20px;">Belum ada booking yang terkonfirmasi untuk venue ini.</p>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 40px; text-align: center;">
+        <p style="color: #999;">Anda belum memiliki venue. <a href="{% url 'venue_create' %}">Tambah venue baru</a></p>
+    </div>
+    {% endfor %}
 </div>
 {% endblock content %}
