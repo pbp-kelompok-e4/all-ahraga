@@ -16,7 +16,7 @@
         {% include "main/_my_booking_list.html" %}
     </div>
 
-    <div id="editBookingModal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div id="editBookingModal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50 overflow-y-auto p-4">
         <div class="bg-white rounded-lg shadow-lg w-[90%] max-w-lg p-6 relative">
             <h3 class="text-lg font-semibold mb-4">Edit Booking</h3>
 
@@ -25,15 +25,16 @@
             <input type="hidden" id="editBookingId">
 
             <label class="block mb-2 font-medium">Pilih Jadwal Baru:</label>
-            <select id="editSchedule" class="w-full p-2 border rounded mb-4"></select>
+            <select id="editSchedule" name="schedule_id" class="w-full p-2 border rounded mb-4"></select>
 
             <label class="block mb-2 font-medium">Pilih Coach (opsional):</label>
-            <select id="editCoach" class="w-full p-2 border rounded mb-4">
-                <option value="">Tanpa Coach</option>
+            <select id="editCoach" name="coach_id" class="w-full p-2 border rounded mb-4">
+            <option value="">Tanpa Coach</option>
             </select>
 
             <label class="block mb-2 font-medium">Pilih Peralatan:</label>
-            <div id="editEquipmentList" class="mb-4 space-y-2"></div>
+            <div id="editEquipmentList" class="mb-4 space-y-3 max-h-[240px] overflow-y-auto pr-2">
+                </div>
 
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Batal</button>
@@ -44,6 +45,7 @@
             <button onclick="closeEditModal()" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">✕</button>
         </div>
     </div>
+</div>
 
 <script>
 async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) {
@@ -90,7 +92,6 @@ async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = nu
   } catch (err) {
     console.error('Error loading coaches:', err);
     coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
-    // Fallback jika error
     if (currentCoachId && window.currentCoachData) {
       const opt = document.createElement('option');
       opt.value = window.currentCoachData.id;
@@ -125,7 +126,6 @@ async function openEditModal(bookingId) {
     }
 
     scheduleSelect.innerHTML = '';
-    
     if (data.current_schedule) {
       const currentOpt = document.createElement('option');
       currentOpt.value = data.current_schedule.id;
@@ -133,7 +133,6 @@ async function openEditModal(bookingId) {
       currentOpt.selected = true;
       scheduleSelect.appendChild(currentOpt);
     }
-    
     data.schedules.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.id;
@@ -142,29 +141,70 @@ async function openEditModal(bookingId) {
     });
 
     equipmentList.innerHTML = '';
-    data.equipments.forEach(eq => {
-      const wrapper = document.createElement('div');
-      const isChecked = data.selected_equipment_ids && data.selected_equipment_ids.includes(eq.id) ? 'checked' : '';
+    data.available_equipments.forEach(eq => {
+      const isChecked = data.selected_equipment_map.hasOwnProperty(eq.id);
+      const selectedQuantity = data.selected_equipment_map[eq.id] || 1;
+      
+      const wrapper = document.createElement('label');
+      wrapper.className = "flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50 transition-all";
+      
       wrapper.innerHTML = `
-        <label>
-          <input type="checkbox" name="equipment" value="${eq.id}" ${isChecked}>
-          ${eq.name} - Rp ${eq.price.toLocaleString('id-ID')}
-        </label>
+        <div class="flex items-center gap-3">
+          <input type="checkbox" name="equipment" value="${eq.id}" 
+                 id="modal-eq-cb-${eq.id}"
+                 class="eq-checkbox w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                 ${isChecked ? 'checked' : ''}>
+          <div>
+            <div class="font-medium">${eq.name}</div>
+            <div class="text-sm text-slate-600">Stock: ${eq.stock_quantity}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-sm">Rp ${eq.price.toLocaleString('id-ID')}</span>
+          <input type="number" name="quantity_${eq.id}" value="${selectedQuantity}" 
+                 min="1" max="${eq.stock_quantity}"
+                 id="modal-eq-qty-${eq.id}"
+                 data-eq-id="${eq.id}"
+                 class="eq-quantity w-16 p-1 text-center border border-slate-300 rounded-md disabled:bg-slate-200 disabled:opacity-50"
+                 ${!isChecked ? 'disabled' : ''}>
+        </div>
       `;
       equipmentList.appendChild(wrapper);
     });
 
+    equipmentList.querySelectorAll('.eq-checkbox').forEach(cb => {
+      const qtyInput = equipmentList.querySelector(`#modal-eq-qty-${cb.value}`);
+      if (!qtyInput) return;
+      cb.addEventListener('change', () => {
+        if (cb.checked) {
+          qtyInput.disabled = false;
+        } else {
+          qtyInput.disabled = true;
+        }
+      });
+    });
+
+    equipmentList.querySelectorAll('.eq-quantity').forEach(qtyInput => {
+      qtyInput.addEventListener('input', () => {
+        const cb = equipmentList.querySelector(`#modal-eq-cb-${qtyInput.dataset.eqId}`);
+        if (cb && !cb.checked) {
+          cb.checked = true;
+          qtyInput.disabled = false;
+        }
+      });
+    });
+
     const scheduleIdToLoad = data.current_schedule ? data.current_schedule.id : (data.schedules.length > 0 ? data.schedules[0].id : null);
-    
     if (scheduleIdToLoad) {
       await loadCoachesForSchedule(scheduleIdToLoad, bookingId, data.current_coach_id);
-    
     } else {
       coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
     }
+
   } catch (err) {
     console.error(err);
     scheduleSelect.innerHTML = '<option>Gagal memuat jadwal.</option>';
+    equipmentList.innerHTML = 'Gagal memuat equipment.';
   }
 }
 
@@ -180,33 +220,23 @@ function closeEditModal() {
 document.getElementById('editBookingForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   const bookingId = document.getElementById('editBookingId').value;
-  const scheduleId = document.getElementById('editSchedule').value;
-  const coachId = document.getElementById('editCoach').value;
   const csrfToken = document.querySelector('#editBookingForm input[name="csrfmiddlewaretoken"]').value;
-
-  const selectedEquipments = Array.from(
-    document.querySelectorAll('#editEquipmentList input[name="equipment"]:checked')
-  ).map(e => e.value);
-
-  const formData = new FormData();
-  formData.append('schedule_id', scheduleId);
-  formData.append('coach_id', coachId);
-  selectedEquipments.forEach(eq => formData.append('equipment', eq));
+  const formData = new FormData(this);
 
   try {
     const res = await fetch(`/booking/update/${bookingId}/`, {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
-      body: formData
+      body: formData 
     });
 
     const data = await res.json();
     if (res.ok) {
       alert(data.message);
       closeEditModal();
-      location.reload();
+      location.reload(); 
     } else {
-      alert('Gagal: ' + data.message);
+      alert('Gagal: ' (data.message || 'Error tidak diketahui'));
     }
   } catch (err) {
     alert('Terjadi kesalahan: ' + err.message);

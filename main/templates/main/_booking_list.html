@@ -20,12 +20,12 @@
                 </p>
                 {% endif %}
 
-                {% with equipment_list=booking.bookingequipment_set.all %}
+                {% with equipment_list=booking.equipment_details.all %}
                 {% if equipment_list %}
                 <p class="mb-1">
                     <strong>Peralatan:</strong>
                     {% for eq in equipment_list %}
-                    {{ eq.equipment.name }}{% if not forloop.last %}, {% endif %}
+                    {{ eq.equipment.name }} (x{{ eq.quantity }}){% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 </p>
                 {% endif %}
