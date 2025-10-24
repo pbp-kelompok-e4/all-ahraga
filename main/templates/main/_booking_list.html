@@ -7,13 +7,36 @@
                     <strong>{{ booking.venue_schedule.venue.name }}</strong>
                 </h4>
                 
-                <p class="mb-2">
-                    <strong>Jadwal:</strong> 
-                    {{ booking.venue_schedule.date|date:"l, d F Y" }}
+                <p class="mb-1">
+                    <strong>Tanggal:</strong> {{ booking.venue_schedule.date|date:"l, d F Y" }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-1">
+                    <strong>Waktu:</strong> {{ booking.venue_schedule.start_time|time:"H:i" }} - {{ booking.venue_schedule.end_time|time:"H:i" }}
+                </p>
+
+                {% if booking.coach_schedule %}
+                <p class="mb-1">    
+                    <strong>Coach:</strong> {{ booking.coach_schedule.coach.user.get_full_name|default:booking.coach_schedule.coach.user.username }}
+                </p>
+                {% endif %}
+
+                {% with equipment_list=booking.bookingequipment_set.all %}
+                {% if equipment_list %}
+                <p class="mb-1">
+                    <strong>Peralatan:</strong>
+                    {% for eq in equipment_list %}
+                    {{ eq.equipment.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+                {% endwith %}
+
+                <p class="mb-1">
                     <strong>Total Biaya:</strong> 
                     <span class="font-medium">Rp {{ booking.total_price }}</span>
+                </p>
+                <p class="mb-1">
+                    <strong>Metode Pembayaran:</strong> {{ booking.transaction.payment_method }}
                 </p>
                 <p>
                     <strong>Status Pembayaran:</strong> 

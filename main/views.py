@@ -1147,7 +1147,11 @@ def customer_payment(request, booking_id):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
     bookings = Booking.objects.filter(customer=request.user).select_related(
-        'venue_schedule__venue', 'transaction'
+        'venue_schedule__venue', 
+        'transaction', 
+        'coach_schedule__coach__user'  
+    ).prefetch_related(
+        'equipment_details__equipment' 
     ).order_by('-venue_schedule__date')
 
     query = request.GET.get('q', '').strip()
@@ -1228,7 +1232,8 @@ def delete_booking(request, booking_id):
                 coach_schedule.is_booked = False
                 coach_schedule.is_available = True
                 coach_schedule.save()
-
+            
+            booking.transaction.status = 'CANCELLED'
             booking.transaction.delete()
             booking.delete()
             
