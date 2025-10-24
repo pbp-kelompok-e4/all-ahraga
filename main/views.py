@@ -181,6 +181,9 @@ def venue_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_revenue_view(request):
+    # Check if it's an AJAX request
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    
     # 1. Ambil semua venue milik user ini
     venues = Venue.objects.filter(owner=request.user)
     venue_ids = venues.values_list('id', flat=True)
@@ -209,13 +212,48 @@ def venue_revenue_view(request):
             status='CONFIRMED'
         ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
         
-        venue_revenue_data.append({
+        venue_data = {
             'venue': venue,
             'bookings': confirmed_bookings,
             'total_revenue': venue_total,
             'booking_count': confirmed_bookings.count()
+        }
+        
+        # If AJAX, convert to serializable format
+        if is_ajax:
+            bookings_data = []
+            for booking in confirmed_bookings:
+                bookings_data.append({
+                    'id': booking.id,
+                    'customer_username': booking.customer.username,
+                    'date': booking.venue_schedule.date.strftime('%a, %d %b %Y'),
+                    'start_time': booking.venue_schedule.start_time.strftime('%H:%M'),
+                    'end_time': booking.venue_schedule.end_time.strftime('%H:%M'),
+                    'coach': booking.coach_schedule.coach.user.username if booking.coach_schedule else None,
+                    'revenue': float(booking.transaction.revenue_venue)
+                })
+            
+            venue_data = {
+                'venue_id': venue.id,
+                'venue_name': venue.name,
+                'sport_category': venue.sport_category.name,
+                'location': venue.location.name,
+                'total_revenue': float(venue_total),
+                'booking_count': confirmed_bookings.count(),
+                'bookings': bookings_data
+            }
+        
+        venue_revenue_data.append(venue_data)
+
+    # Return JSON for AJAX requests
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'total_revenue': float(total_revenue),
+            'venue_revenue_data': venue_revenue_data
         })
 
+    # Return HTML for normal requests
     context = {
         'total_revenue': total_revenue,
         'venue_revenue_data': venue_revenue_data,
@@ -262,6 +300,7 @@ def venue_manage_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
     if request.method == 'POST':
+        # Handle Venue Edit
         if 'submit_venue_edit' in request.POST:
             venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)
             if venue_edit_form.is_valid():
@@ -279,6 +318,7 @@ def venue_manage_view(request, venue_id):
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'errors': venue_edit_form.errors}, status=400)
 
+        # Handle Equipment Add
         elif 'submit_equipment' in request.POST:
             equipment_form = EquipmentForm(request.POST)
             if equipment_form.is_valid():
@@ -305,7 +345,6 @@ def venue_manage_view(request, venue_id):
                 return redirect('venue_manage', venue_id=venue.id)
             else:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    # Format error lebih detail
                     errors_dict = {}
                     for field, error_list in equipment_form.errors.items():
                         errors_dict[field] = [str(error) for error in error_list]
@@ -316,6 +355,84 @@ def venue_manage_view(request, venue_id):
                         'message': 'Validasi gagal. Periksa input Anda.'
                     }, status=400)
 
+        # Handle Equipment Edit
+        elif request.POST.get('action') == 'edit':
+            equipment_id = request.POST.get('equipment_id')
+            try:
+                equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                equipment_form = EquipmentForm(request.POST, instance=equipment)
+                
+                if equipment_form.is_valid():
+                    equipment_form.save()
+                    
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        equipments_data = []
+                        for item in venue.equipment.all():
+                            equipments_data.append({
+                                'id': item.id,
+                                'name': item.name,
+                                'stock': item.stock_quantity,
+                                'price': float(item.rental_price)
+                            })
+                        return JsonResponse({
+                            'success': True,
+                            'message': 'Equipment berhasil diperbarui.',
+                            'equipments': equipments_data
+                        })
+                    
+                    messages.success(request, "Equipment berhasil diperbarui.")
+                    return redirect('venue_manage', venue_id=venue.id)
+                else:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        errors_dict = {}
+                        for field, error_list in equipment_form.errors.items():
+                            errors_dict[field] = [str(error) for error in error_list]
+                        
+                        return JsonResponse({
+                            'success': False, 
+                            'errors': errors_dict,
+                            'message': 'Validasi gagal. Periksa input Anda.'
+                        }, status=400)
+            except Equipment.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan.'
+                    }, status=404)
+
+        # Handle Equipment Delete
+        elif request.POST.get('action') == 'delete':
+            equipment_id = request.POST.get('equipment_id')
+            try:
+                equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                equipment_name = equipment.name
+                equipment.delete()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    equipments_data = []
+                    for item in venue.equipment.all():
+                        equipments_data.append({
+                            'id': item.id,
+                            'name': item.name,
+                            'stock': item.stock_quantity,
+                            'price': float(item.rental_price)
+                        })
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Equipment "{equipment_name}" berhasil dihapus.',
+                        'equipments': equipments_data
+                    })
+                
+                messages.success(request, f'Equipment "{equipment_name}" berhasil dihapus.')
+                return redirect('venue_manage', venue_id=venue.id)
+            except Equipment.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan.'
+                    }, status=404)
+
+    # GET request - display forms
     venue_edit_form = VenueForm(instance=venue)
     equipment_form = EquipmentForm()
     venue_location = venue.location 
