@@ -7,14 +7,14 @@ from django.forms.widgets import DateInput, TextInput
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
     ('VENUE_OWNER', 'Venue Owner'),
-    ('COACH', 'Pelatih'),
+    ('COACH', 'Coach'),
 ]
 
 class CustomUserCreationForm(UserCreationForm):
-    role_type = forms.ChoiceField(choices=ROLE_CHOICES, label="Daftar Sebagai")
-    phone_number = forms.CharField(max_length=15, required=True, label="Nomor Telepon")
+    role_type = forms.ChoiceField(choices=ROLE_CHOICES, label="Sign Up As")
+    phone_number = forms.CharField(max_length=15, required=True, label="Phone Number")
     email = forms.EmailField(required=True, label="Email Address") 
-
+    
     class Meta:
         model = User 
         fields = ('username', 'email', 'phone_number', 'role_type',) 
@@ -22,10 +22,9 @@ class CustomUserCreationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data.get('email')
-        
         if commit:
             user.save()
-        
+
         role = self.cleaned_data.get('role_type')
         profile = UserProfile.objects.create(
             user=user,

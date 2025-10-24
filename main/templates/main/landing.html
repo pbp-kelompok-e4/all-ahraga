@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Selamat Datang di All-Ahraga{% endblock title %}
+
+{% block content %}
+<div class="text-center py-12 md:py-16">
+    <h1 class="text-4xl md:text-5xl font-bold text-slate-900">
+        Booking Lapangan & Coach Olahraga
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+        Temukan lapangan terbaik dan pelatih profesional di area Anda. Cepat, mudah, dan terpercaya.
+    </p>
+    <div class="mt-8 flex justify-center gap-4">
+        <a href="{% url 'register' %}" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:bg-blue-700 transition-transform hover:-translate-y-0.5">
+            Daftar Sekarang
+        </a>
+        <a href="{% url 'login' %}" class="px-6 py-3 bg-white text-slate-700 font-medium rounded-lg shadow-lg border border-slate-300 hover:bg-slate-50 transition-transform hover:-translate-y-0.5">
+            Masuk
+        </a>
+    </div>
+</div>
+
+<div class="py-16 border-t border-slate-200">
+    <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">
+        Semua Kebutuhan Olahraga Anda
+    </h2>
+    <div class="grid md:grid-cols-3 gap-8">
+        
+        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+            <h3 class="mt-5 text-xl font-semibold text-slate-900">Venue Terlengkap</h3>
+            <p class="mt-2 text-gray-600">
+                Cari dan filter ratusan lapangan futsal, badminton, basket, dan lainnya di sekitar Anda.
+            </p>
+        </div>
+        
+        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </div>
+            <h3 class="mt-5 text-xl font-semibold text-slate-900">Pelatih Profesional</h3>
+            <p class="mt-2 text-gray-600">
+                Tingkatkan skill Anda dengan menyewa pelatih berlisensi sesuai dengan jadwal lapangan Anda.
+            </p>
+        </div>
+        
+        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h3 class="mt-5 text-xl font-semibold text-slate-900">Booking Instan</h3>
+            <p class="mt-2 text-gray-600">
+                Pesan jadwal, pilih coach, dan bayar di satu tempat. Cepat, aman, dan tanpa repot.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="py-16 border-t border-slate-200">
+    <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">
+        Cara Memulai
+    </h2>
+    <div class="max-w-3xl mx-auto grid md:grid-cols-3 gap-8 text-center">
+        <div>
+            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">1</div>
+            <h3 class="mt-4 text-xl font-semibold">Daftar Akun</h3>
+            <p class="mt-2 text-gray-600">Buat akun Anda sebagai customer, pemilik venue, atau pelatih.</p>
+        </div>
+        <div>
+            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">2</div>
+            <h3 class="mt-4 text-xl font-semibold">Cari & Pilih</h3>
+            <p class="mt-2 text-gray-600">Temukan jadwal lapangan atau coach yang Anda inginkan.</p>
+        </div>
+        <div>
+            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">3</div>
+            <h3 class="mt-4 text-xl font-semibold">Booking & Main</h3>
+            <p class="mt-2 text-gray-600">Konfirmasi booking Anda dan bersiaplah berolahraga!</p>
+        </div>
+    </div>
+</div>
+
+<div class="py-12 mt-12 border-t border-slate-200">
+    <div class="bg-slate-800 text-white rounded-xl p-12 text-center shadow-2xl">
+        <h2 class="text-3xl font-bold">Siap Berolahraga?</h2>
+        <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">
+            Bergabunglah dengan ribuan pengguna lain dan temukan pengalaman booking olahraga terbaik hari ini.
+        </p>
+        <div class="mt-8">
+            <a href="{% url 'register' %}" class="px-8 py-3 bg-white text-slate-900 font-bold rounded-lg shadow-lg hover:bg-slate-200 transition-transform hover:scale-105 text-lg">
+                Mulai Sekarang
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
