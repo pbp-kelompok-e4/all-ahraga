@@ -27,17 +27,87 @@
       </div>
     </form>
   {% else %}
-    {% endif %}
+  {% endif %}
 </div>
+<div id="user-toast-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
 
+<style>
+  .user-toast {
+    min-width: 320px;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: user-slide-in 0.3s ease-out;
+  }
+  .user-toast.success { background: linear-gradient(to right, #10B981, #059669); }
+  .user-toast.error { background: linear-gradient(to right, #EF4444, #DC2626); }
+  .user-toast.info { background: linear-gradient(to right, #3B82F6, #2563EB); }
+  .user-toast.warning { background: linear-gradient(to right, #F59E0B, #D97706); }
+  
+  .user-toast-content { display: flex; align-items: center; gap: 0.75rem; }
+  .user-toast-content .icon { flex-shrink: 0; }
+  .user-toast-content .message { flex: 1; font-weight: 500; }
+  .user-toast-content .close-btn { 
+    background: none; border: none; color: rgba(255, 255, 255, 0.8); 
+    cursor: pointer; padding: 0; 
+  }
+  
+  @keyframes user-slide-in {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes user-slide-out {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+  }
+</style>
 <script>
+function showUserToast(message, type = 'info') {
+  const container = document.getElementById('user-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `user-toast ${type}`; 
+
+  const icons = {
+    success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+    error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+    info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+    warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>'
+  };
+
+  toast.innerHTML = `
+    <div class="user-toast-content">
+      <span class="icon">${icons[type] || icons['info']}</span>
+      <p class="message">${message}</p>
+      <button type="button" class="close-btn">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(toast);
+
+  const closeToast = () => {
+    toast.style.animation = 'user-slide-out 0.3s ease-out forwards';
+    setTimeout(() => toast.remove(), 300);
+  };
+  const timer = setTimeout(closeToast, 4000); 
+  
+  toast.querySelector('.close-btn').addEventListener('click', () => {
+    clearTimeout(timer);
+    closeToast();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const paymentForm = document.getElementById('payment-form');
   const submitButton = document.getElementById('submit-button');
 
   if (paymentForm) {
     paymentForm.addEventListener('submit', function(e) {
-        e.preventDefault(); 
+        e.preventDefault();
         
         if (submitButton) {
             submitButton.disabled = true;
@@ -48,30 +118,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(this.action, {
             method: 'POST',
-            body: new FormData(this), 
+            body: new FormData(this),
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRFToken': csrfToken
             }
         })
         .then(response => {
-            return response.json().then(data => ({ 
-                ok: response.ok, 
-                data 
-            }));
+            return response.json().then(data => ({ ok: response.ok, data }));
         })
         .then(({ ok, data }) => {
             if (ok) {
-                // SUKSES (status 200)
-                alert(data.message); 
-                window.location.href = data.redirect_url;
+                showUserToast(data.message, 'success'); 
+                
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1500);
             } else {
                 throw new Error(data.message);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error: ' + error.message);
+            showUserToast(error.message, 'error');
             
             if (submitButton) {
                 submitButton.disabled = false;
@@ -80,7 +149,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
   }
-
 });
 </script>
 {% endblock content %}

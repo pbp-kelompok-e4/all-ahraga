@@ -5,7 +5,6 @@
 {% block content %}
 <div class="max-w-[900px] mx-auto my-5 p-6 bg-white rounded-lg shadow">
     
-    <p class="text-center mb-4">Berikut adalah daftar booking Anda yang menunggu konfirmasi pembayaran.</p>
     <div class="mb-6">
         <input type="text" id="searchMyBooking" 
                placeholder="Cari nama venue atau ID booking..."
@@ -46,8 +45,98 @@
         </div>
     </div>
 </div>
+<div id="user-toast-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+<style>
+  .user-toast {
+    min-width: 320px;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Gunakan nama animasi unik */
+    animation: user-slide-in 0.3s ease-out;
+  }
+  /* Empat tipe untuk disesuaikan dengan Django */
+  .user-toast.success { background: linear-gradient(to right, #10B981, #059669); }
+  .user-toast.error { background: linear-gradient(to right, #EF4444, #DC2626); }
+  .user-toast.info { background: linear-gradient(to right, #3B82F6, #2563EB); }
+  .user-toast.warning { background: linear-gradient(to right, #F59E0B, #D97706); }
+  
+  .user-toast-content { display: flex; align-items: center; gap: 0.75rem; }
+  .user-toast-content .icon { flex-shrink: 0; }
+  .user-toast-content .message { flex: 1; font-weight: 500; }
+  .user-toast-content .close-btn { 
+    background: none; border: none; color: rgba(255, 255, 255, 0.8); 
+    cursor: pointer; padding: 0; 
+  }
+  
+  /* Keyframes dengan nama unik */
+  @keyframes user-slide-in {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes user-slide-out {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+  }
+</style>
 
 <script>
+function showUserToast(message, type = 'info') {
+  const container = document.getElementById('user-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `user-toast ${type}`; 
+
+  const icons = {
+    success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+    error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+    info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+    warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>'
+  };
+
+  toast.innerHTML = `
+    <div class="user-toast-content">
+      <span class="icon">${icons[type] || icons['info']}</span>
+      <p class="message">${message}</p>
+      <button type="button" class="close-btn">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+      </button>
+    </div>
+  `;
+  container.appendChild(toast);
+
+  const closeToast = () => {
+    toast.style.animation = 'user-slide-out 0.3s ease-out forwards';
+    setTimeout(() => toast.remove(), 300);
+  };
+  const timer = setTimeout(closeToast, 4000); 
+  
+  toast.querySelector('.close-btn').addEventListener('click', () => {
+    clearTimeout(timer);
+    closeToast();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  {% if messages %}
+    {% for message in messages %}
+      let toastType = 'info'; 
+      {% if message.tags == 'success' %}
+        toastType = 'success';
+      {% elif message.tags == 'error' %}
+        toastType = 'error';
+      {% elif message.tags == 'warning' %}
+        toastType = 'warning';
+      {% endif %}
+      
+      showUserToast("{{ message|escapejs }}", toastType);
+    {% endfor %}
+  {% endif %}
+});
 async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) {
   const coachSelect = document.getElementById('editCoach');
   coachSelect.innerHTML = '<option value="">Memuat coach...</option>';
@@ -232,14 +321,17 @@ document.getElementById('editBookingForm').addEventListener('submit', async func
 
     const data = await res.json();
     if (res.ok) {
-      alert(data.message);
+      showUserToast(data.message, 'success');
       closeEditModal();
-      location.reload(); 
+
+      setTimeout(() => {
+          location.reload(); 
+      }, 1500);
     } else {
-      alert('Gagal: ' (data.message || 'Error tidak diketahui'));
+      showUserToast('Gagal: ' + (data.message || 'Error tidak diketahui'), 'error');
     }
   } catch (err) {
-    alert('Terjadi kesalahan: ' + err.message);
+    showUserToast('Terjadi kesalahan: ' + err.message, 'error');
   }
 });
 </script>
