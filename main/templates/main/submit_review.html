@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Beri Review{% endblock %}
+
+{% block extra_head %}
+<style>
+  .star-input{display:inline-flex;flex-direction:row-reverse;gap:.25rem}
+  .star-input input{display:none}
+  .star-input label{font-size:28px;color:#d1d5db;cursor:pointer;transition:transform .05s ease,color .1s ease}
+  .star-input label:hover{transform:scale(1.05)}
+  .star-input label:hover, .star-input label:hover ~ label{color:#f59e0b}
+  .star-input input:checked ~ label{color:#f59e0b}
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto my-8 p-6 bg-white rounded-xl shadow">
+  <h2 class="text-2xl font-bold mb-1">Beri Review</h2>
+  <p class="text-gray-600 mb-6">Booking #{{ booking.id }} • {{ booking.venue_schedule.venue.name }}</p>
+
+  <div class="grid md:grid-cols-2 gap-8">
+
+    <!-- ================= Venue Review ================ -->
+    <div class="border rounded-lg p-5">
+      <h3 class="text-lg font-semibold mb-4">Review Venue</h3>
+      <form method="post" action="{% url 'submit_review' booking.id %}" class="space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="target" value="venue">
+
+        <div>
+          <label class="block text-gray-700 font-medium mb-1">Rating Venue</label>
+          <div class="star-input">
+            <input type="radio" id="venue-star5" name="rating" value="5" required><label for="venue-star5">★</label>
+            <input type="radio" id="venue-star4" name="rating" value="4"><label for="venue-star4">★</label>
+            <input type="radio" id="venue-star3" name="rating" value="3"><label for="venue-star3">★</label>
+            <input type="radio" id="venue-star2" name="rating" value="2"><label for="venue-star2">★</label>
+            <input type="radio" id="venue-star1" name="rating" value="1"><label for="venue-star1">★</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 font-medium mb-1">Feedback Venue</label>
+          <textarea name="comment" rows="4" placeholder="Ceritakan pengalamanmu di venue ini..."
+            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-600 focus:outline-none" required></textarea>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit"
+            class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">
+            Kirim Review Venue
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ================= Coach Review ================ -->
+    {% if booking.coach_schedule and booking.coach_schedule.coach %}
+    <div class="border rounded-lg p-5">
+      <h3 class="text-lg font-semibold mb-4">
+        Review Coach
+        <span class="text-gray-500 font-normal">— {{ booking.coach_schedule.coach.user.get_full_name|default:booking.coach_schedule.coach.user.username }}</span>
+      </h3>
+
+      <form method="post" action="{% url 'submit_review' booking.id %}" class="space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="target" value="coach">
+
+        <div>
+          <label class="block text-gray-700 font-medium mb-1">Rating Coach</label>
+          <div class="star-input">
+            <input type="radio" id="coach-star5" name="rating" value="5" required><label for="coach-star5">★</label>
+            <input type="radio" id="coach-star4" name="rating" value="4"><label for="coach-star4">★</label>
+            <input type="radio" id="coach-star3" name="rating" value="3"><label for="coach-star3">★</label>
+            <input type="radio" id="coach-star2" name="rating" value="2"><label for="coach-star2">★</label>
+            <input type="radio" id="coach-star1" name="rating" value="1"><label for="coach-star1">★</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 font-medium mb-1">Feedback Coach</label>
+          <textarea name="comment" rows="4" placeholder="Ceritakan pengalamanmu dengan coach ini..."
+            class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-600 focus:outline-none" required></textarea>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="submit"
+            class="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition">
+            Kirim Review Coach
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="mt-6">
+    <a href="{% url 'booking_history' %}" class="text-sm text-gray-600 hover:underline">← Kembali ke Riwayat</a>
+  </div>
+</div>
+{% endblock %}

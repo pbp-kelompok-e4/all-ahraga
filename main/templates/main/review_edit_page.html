@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Review{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto my-8 bg-white rounded-xl shadow p-6">
+  <h2 class="text-2xl font-bold mb-4">Edit Review</h2>
+
+  <form method="post" action="{% url 'edit_review' review.id %}" class="space-y-5">
+    {% csrf_token %}
+
+    <!-- Rating -->
+    <div>
+      <label class="block text-gray-700 font-medium mb-1">Rating</label>
+      <div class="flex flex-row-reverse justify-end gap-1">
+        {% for i in "54321" %}
+          <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" class="hidden peer"
+                 {% if review.rating|stringformat:"i" == i %}checked{% endif %}>
+          <label for="star{{ i }}" class="text-2xl text-gray-300 peer-checked:text-yellow-400 hover:text-yellow-400 cursor-pointer transition">★</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Comment -->
+    <div>
+      <label class="block text-gray-700 font-medium mb-1">Komentar</label>
+      <textarea name="comment" rows="4" required
+        class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 focus:outline-none text-gray-700 resize-none">{{ review.comment }}</textarea>
+    </div>
+
+    <div class="flex justify-between items-center pt-2">
+      <a href="{% url 'booking_history' %}" class="text-red-600 font-semibold hover:underline">Batal</a>
+      <button type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-full shadow-md transition">
+        Simpan
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

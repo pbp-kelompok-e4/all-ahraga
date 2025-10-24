@@ -4,82 +4,177 @@
 
 {% block content %}
 <div class="max-w-[900px] mx-auto my-5 p-6 bg-white rounded-lg shadow">
-    <h2 class="text-center border-b-2 border-gray-100 pb-4 mb-6 text-xl font-semibold">
-        Riwayat Bookingan Saya
-    </h2>
+  <h2 class="text-center border-b-2 border-gray-100 pb-4 mb-6 text-xl font-semibold">
+    Riwayat Bookingan Saya
+  </h2>
 
-    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
-        <input type="text" id="searchBooking" placeholder="Cari nama venue atau ID booking..."
-               class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-        
-        <select id="statusFilter"
-                class="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            <option value="">Semua Status</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="PENDING">Pending</option></select>
-    </div>
-    
-    <div id="bookingListWrapper">
-        {% include "main/_booking_list.html" %}
-    </div>
+  <!-- Search & Filter -->
+  <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
+    <input
+      type="text"
+      id="searchBooking"
+      placeholder="Cari nama venue atau ID booking..."
+      class="flex-grow p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+    />
+    <select
+      id="statusFilter"
+      class="p-2.5 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+    >
+      <option value="">Semua Status</option>
+      <option value="CONFIRMED">Confirmed</option>
+      <option value="PENDING">Pending</option>
+    </select>
+  </div>
 
-    </div>
+  <!-- History List -->
+  <div id="bookingListWrapper" class="space-y-4">
+    {% for b in bookings %}
+      <div class="rounded-lg border border-gray-200 bg-white shadow-sm p-4 md:p-5">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <p class="text-lg font-semibold leading-tight">{{ b.venue_schedule.venue.name }}</p>
+            <p class="text-xs text-gray-500 mt-1">ID Booking: {{ b.id }}</p>
+          </div>
+
+          <!-- Status Badge -->
+          {% if b.transaction.status == 'CONFIRMED' %}
+            <span class="inline-flex items-center w-fit px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20">
+              {{ b.transaction.status }}
+            </span>
+          {% elif b.transaction.status == 'PENDING' %}
+            <span class="inline-flex items-center w-fit px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20">
+              {{ b.transaction.status }}
+            </span>
+          {% else %}
+            <span class="inline-flex items-center w-fit px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-400/30">
+              {{ b.transaction.status|default:"Unknown" }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          {% if b.transaction.status == 'CONFIRMED' %}
+            <div class="flex flex-wrap items-center gap-2">
+              {# ==== VENUE ==== #}
+              {% if b.venue_schedule and b.venue_schedule.venue %}
+                {% if b.my_venue_review %}
+                  <a
+                    href="{% url 'edit_review_page' b.my_venue_review.id %}"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-blue-600 text-blue-700 hover:bg-blue-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                  >
+                    Edit Review Venue
+                  </a>
+                  <form
+                    method="post"
+                    action="{% url 'delete_review' b.my_venue_review.id %}"
+                    class="inline-block"
+                    onsubmit="return confirm('Hapus review venue ini?');"
+                  >
+                    {% csrf_token %}
+                    <button
+                      type="submit"
+                      class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-red-600 text-red-700 hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                    >
+                      Hapus Review Venue
+                    </button>
+                  </form>
+                {% else %}
+                  <a
+                    href="{% url 'submit_review' b.id %}?target=venue"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+                  >
+                    Beri Review Venue
+                  </a>
+                {% endif %}
+              {% endif %}
+
+              {# ==== COACH (jika ada) ==== #}
+              {% if b.coach_schedule and b.coach_schedule.coach %}
+                {% if b.my_coach_review %}
+                  <a
+                    href="{% url 'edit_review_page' b.my_coach_review.id %}"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-blue-600 text-blue-700 hover:bg-blue-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                  >
+                    Edit Review Coach
+                  </a>
+                  <form
+                    method="post"
+                    action="{% url 'delete_review' b.my_coach_review.id %}"
+                    class="inline-block"
+                    onsubmit="return confirm('Hapus review coach ini?');"
+                  >
+                    {% csrf_token %}
+                    <button
+                      type="submit"
+                      class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-red-600 text-red-700 hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                    >
+                      Hapus Review Coach
+                    </button>
+                  </form>
+                {% else %}
+                  <a
+                    href="{% url 'submit_review' b.id %}?target=coach"
+                    class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"
+                  >
+                    Beri Review Coach
+                  </a>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="text-sm text-gray-500">Belum Konfirmasi</div>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-center text-gray-500 py-10">
+        Belum ada booking yang ditemukan. Cobalah untuk melakukan booking terlebih dahulu.
+      </p>
+    {% endfor %}
+  </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchBooking');
-    const statusFilter = document.getElementById('statusFilter');
-    const bookingListWrapper = document.getElementById('bookingListWrapper');
-    
-    const dataUrl = "{% url 'booking_history' %}"; 
+  const searchInput = document.getElementById('searchBooking');
+  const statusFilter = document.getElementById('statusFilter');
+  const bookingListWrapper = document.getElementById('bookingListWrapper');
+  const dataUrl = "{% url 'booking_history' %}";
 
-    let debounceTimer;
-    function debounce(func, delay) {
-        return function(...args) {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                func.apply(this, args);
-            }, delay);
-        };
+  let debounceTimer;
+  function debounce(func, delay) {
+    return function(...args) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { func.apply(this, args); }, delay);
+    };
+  }
+
+  async function fetchBookings() {
+    const searchTerm = searchInput.value;
+    const statusTerm = statusFilter.value;
+    const url = new URL(dataUrl, window.location.origin);
+    if (searchTerm) url.searchParams.append('q', searchTerm);
+    if (statusTerm) url.searchParams.append('status', statusTerm);
+
+    try {
+      bookingListWrapper.innerHTML = '<p class="text-center text-gray-500 py-10">Memuat...</p>';
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const html = await response.text();
+      bookingListWrapper.innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      bookingListWrapper.innerHTML = '<p class="text-center text-red-500 py-10">Gagal memuat data.</p>';
     }
+  }
 
-    async function fetchBookings() {
-        const searchTerm = searchInput.value;
-        const statusTerm = statusFilter.value;
-
-        const url = new URL(dataUrl, window.location.origin);
-        if (searchTerm) {
-            url.searchParams.append('q', searchTerm);
-        }
-        if (statusTerm) {
-            url.searchParams.append('status', statusTerm);
-        }
-
-        try {
-            bookingListWrapper.innerHTML = '<p class="text-center text-gray-500 py-10">Memuat...</p>';
-
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest' 
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-            const html = await response.text();
-            bookingListWrapper.innerHTML = html; 
-
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-            bookingListWrapper.innerHTML = '<p class="text-center text-red-500 py-10">Gagal memuat data.</p>';
-        }
-    }
-    searchInput.addEventListener('input', debounce(fetchBookings, 300));
-    statusFilter.addEventListener('change', fetchBookings);
-
-});  
+  searchInput.addEventListener('input', debounce(fetchBookings, 300));
+  statusFilter.addEventListener('change', fetchBookings);
+});
 </script>
 {% endblock content %}
