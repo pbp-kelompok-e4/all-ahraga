@@ -537,42 +537,54 @@ def delete_venue_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def get_available_coaches(request, schedule_id):
+    editing_booking_id = request.GET.get('editing_booking_id')
+
     try:
-        schedule = VenueSchedule.objects.select_related('venue__location', 'venue__sport_category').get(id=schedule_id, is_booked=False)
+        schedule_query = Q(id=schedule_id)
+        schedule_booked_filter = Q(is_booked=False)
+        if editing_booking_id:
+            schedule_booked_filter |= Q(booking__id=editing_booking_id)
+        
+        schedule_query &= schedule_booked_filter
+        
+        schedule = VenueSchedule.objects.select_related('venue__location', 'venue__sport_category').get(schedule_query)
         venue = schedule.venue
     except VenueSchedule.DoesNotExist:
         return JsonResponse({'error': 'Jadwal tidak ditemukan atau sudah dibooking.'}, status=404)
-
-    # [FIX] LANGKAH 1: Dapatkan HANYA ID coach yang jadwalnya cocok.
-    available_coach_ids = CoachSchedule.objects.filter(
+    coach_schedule_query = Q(
         date=schedule.date,
         start_time=schedule.start_time,
         is_available=True,
-        is_booked=False
-    ).values_list('coach_id', flat=True) # Hanya ambil daftar [1, 2, 5, ...]
+    )
+    
+    coach_booked_filter = Q(is_booked=False)
+    if editing_booking_id:
+        coach_booked_filter |= Q(booking__id=editing_booking_id)
 
-    # [FIX] LANGKAH 2: Filter CoachProfile berdasarkan daftar ID tersebut
+    coach_schedule_query &= coach_booked_filter
+
+    available_coach_ids = CoachSchedule.objects.filter(
+        coach_schedule_query
+    ).values_list('coach_id', flat=True)
+
     coaches_for_schedule = CoachProfile.objects.filter(
         id__in=available_coach_ids,
         service_areas=venue.location,
         main_sport_trained=venue.sport_category
-    ).distinct().select_related(  # <-- .distinct() DIPINDAHKAN KE SINI
+    ).distinct().select_related(
         'user', 'main_sport_trained'
-    ).prefetch_related('service_areas') # <-- .distinct() DIHAPUS DARI SINI
+    ).prefetch_related('service_areas')
 
     coaches_data = []
     for coach in coaches_for_schedule:
         full_name = coach.user.get_full_name() or coach.user.username
-
         profile_picture_url = None
         if coach.profile_picture:
             try:
                 profile_picture_url = coach.profile_picture.url
             except ValueError:
                 profile_picture_url = None 
-
         areas_list = [area.name for area in coach.service_areas.all()]
-
         coaches_data.append({
             'id': coach.id,
             'name': full_name,
@@ -1287,12 +1299,10 @@ def update_booking(request, booking_id):
             current_time = now.time()
             
             try:
-                new_schedule = VenueSchedule.objects.select_for_update().get(
-                    id=new_schedule_id,
-                    venue=venue,
-                    is_booked=False,
-                    date__gte=today
-                )
+                schedule_query = Q(id=new_schedule_id, venue=venue, date__gte=today)
+                schedule_query &= (Q(is_booked=False) | Q(booking=booking))
+
+                new_schedule = VenueSchedule.objects.select_for_update().get(schedule_query)
                 
                 if new_schedule.date == today and new_schedule.start_time < current_time:
                     raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
@@ -1304,28 +1314,36 @@ def update_booking(request, booking_id):
                 }, status=400)
             
             old_schedule = booking.venue_schedule
-            old_schedule.is_booked = False
-            old_schedule.is_available = True
-            old_schedule.save()
+            if old_schedule.id != new_schedule.id:
+                old_schedule.is_booked = False
+                old_schedule.is_available = True
+                old_schedule.save()
             
             if booking.coach_schedule:
                 old_coach_schedule = booking.coach_schedule
-                old_coach_schedule.is_booked = False
-                old_coach_schedule.is_available = True
-                old_coach_schedule.save()
+                if (old_schedule.id != new_schedule.id) or \
+                   (str(old_coach_schedule.coach.id) != new_coach_id):
+                    old_coach_schedule.is_booked = False
+                    old_coach_schedule.is_available = True
+                    old_coach_schedule.save()
             
             total_price = venue.price_per_hour or 0
             
             new_coach_schedule_obj = None
-            if new_coach_id and new_coach_id != 'none':
+            if new_coach_id and new_coach_id != 'none' and new_coach_id != '':
                 try:
                     coach_obj = CoachProfile.objects.get(id=new_coach_id)
-                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
+                    coach_schedule_query = Q(
                         coach=coach_obj,
                         date=new_schedule.date,
-                        start_time=new_schedule.start_time,
-                        is_booked=False
+                        start_time=new_schedule.start_time
                     )
+                    coach_schedule_query &= (Q(is_booked=False) | Q(booking=booking))
+
+                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
+                        coach_schedule_query
+                    )
+
                     total_price += coach_obj.rate_per_hour or 0
                     
                     new_coach_schedule_obj.is_booked = True
@@ -1462,7 +1480,6 @@ def update_booking_data(request, booking_id):
             'name': coach.user.get_full_name() or coach.user.username,
             'rate': float(coach.rate_per_hour or 0)
         }
-
     selected_equipment_ids = list(
         BookingEquipment.objects.filter(booking=booking).values_list('equipment_id', flat=True)
     )
@@ -1482,6 +1499,7 @@ def update_booking_data(request, booking_id):
         'current_schedule': current_schedule_data,
         'schedules': schedules_data,
         'current_coach_id': current_coach_id,
+        'current_coach_data': current_coach_data, 
         'selected_equipment_ids': selected_equipment_ids,
         'equipments': equipments_data,
     })

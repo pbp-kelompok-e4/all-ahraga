@@ -46,9 +46,8 @@
     </div>
 
 <script>
-async function loadCoachesForSchedule(scheduleId, currentCoachId = null) {
+async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) {
   const coachSelect = document.getElementById('editCoach');
-
   coachSelect.innerHTML = '<option value="">Memuat coach...</option>';
 
   if (!scheduleId) {
@@ -57,13 +56,12 @@ async function loadCoachesForSchedule(scheduleId, currentCoachId = null) {
   }
 
   try {
-    const response = await fetch(`/api/schedule/${scheduleId}/coaches/`, {
+    const response = await fetch(`/api/schedule/${scheduleId}/coaches/?editing_booking_id=${bookingId}`, {
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
 
     if (!response.ok) {
       coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
-      
       if (currentCoachId && window.currentCoachData) {
         const opt = document.createElement('option');
         opt.value = window.currentCoachData.id;
@@ -74,7 +72,6 @@ async function loadCoachesForSchedule(scheduleId, currentCoachId = null) {
     }
     
     const data = await response.json();
-
     coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
     
     if (data.coaches && data.coaches.length > 0) {
@@ -84,16 +81,16 @@ async function loadCoachesForSchedule(scheduleId, currentCoachId = null) {
         opt.textContent = `${coach.name} - Rp ${coach.rate_per_hour.toLocaleString('id-ID')}/jam`;
         coachSelect.appendChild(opt);
       });
-    } else if (currentCoachId && window.currentCoachData) {
-      const opt = document.createElement('option');
-      opt.value = window.currentCoachData.id;
-      opt.textContent = `${window.currentCoachData.name} - Rp ${window.currentCoachData.rate.toLocaleString('id-ID')}/jam (Coach Saat Ini)`;
-      coachSelect.appendChild(opt);
     }
+
+    if (currentCoachId) {
+      coachSelect.value = currentCoachId;
+    }
+
   } catch (err) {
     console.error('Error loading coaches:', err);
     coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
-    
+    // Fallback jika error
     if (currentCoachId && window.currentCoachData) {
       const opt = document.createElement('option');
       opt.value = window.currentCoachData.id;
@@ -111,6 +108,8 @@ async function openEditModal(bookingId) {
   const bookingIdInput = document.getElementById('editBookingId');
   bookingIdInput.value = bookingId;
 
+  window.currentCoachData = null;
+
   scheduleSelect.innerHTML = '<option>Memuat...</option>';
   coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
   equipmentList.innerHTML = 'Memuat...';
@@ -120,6 +119,10 @@ async function openEditModal(bookingId) {
   try {
     const res = await fetch(`/api/booking/${bookingId}/edit-data/`);
     const data = await res.json();
+
+    if (data.current_coach_id && data.current_coach_data) {
+        window.currentCoachData = data.current_coach_data;
+    }
 
     scheduleSelect.innerHTML = '';
     
@@ -154,11 +157,8 @@ async function openEditModal(bookingId) {
     const scheduleIdToLoad = data.current_schedule ? data.current_schedule.id : (data.schedules.length > 0 ? data.schedules[0].id : null);
     
     if (scheduleIdToLoad) {
-      await loadCoachesForSchedule(scheduleIdToLoad);
+      await loadCoachesForSchedule(scheduleIdToLoad, bookingId, data.current_coach_id);
     
-      if (data.current_coach_id) {
-        coachSelect.value = data.current_coach_id;
-      }
     } else {
       coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
     }
@@ -169,7 +169,8 @@ async function openEditModal(bookingId) {
 }
 
 document.getElementById('editSchedule').addEventListener('change', async function() {
-  await loadCoachesForSchedule(this.value);
+  const bookingId = document.getElementById('editBookingId').value;
+  await loadCoachesForSchedule(this.value, bookingId, null);
 });
 
 function closeEditModal() {
