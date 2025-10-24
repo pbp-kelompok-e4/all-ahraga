@@ -7,19 +7,22 @@
     
     <title>All-Ahraga | {% block title %}{% endblock title %}</title> 
     
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    {% block extra_head %}{% endblock extra_head %} 
+    
+    {% block extra_head %}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% endblock extra_head %} 
 </head>
 
 <body class="min-h-screen bg-gray-50 flex flex-col">
     <header class="bg-slate-800 text-white shadow-lg">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
-                <div class="text-xl font-bold">
-                    <a href="{% url 'home' %}" class="hover:text-blue-400 transition">All-Ahraga</a>
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="relative flex justify-between items-center h-16">
+                <div class="flex-none text-xl font-bold">
+                    <a href="{% url 'index' %}" class="hover:text-blue-400 transition">All-Ahraga</a>
                 </div>
-                <nav class="flex items-center space-x-6">
+
+                <nav class="absolute inset-x-0 flex justify-center items-center space-x-6">
                     {% if user.is_authenticated %}
                         {% if user.profile %}
                             {% if user.is_superuser or user.is_staff %}
@@ -31,26 +34,54 @@
                                 <a href="{% url 'venue_revenue' %}" class="hover:text-blue-400 transition">Revenue Report</a>
                             
                             {% elif user.profile.is_coach %}
-                                <a href="{% url 'coach_schedule' %}" class="hover:text-blue-400 transition">Jadwal Sesi</a>
-                                <a href="{% url 'coach_profile' %}" class="hover:text-blue-400 transition">Profil Pelatih</a>
-                                <a href="{% url 'coach_revenue_report' %}" class="hover:text-blue-400 transition">Laporan Pendapatan</a>
                                 <a href="{% url 'coach_list' %}" class="hover:text-blue-400 transition">Daftar Pelatih</a>
+                                <a href="{% url 'coach_revenue_report' %}" class="hover:text-blue-400 transition">Laporan Pendapatan</a>
+                                <a href="{% url 'coach_schedule' %}" class="hover:text-blue-400 transition">Jadwal Kamu</a>
+                                <a href="{% url 'coach_profile' %}" class="hover:text-blue-400 transition">Profil Kamu</a>
                             
                             {% elif user.profile.is_customer %}
                                 <a href="{% url 'my_bookings' %}" class="hover:text-blue-400 transition">Bookingan Saya</a>
                                 <a href="{% url 'booking_history' %}" class="hover:text-blue-400 transition">Riwayat Booking</a>
                             {% endif %}
                         {% endif %}
-                        
-                        <span class="text-gray-400">|</span>
-                        <a href="{% url 'logout' %}" class="hover:text-red-400 transition">
-                            Keluar ({{ user.username }})
-                        </a>
-                    {% else %}
-                        <a href="{% url 'register' %}" class="hover:text-blue-400 transition">Daftar</a>
-                        <a href="{% url 'login' %}" class="hover:text-blue-400 transition">Masuk</a>
                     {% endif %}
                 </nav>
+
+                <div class="flex-none flex items-center">
+                    {% if user.is_authenticated %}
+                        <div x-data="{ open: false }" class="relative">
+                            <button @click="open = !open" class="p-1 rounded-full hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </button>
+                            
+                            <div x-show="open" 
+                                 @click.away="open = false" 
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5"
+                                 style="display: none;">
+                                
+                                <div class="px-4 py-2 text-sm text-gray-500 border-b">
+                                    <strong class="text-gray-900">{{ user.username }}</strong>
+                                </div>
+                                <a href="{% url 'logout' %}" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition">
+                                    Keluar
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="flex items-center space-x-6">
+                            <a href="{% url 'register' %}" class="hover:text-blue-400 transition">Daftar</a>
+                            <a href="{% url 'login' %}" class="hover:text-blue-400 transition">Masuk</a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </header>
