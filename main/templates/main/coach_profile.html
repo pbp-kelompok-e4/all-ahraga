@@ -1,253 +1,259 @@
 {% extends "base.html" %}
 
+
 {% block title %}Profil Pelatih{% endblock title %}
+
 
 {% block content %}
 <div style="min-height: 100vh; background: #ffffff; padding: 40px 20px; font-family: 'Poppins', sans-serif;">
-  
-  <!-- Back Button -->
-  <div style="max-width: 1000px; margin: 0 auto 20px;">
-    <a href="{% url 'home' %}" 
-       style="display: inline-flex; align-items: center; gap: 8px;
-              padding: 10px 20px; background: #003F3F; color: #fff;
-              text-decoration: none; border-radius: 8px;
-              font-size: 14px; font-weight: 500;
-              transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,63,63,0.2);">
-      <span style="font-size: 18px;">←</span> Kembali
-    </a>
-  </div>
+
+
 
   <!-- Main Container -->
   <div style="max-width: 1000px; margin: 0 auto;">
-    
+   
     <!-- Header Card -->
-    <div style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%); 
+    <div style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
                 border-radius: 20px 20px 0 0; padding: 40px; text-align: center;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-      
+     
       <!-- Profile Picture -->
       <div style="margin-bottom: 20px; display: flex; justify-content: center;">
-        {% if coach_profile %}
-          {% if coach_profile.profile_picture %}
-            <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil" 
-                 style="width: 140px; height: 140px; border-radius: 50%; 
-                        object-fit: cover; border: 5px solid #f5b800; 
-                        box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
-          {% elif coach_profile.profile_picture_url %}
-            <img src="{{ coach_profile.profile_picture_url }}" alt="Foto Profil" 
-                 style="width: 140px; height: 140px; border-radius: 50%; 
-                        object-fit: cover; border: 5px solid #f5b800; 
-                        box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+        <div id="profilePictureContainer">
+          {% if coach_profile %}
+            {% if coach_profile.profile_picture %}
+              <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil"
+                   id="headerProfilePic"
+                   style="width: 140px; height: 140px; border-radius: 50%;
+                          object-fit: cover; border: 5px solid #f5b800;
+                          box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+            {% else %}
+              <div style="width: 140px; height: 140px; border-radius: 50%;
+                          background: rgba(255,255,255,0.2); margin: 0 auto;
+                          display: flex; align-items: center; justify-content: center;
+                          border: 5px solid #f5b800;">
+                <span style="font-size: 48px; color: #fff;">👤</span>
+              </div>
+            {% endif %}
           {% else %}
-            <div style="width: 140px; height: 140px; border-radius: 50%; 
+            <div style="width: 140px; height: 140px; border-radius: 50%;
                         background: rgba(255,255,255,0.2); margin: 0 auto;
                         display: flex; align-items: center; justify-content: center;
                         border: 5px solid #f5b800;">
               <span style="font-size: 48px; color: #fff;">👤</span>
             </div>
           {% endif %}
-        {% else %}
-          <div style="width: 140px; height: 140px; border-radius: 50%; 
-                      background: rgba(255,255,255,0.2); margin: 0 auto;
-                      display: flex; align-items: center; justify-content: center;
-                      border: 5px solid #f5b800;">
-            <span style="font-size: 48px; color: #fff;">👤</span>
-          </div>
-        {% endif %}
+        </div>
       </div>
+
 
       <h1 style="color: #fff; margin: 0 0 10px; font-size: 32px; font-weight: 600;">
         {{ user_obj.username }}
       </h1>
-      
-      {% if coach_profile and coach_profile.is_verified %}
+     
+      <div id="verifiedBadge" {% if not coach_profile or not coach_profile.is_verified %}style="display: none;"{% endif %}>
         <div style="display: inline-flex; align-items: center; gap: 6px;
                     background: rgba(245,184,0,0.2); padding: 6px 16px;
                     border-radius: 20px; border: 2px solid #f5b800;">
           <span style="color: #f5b800; font-size: 18px;">✓</span>
           <span style="color: #fff; font-weight: 500; font-size: 14px;">Pelatih Terverifikasi</span>
         </div>
-      {% endif %}
+      </div>
     </div>
 
+
     <!-- Content Card -->
-    <div style="background: #fff; border-radius: 0 0 20px 20px; 
+    <div style="background: #fff; border-radius: 0 0 20px 20px;
                 padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-      
-      <!-- Info Section -->
-      <div style="
-        display: grid; 
-        grid-template-columns: repeat(2, 1fr); 
-        gap: 20px; 
-        margin-bottom: 30px;
-      ">
-
-      <style>
-        @media (max-width: 768px) {
-          div[style*='grid-template-columns: repeat(2, 1fr)'] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      </style>
-        
-        <!-- Info Card 1 -->
-        <div style="background: #f8fafa; padding: 20px; border-radius: 12px; 
-                    border-left: 4px solid #003F3F;">
-          <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">
-            EMAIL
-          </div>
-          <div style="color: #003F3F; font-weight: 600; word-break: break-all;">
-            {{ user_obj.email }}
-          </div>
-        </div>
-
-        <!-- Info Card 2 -->
-        <div style="background: #f8fafa; padding: 20px; border-radius: 12px; 
-                    border-left: 4px solid #003F3F;">
-          <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">
-            NOMOR TELEPON
-          </div>
-          <div style="color: #003F3F; font-weight: 600;">
-            {{ phone_number }}
-          </div>
-        </div>
-
+     
+      <!-- Profile Content (Dynamic) -->
+      <div id="profileContent">
         {% if coach_profile %}
-        <!-- Info Card 3 -->
-        <div style="background: #f8fafa; padding: 20px; border-radius: 12px; 
-                    border-left: 4px solid #f5b800;">
-          <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">
-            UMUR
-          </div>
-          <div style="color: #003F3F; font-weight: 600;">
-            {{ coach_profile.age|default:"-" }} tahun
-          </div>
-        </div>
+          <!-- Existing Profile View -->
+          <div id="profileDataView">
+            <!-- Info Section -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+              <style>
+                @media (max-width: 768px) {
+                  div[style*='grid-template-columns: repeat(2, 1fr)'] {
+                    grid-template-columns: 1fr !important;
+                  }
+                }
+              </style>
+             
+              <div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #003F3F;">
+                <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">EMAIL</div>
+                <div style="color: #003F3F; font-weight: 600; word-break: break-all;">{{ user_obj.email }}</div>
+              </div>
 
-        <!-- Info Card 4 -->
-        <div style="background: #f8fafa; padding: 20px; border-radius: 12px; 
-                    border-left: 4px solid #f5b800;">
-          <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">
-            RATE PER JAM
+
+              <div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #003F3F;">
+                <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">NOMOR TELEPON</div>
+                <div style="color: #003F3F; font-weight: 600;">{{ phone_number }}</div>
+              </div>
+
+
+              <div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #f5b800;">
+                <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">UMUR</div>
+                <div style="color: #003F3F; font-weight: 600;" id="displayAge">{{ coach_profile.age|default:"-" }} tahun</div>
+              </div>
+
+
+              <div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #f5b800;">
+                <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">RATE PER JAM</div>
+                <div style="color: #f5b800; font-weight: 600; font-size: 18px;" id="displayRate">Rp {{ coach_profile.rate_per_hour|floatformat:0 }}</div>
+              </div>
+            </div>
+
+
+            <!-- Detail Section -->
+            <div style="margin-bottom: 30px;">
+              <h3 style="color: #003F3F; font-size: 20px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e8f4f4;">
+                Detail Pelatihan
+              </h3>
+
+
+              <div style="display: grid; gap: 20px;">
+                <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
+                  <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">🏆 OLAHRAGA UTAMA</div>
+                  <div style="color: #003F3F; font-weight: 600; font-size: 16px;" id="displaySport">{{ coach_profile.main_sport_trained.name }}</div>
+                </div>
+
+
+                <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
+                  <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">💼 PENGALAMAN</div>
+                  <div style="color: #003F3F; line-height: 1.6;" id="displayExperience">{{ coach_profile.experience_desc|default:"-" }}</div>
+                </div>
+
+
+                <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
+                  <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 12px;">📍 AREA LAYANAN</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="displayAreas">
+                    {% for area in coach_profile.service_areas.all %}
+                      <span style="background: #003F3F; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;">
+                        {{ area.name }}
+                      </span>
+                    {% empty %}
+                      <span style="color: #999;">Belum ada area layanan</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style="color: #f5b800; font-weight: 600; font-size: 18px;">
-            Rp {{ coach_profile.rate_per_hour|floatformat:0 }}
+        {% else %}
+          <!-- No Profile Message -->
+          <div id="noProfileView" style="text-align: center; padding: 40px 20px; background: #f8fafa; border-radius: 12px; margin-bottom: 30px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <h3 style="color: #003F3F; margin-bottom: 10px;">Profil Belum Lengkap</h3>
+            <p style="color: #666; margin: 0;">
+              Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.
+            </p>
           </div>
-        </div>
         {% endif %}
       </div>
 
-      {% if coach_profile %}
-      <!-- Detail Section -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #003F3F; font-size: 20px; margin-bottom: 20px; 
-                   padding-bottom: 10px; border-bottom: 2px solid #e8f4f4;">
-          Detail Pelatihan
-        </h3>
-
-        <div style="display: grid; gap: 20px;">
-          
-          <!-- Sport Trained -->
-          <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
-            <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">
-              🏆 OLAHRAGA UTAMA
-            </div>
-            <div style="color: #003F3F; font-weight: 600; font-size: 16px;">
-              {{ coach_profile.main_sport_trained.name }}
-            </div>
-          </div>
-
-          <!-- Experience -->
-          <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
-            <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">
-              💼 PENGALAMAN
-            </div>
-            <div style="color: #003F3F; line-height: 1.6;">
-              {{ coach_profile.experience_desc|default:"-" }}
-            </div>
-          </div>
-
-          <!-- Service Areas -->
-          <div style="background: #f8fafa; padding: 20px; border-radius: 12px;">
-            <div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 12px;">
-              📍 AREA LAYANAN
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              {% for area in coach_profile.service_areas.all %}
-                <span style="background: #003F3F; color: #fff; padding: 6px 14px; 
-                             border-radius: 20px; font-size: 13px; font-weight: 500;">
-                  {{ area.name }}
-                </span>
-              {% empty %}
-                <span style="color: #999;">Belum ada area layanan</span>
-              {% endfor %}
-            </div>
-          </div>
-
-        </div>
-      </div>
-      {% else %}
-      <!-- No Profile Message -->
-      <div style="text-align: center; padding: 40px 20px; 
-                  background: #f8fafa; border-radius: 12px; margin-bottom: 30px;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
-        <h3 style="color: #003F3F; margin-bottom: 10px;">Profil Belum Lengkap</h3>
-        <p style="color: #666; margin: 0;">
-          Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.
-        </p>
-      </div>
-      {% endif %}
 
       <!-- Action Buttons -->
-      <div style="display: grid; grid-template-columns: {% if coach_profile %}1fr 1fr{% else %}1fr{% endif %}; 
-                  gap: 16px; margin-top: 30px;">
-        
-        <a href="{% url 'manage_coach_profile' %}" 
+      <div id="actionButtons" style="display: grid; grid-template-columns: {% if coach_profile %}1fr 1fr{% else %}1fr{% endif %}; gap: 16px; margin-top: 30px;">
+       
+        <button onclick="showManageModal()"
           style="display: flex; align-items: center; justify-content: center; gap: 8px;
-                  padding: 14px 24px; 
-                  background: linear-gradient(135deg, #003F3F 0%, #005757 100%); 
-                  color: #FFFFFF; 
+                  padding: 14px 24px;
+                  background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+                  color: #FFFFFF; border: none;
                   text-decoration: none; border-radius: 10px;
                   font-weight: 600; font-size: 15px; transition: all 0.3s ease;
                   box-shadow: 0 4px 12px rgba(0,63,63,0.3); cursor: pointer;">
           <span>✏️</span> Kelola Profil
-        </a>
+        </button>
+
 
         {% if coach_profile %}
-            <button onclick="showDeleteModal()" 
-              style="display: flex; align-items: center; justify-content: center; gap: 8px;
-                      padding: 14px 24px; 
-                      background: #C53030; 
-                      color: #fff; 
-                      border: none; border-radius: 10px; cursor: pointer;
-                      font-weight: 600; font-size: 15px; transition: all 0.3s ease;
-                      box-shadow: 0 4px 12px rgba(197, 48, 48, 0.3);">
-              <span>🗑️</span> Hapus Profil
-            </button>
+          <button onclick="showDeleteModal()" id="deleteBtn"
+            style="display: flex; align-items: center; justify-content: center; gap: 8px;
+                    padding: 14px 24px;
+                    background: #C53030;
+                    color: #fff;
+                    border: none; border-radius: 10px; cursor: pointer;
+                    font-weight: 600; font-size: 15px; transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(197, 48, 48, 0.3);">
+            <span>🗑️</span> Hapus Profil
+          </button>
+        {% else %}
+          <button onclick="showDeleteModal()" id="deleteBtn" style="display: none;">
+            <span>🗑️</span> Hapus Profil
+          </button>
         {% endif %}
       </div>
+
 
     </div>
   </div>
 </div>
 
-<div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                            background: rgba(0,0,0,0.6); z-index: 9999; 
-                            align-items: center; justify-content: center; 
-                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;">
-  
-  <div style="background: #fff; border-radius: 20px; max-width: 460px; width: 90%; 
-              box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
-              animation: slideUp 0.3s ease; overflow: hidden; position: relative;">
-    
-    <button onclick="hideDeleteModal()" 
+
+<!-- Manage Profile Modal -->
+<div id="manageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.6); z-index: 9999;
+                            align-items: center; justify-content: center;
+                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+                            overflow-y: auto; padding: 20px;">
+ 
+  <div style="background: #fff; border-radius: 20px; max-width: 900px; width: 100%;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              animation: slideUp 0.3s ease; overflow: hidden; position: relative;
+              max-height: 90vh; display: flex; flex-direction: column;">
+   
+    <button onclick="hideManageModal()"
             style="position: absolute; top: 15px; right: 20px; z-index: 10;
-                   background: transparent; border: none; color: white; 
+                   background: transparent; border: none; color: white;
                    font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1;
                    text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
       &times;
     </button>
-    <div style="background: linear-gradient(135deg, #C53030 0%, #A02020 100%); 
+
+
+    <div style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+                padding: 24px 30px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 12px;">✏️</div>
+      <h2 style="color: #fff; margin: 0; font-size: 22px; font-weight: 600;">
+        Kelola Profil Pelatih
+      </h2>
+    </div>
+
+
+    <div id="formContainer" style="padding: 24px 30px; overflow-y: auto; flex: 1;">
+      <!-- Form will be loaded here via AJAX -->
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <div style="font-size: 32px; margin-bottom: 12px;">⏳</div>
+        Memuat formulir...
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.6); z-index: 9999;
+                            align-items: center; justify-content: center;
+                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;">
+ 
+  <div style="background: #fff; border-radius: 20px; max-width: 460px; width: 90%;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              animation: slideUp 0.3s ease; overflow: hidden; position: relative;">
+   
+    <button onclick="hideDeleteModal()"
+            style="position: absolute; top: 15px; right: 20px; z-index: 10;
+                   background: transparent; border: none; color: white;
+                   font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1;
+                   text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
+      &times;
+    </button>
+
+
+    <div style="background: linear-gradient(135deg, #C53030 0%, #A02020 100%);
                 padding: 24px 30px; text-align: center;">
       <div style="font-size: 48px; margin-bottom: 12px; animation: pulse 2s infinite;">⚠️</div>
       <h2 style="color: #fff; margin: 0; font-size: 22px; font-weight: 600;">
@@ -255,139 +261,141 @@
       </h2>
     </div>
 
+
     <div style="padding: 24px 30px;">
       <p style="color: #333; margin: 0 0 16px; line-height: 1.6; font-size: 14px; text-align: center;">
-        Apakah Anda yakin ingin menghapus profil pelatih Anda? 
+        Apakah Anda yakin ingin menghapus profil pelatih Anda?
         <strong style="color: #C53030;">Tindakan ini tidak dapat dibatalkan.</strong>
       </p>
 
-      <div style="background: #FEE2E2; border: 1px solid #F87171; border-radius: 12px; 
+
+      <div style="background: #FEE2E2; border: 1px solid #F87171; border-radius: 12px;
                   padding: 16px; margin-bottom: 20px;">
         <div style="color: #991B1B; font-weight: 600; margin-bottom: 12px; font-size: 14px;">
           ⚡ Yang akan terhapus:
         </div>
-        <ul style="margin: 0; padding-left: 20px; color: #991B1B; font-size: 13px; line-height: 1.7;">
-          <li>Informasi profil pribadi Anda</li>
-          <li>Semua kelas yang Anda buat</li>
-          <li>Riwayat transaksi dan pendapatan</li>
-          <li>Rating dan ulasan dari pengguna</li>
+        <ul style="margin:0; padding-left: 20px; color: #991B1B; font-size: 13px; line-height: 1.7;">
+        <li>Informasi profil pribadi Anda</li>
+        <li>Semua kelas yang Anda buat</li>
+        <li>Riwayat transaksi dan pendapatan</li>
+        <li>Rating dan ulasan dari pengguna</li>
         </ul>
-      </div>
+        </div>
+        <label style="display: flex; align-items: start; gap: 12px;
+                background: #f8f9fa; padding: 14px; border-radius: 10px;
+                cursor: pointer; margin-bottom: 20px; border: 1px solid #dee2e6;
+                transition: all 0.2s ease;">
+    <input type="checkbox" id="confirmCheckbox"
+           style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #C53030;">
+    <span style="color: #495057; font-size: 13px; line-height: 1.5;">
+      Saya memahami konsekuensinya dan ingin melanjutkan penghapusan profil pelatih
+    </span>
+  </label>
 
-      <label style="display: flex; align-items: start; gap: 12px; 
-                    background: #f8f9fa; padding: 14px; border-radius: 10px;
-                    cursor: pointer; margin-bottom: 20px; border: 1px solid #dee2e6;
-                    transition: all 0.2s ease;">
-        <input type="checkbox" id="confirmCheckbox" 
-               style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #C53030;">
-        <span style="color: #495057; font-size: 13px; line-height: 1.5;">
-          Saya memahami konsekuensinya dan ingin melanjutkan penghapusan profil pelatih
-        </span>
-      </label>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <button onclick="hideDeleteModal()" 
-                style="padding: 12px; background: #6c757d; color: #fff; border: none; 
-                       border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
-                       transition: all 0.2s ease;">
-          Batal
-        </button>
-        <button id="confirmDeleteBtn" onclick="confirmDelete()" disabled
-                style="padding: 12px; background: #C53030; color: #fff; border: none; 
-                       border-radius: 10px; font-weight: 600; font-size: 14px; cursor: not-allowed;
-                       transition: all 0.2s ease; opacity: 0.5;">
-          Ya, Hapus Profil
-        </button>
-      </div>
-    </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+    <button onclick="hideDeleteModal()"
+            style="padding: 12px; background: #6c757d; color: #fff; border: none;
+                   border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
+                   transition: all 0.2s ease;">
+      Batal
+    </button>
+    <button id="confirmDeleteBtn" onclick="confirmDelete()" disabled
+            style="padding: 12px; background: #C53030; color: #fff; border: none;
+                   border-radius: 10px; font-weight: 600; font-size: 14px; cursor: not-allowed;
+                   transition: all 0.2s ease; opacity: 0.5;">
+      Ya, Hapus Profil
+    </button>
   </div>
 </div>
-
+  </div>
+</div>
 <!-- Toast Notification -->
-<div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px; 
-                        background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%); 
+<div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px;
                         color: #fff; padding: 18px 24px; border-radius: 12px;
-                        box-shadow: 0 8px 24px rgba(220,53,69,0.4); z-index: 10000;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10000;
                         min-width: 300px; animation: slideInRight 0.4s ease;">
   <div style="display: flex; align-items: center; gap: 12px;">
-    <span style="font-size: 24px;">🗑️</span>
+    <span id="toastIcon" style="font-size: 24px;"></span>
     <div>
-      <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Dihapus!</div>
-      <div style="font-size: 13px; opacity: 0.9;">Profil pelatih berhasil dihapus</div>
+      <div id="toastTitle" style="font-weight: 600; font-size: 15px; margin-bottom: 4px;"></div>
+      <div id="toastMessage" style="font-size: 13px; opacity: 0.9;"></div>
     </div>
   </div>
 </div>
-
 <style>
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
 
+
   @keyframes slideUp {
-    from { 
+    from {
       opacity: 0;
-      transform: translateY(50px); 
+      transform: translateY(50px);
     }
-    to { 
+    to {
       opacity: 1;
-      transform: translateY(0); 
+      transform: translateY(0);
     }
   }
 
+
   @keyframes slideInRight {
-    from { 
+    from {
       opacity: 0;
-      transform: translateX(100px); 
+      transform: translateX(100px);
     }
-    to { 
+    to {
       opacity: 1;
-      transform: translateX(0); 
+      transform: translateX(0);
     }
   }
+
 
   @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
   }
 
-  a[href*="manage_coach_profile"]:hover {
+
+  button[onclick*="showManageModal"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,63,63,0.4) !important;
   }
-  
+ 
   button[onclick*="showDeleteModal"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(220,53,69,0.4) !important;
     background: #c82333 !important;
-    cursor: pointer !important;
   }
-  
+ 
   a[href*="home"]:hover {
     transform: translateX(-4px);
     box-shadow: 0 4px 12px rgba(0,63,63,0.3) !important;
   }
 
+
   #confirmDeleteBtn:not(:disabled) {
     cursor: pointer !important;
     opacity: 1 !important;
-    background: #C53030 !important;
   }
+
 
   #confirmDeleteBtn:not(:disabled):hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 16px rgba(220,53,69,0.4) !important;
     background: #a02020 !important;
-    cursor: pointer !important;
   }
 
-  button[onclick*="hideDeleteModal"]:hover {
+
+  button[onclick*="hideDeleteModal"]:hover,
+  button[onclick*="hideManageModal"]:hover {
     background: #5a6268 !important;
     transform: translateY(-2px);
-    cursor: pointer !important;
   }
 </style>
-
 <script>
   function getCookie(name) {
     let cookieValue = null;
@@ -404,11 +412,257 @@
     return cookieValue;
   }
 
+
+  function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
+   
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+   
+    if (type === 'success') {
+      toast.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      toastIcon.textContent = '✅';
+    } else if (type === 'error') {
+      toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c1121f 100%)';
+      toastIcon.textContent = '❌';
+    }
+   
+    toast.style.display = 'block';
+   
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3000);
+  }
+
+
+  function showManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    loadProfileForm();
+  }
+
+
+  function hideManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+
+
+  function loadProfileForm() {
+    const formContainer = document.getElementById('formContainer');
+   
+    fetch("{% url 'get_coach_profile_form_ajax' %}")
+      .then(response => response.text())
+      .then(html => {
+        formContainer.innerHTML = html;
+        attachFormHandler();
+      })
+      .catch(error => {
+        formContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;">' +
+          '<div style="font-size: 32px; margin-bottom: 12px;">❌</div>' +
+          '<p>Gagal memuat formulir. Silakan coba lagi.</p>' +
+          '<button onclick="loadProfileForm()" style="margin-top: 16px; padding: 10px 20px; background: #003F3F; color: white; border: none; border-radius: 8px; cursor: pointer;">Coba Lagi</button>' +
+          '</div>';
+      });
+  }
+
+
+  function attachFormHandler() {
+    const form = document.getElementById('coachProfileForm');
+    if (!form) return;
+
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+     
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerHTML;
+     
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2" style="animation: spin 1s linear infinite;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+        '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+        '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>' +
+        '</svg> Menyimpan...';
+     
+      document.querySelectorAll('.field-error').forEach(el => {
+        el.style.display = 'none';
+        el.textContent = '';
+      });
+     
+      const formErrors = document.getElementById('formErrors');
+      if (formErrors) formErrors.style.display = 'none';
+     
+      const formData = new FormData(form);
+      const csrftoken = getCookie('csrftoken');
+     
+      fetch("{% url 'save_coach_profile_ajax' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          updateProfileUI(data.profile);
+          hideManageModal();
+          showToast('Berhasil!', data.message, 'success');
+        } else {
+          displayFormErrors(data.errors);
+          showToast('Gagal!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Error!', 'Terjadi kesalahan saat menyimpan profil', 'error');
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+
+
+  function displayFormErrors(errors) {
+    const errorSummary = document.getElementById('formErrors');
+    const errorList = document.getElementById('errorList');
+   
+    if (!errorSummary || !errorList) return;
+   
+    errorList.innerHTML = '';
+   
+    for (const [field, messages] of Object.entries(errors)) {
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errorList.appendChild(li);
+      });
+     
+      const fieldInput = document.getElementById('id_' + field);
+      if (fieldInput) {
+        const formGroup = fieldInput.closest('.form-group');
+        if (formGroup) {
+          const errorSpan = formGroup.querySelector('.field-error');
+          if (errorSpan) {
+            errorSpan.textContent = messages.join(', ');
+            errorSpan.style.display = 'block';
+          }
+        }
+      }
+    }
+   
+    if (errorList.children.length > 0) {
+      errorSummary.style.display = 'block';
+    }
+  }
+
+
+  function updateProfileUI(profile) {
+    const profilePicContainer = document.getElementById('profilePictureContainer');
+    if (profile.profile_picture) {
+      profilePicContainer.innerHTML =
+        '<img src="' + profile.profile_picture + '" alt="Foto Profil" id="headerProfilePic" ' +
+        'style="width: 140px; height: 140px; border-radius: 50%; object-fit: cover; ' +
+        'border: 5px solid #f5b800; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">';
+    }
+   
+    const verifiedBadge = document.getElementById('verifiedBadge');
+    if (profile.is_verified) {
+      verifiedBadge.style.display = 'block';
+    }
+   
+    const noProfileView = document.getElementById('noProfileView');
+   
+    if (noProfileView) {
+      noProfileView.remove();
+     
+      const profileContent = document.getElementById('profileContent');
+      const areasHTML = profile.service_areas.length > 0
+        ? profile.service_areas.map(area =>
+            '<span style="background: #003F3F; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;">' +
+            area + '</span>'
+          ).join('')
+        : '<span style="color: #999;">Belum ada area layanan</span>';
+     
+      profileContent.innerHTML =
+        '<div id="profileDataView">' +
+          '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">' +
+            '<style>@media (max-width: 768px) { div[style*="grid-template-columns: repeat(2, 1fr)"] { grid-template-columns: 1fr !important; }}</style>' +
+            '<div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #003F3F;">' +
+              '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">EMAIL</div>' +
+              '<div style="color: #003F3F; font-weight: 600; word-break: break-all;">{{ user_obj.email }}</div>' +
+            '</div>' +
+            '<div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #003F3F;">' +
+              '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">NOMOR TELEPON</div>' +
+              '<div style="color: #003F3F; font-weight: 600;">{{ phone_number }}</div>' +
+            '</div>' +
+            '<div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #f5b800;">' +
+              '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">UMUR</div>' +
+              '<div style="color: #003F3F; font-weight: 600;" id="displayAge">' + (profile.age || '-') + ' tahun</div>' +
+            '</div>' +
+            '<div style="background: #f8fafa; padding: 20px; border-radius: 12px; border-left: 4px solid #f5b800;">' +
+              '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 5px;">RATE PER JAM</div>' +
+              '<div style="color: #f5b800; font-weight: 600; font-size: 18px;" id="displayRate">Rp ' + new Intl.NumberFormat('id-ID').format(profile.rate_per_hour) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-bottom: 30px;">' +
+            '<h3 style="color: #003F3F; font-size: 20px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e8f4f4;">Detail Pelatihan</h3>' +
+            '<div style="display: grid; gap: 20px;">' +
+              '<div style="background: #f8fafa; padding: 20px; border-radius: 12px;">' +
+                '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">🏆 OLAHRAGA UTAMA</div>' +
+                '<div style="color: #003F3F; font-weight: 600; font-size: 16px;" id="displaySport">' + profile.main_sport_trained + '</div>' +
+              '</div>' +
+              '<div style="background: #f8fafa; padding: 20px; border-radius: 12px;">' +
+                '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 8px;">💼 PENGALAMAN</div>' +
+                '<div style="color: #003F3F; line-height: 1.6;" id="displayExperience">' + (profile.experience_desc || '-') + '</div>' +
+              '</div>' +
+              '<div style="background: #f8fafa; padding: 20px; border-radius: 12px;">' +
+                '<div style="color: #666; font-size: 13px; font-weight: 500; margin-bottom: 12px;">📍 AREA LAYANAN</div>' +
+                '<div style="display: flex; flex-wrap: wrap; gap: 8px;" id="displayAreas">' + areasHTML + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+     
+      const deleteBtn = document.getElementById('deleteBtn');
+      deleteBtn.style.display = 'flex';
+     
+      const actionButtons = document.getElementById('actionButtons');
+      actionButtons.style.gridTemplateColumns = '1fr 1fr';
+     
+    } else {
+      document.getElementById('displayAge').textContent = (profile.age || '-') + ' tahun';
+      document.getElementById('displayRate').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(profile.rate_per_hour);
+      document.getElementById('displaySport').textContent = profile.main_sport_trained;
+      document.getElementById('displayExperience').textContent = profile.experience_desc || '-';
+     
+      const areasContainer = document.getElementById('displayAreas');
+      if (profile.service_areas.length > 0) {
+        areasContainer.innerHTML = profile.service_areas.map(area =>
+          '<span style="background: #003F3F; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;">' +
+          area + '</span>'
+        ).join('');
+      } else {
+        areasContainer.innerHTML = '<span style="color: #999;">Belum ada area layanan</span>';
+      }
+    }
+  }
+
+
   function showDeleteModal() {
     const modal = document.getElementById('deleteModal');
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
+
 
   function hideDeleteModal() {
     const modal = document.getElementById('deleteModal');
@@ -418,43 +672,20 @@
     document.getElementById('confirmDeleteBtn').disabled = true;
   }
 
-  // Enable/disable delete button based on checkbox
-  document.addEventListener('DOMContentLoaded', function() {
-    const checkbox = document.getElementById('confirmCheckbox');
-    const deleteBtn = document.getElementById('confirmDeleteBtn');
-    
-    if (checkbox && deleteBtn) {
-      checkbox.addEventListener('change', function() {
-        deleteBtn.disabled = !this.checked;
-        if (!this.checked) {
-          deleteBtn.style.cursor = 'not-allowed';
-        } else {
-          deleteBtn.style.cursor = 'pointer';
-        }
-      });
-    }
-
-    // Close modal when clicking outside
-    const modal = document.getElementById('deleteModal');
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        hideDeleteModal();
-      }
-    });
-  });
 
   function confirmDelete() {
     const deleteBtn = document.getElementById('confirmDeleteBtn');
     if (deleteBtn.disabled) return;
-    
+   
     deleteBtn.disabled = true;
     deleteBtn.textContent = 'Menghapus...';
     deleteBtn.style.opacity = '0.7';
     deleteBtn.style.cursor = 'not-allowed';
 
+
     const csrftoken = getCookie('csrftoken');
-    
-    fetch("{% url 'delete_coach_profile' %}", {
+   
+    fetch("{% url 'delete_coach_profile_ajax' %}", {
       method: 'POST',
       headers: {
         'X-CSRFToken': csrftoken,
@@ -462,30 +693,91 @@
       },
       credentials: 'same-origin'
     })
-    .then(response => {
-      if (response.ok) {
-        // Hide modal
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
         hideDeleteModal();
-        
-        // Show toast
-        const toast = document.getElementById('toast');
-        toast.style.display = 'block';
-        
-        // Redirect after 2 seconds
+        showToast('Berhasil!', data.message, 'error');
         setTimeout(() => {
-          window.location.href = "{% url 'coach_profile' %}";
-        }, 2000);
-      } else { 
-        throw new Error('Gagal menghapus profil');  
+          updateUIAfterDelete();
+        }, 500);
+      } else {
+        throw new Error(data.message);
       }
     })
     .catch(error => {
-      alert('Terjadi kesalahan: ' + error.message);
+      showToast('Error!', error.message || 'Terjadi kesalahan', 'error');
       deleteBtn.disabled = false;
       deleteBtn.textContent = 'Ya, Hapus Profil';
       deleteBtn.style.opacity = '1';
       deleteBtn.style.cursor = 'pointer';
     });
   }
+
+
+  function updateUIAfterDelete() {
+    const profilePicContainer = document.getElementById('profilePictureContainer');
+    profilePicContainer.innerHTML =
+      '<div style="width: 140px; height: 140px; border-radius: 50%; ' +
+      'background: rgba(255,255,255,0.2); margin: 0 auto; ' +
+      'display: flex; align-items: center; justify-content: center; ' +
+      'border: 5px solid #f5b800;">' +
+        '<span style="font-size: 48px; color: #fff;">👤</span>' +
+      '</div>';
+   
+    document.getElementById('verifiedBadge').style.display = 'none';
+   
+    const profileContent = document.getElementById('profileContent');
+    profileContent.innerHTML =
+      '<div id="noProfileView" style="text-align: center; padding: 40px 20px; background: #f8fafa; border-radius: 12px; margin-bottom: 30px;">' +
+        '<div style="font-size: 48px; margin-bottom: 16px;">📋</div>' +
+        '<h3 style="color: #003F3F; margin-bottom: 10px;">Profil Belum Lengkap</h3>' +
+        '<p style="color: #666; margin: 0;">Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.</p>' +
+      '</div>';
+   
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn.style.display = 'none';
+   
+    const actionButtons = document.getElementById('actionButtons');
+    actionButtons.style.gridTemplateColumns = '1fr';
+  }
+
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('confirmCheckbox');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+   
+    if (checkbox && deleteBtn) {
+      checkbox.addEventListener('change', function() {
+        deleteBtn.disabled = !this.checked;
+        deleteBtn.style.opacity = this.checked ? '1' : '0.5';
+        deleteBtn.style.cursor = this.checked ? 'pointer' : 'not-allowed';
+      });
+    }
+
+
+    const manageModal = document.getElementById('manageModal');
+    manageModal.addEventListener('click', function(e) {
+      if (e.target === manageModal) {
+        hideManageModal();
+      }
+    });
+
+
+    const deleteModal = document.getElementById('deleteModal');
+    deleteModal.addEventListener('click', function(e) {
+      if (e.target === deleteModal) {
+        hideDeleteModal();
+      }
+    });
+  });
+
+
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
 </script>
 {% endblock content %}
+
+
+

@@ -57,7 +57,6 @@
     color: #dc2626 !important; /* red-600 */
 }
 
-
 /* Checkbox Logic (Tetap Sama) */
 .delete-checkbox { display: none; margin-right: 0.5rem; width: auto !important; }
 .selection-active .delete-checkbox { display: inline-block; }
@@ -76,6 +75,39 @@
     transform: translateX(0) !important;
     opacity: 1 !important;
 }
+
+/* Animasi */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
 /* --- AKHIR CSS --- */
 </style>
 {% endblock extra_head %}
@@ -83,152 +115,428 @@
 {% block title %}Jadwal Sesi Anda{% endblock title %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-10">
-  
-  <div class="mb-8 text-white shadow-lg" style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%); border-radius: 1.25rem; /* 20px */">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-8 md:p-10">
-      <div>
-        <h1 class="text-3xl font-extrabold">Jadwal Sesi Anda</h1>
-        <p class="mt-1 text-base opacity-90">
-          Kelola jadwal coaching Anda — tambahkan, pilih, atau hapus slot dengan mudah.
-        </p>
-      </div>
-      </div>
-  </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    
-    <div class="lg:col-span-2 space-y-6">
+<div class="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
 
-      <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          
-          <div class="flex items-center gap-2">
-            <label for="filter-date" class="text-sm font-medium text-gray-600 flex-shrink-0">Tampilkan Tanggal:</label>
-            <input id="filter-date" type="date" class="datepicker bg-gray-50 border border-gray-300 text-slate-800 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Pilih tanggal" />
-            <button id="apply-filter" class="px-3 py-2 bg-teal-800 text-white hover:bg-teal-900 rounded-lg text-sm font-medium transition">Terapkan</button>
-            <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Tampilkan Semua</button>
-          </div>
-
-          <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="flex-shrink-0">
-            {% csrf_token %}
-            <div class="flex items-center gap-3">
-              <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                Hapus Jadwal
-              </button>
-              <div id="delete-controls-container" class="hidden flex items-center gap-3">
-                  <button type="button" id="select-all" class="px-3 py-2 bg-slate-50 border rounded-lg text-sm">Pilih Semua</button>
-                  <button type="button" id="cancel-delete-btn" class="px-3 py-2 bg-gray-100 border rounded-lg text-sm">Batal</button>
-              </div>
-            </div>
-          </form>
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                Jadwal Sesi Anda
+            </h1>
+            <p class="text-gray-600 mb-6">
+                Kelola jadwal coaching Anda — tambahkan, pilih, atau hapus slot dengan mudah.
+            </p>
         </div>
-      </div>
 
-      <div class="space-y-6" id="schedules-list-container">
-        {% if schedules %}
-          {% regroup schedules by date as grouped_schedules %}
-          {% for group in grouped_schedules %}
-            <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="{{ group.grouper|date:'Y-m-d' }}">
-              <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-                <div>
-                  <h3 class="text-lg font-semibold text-slate-800">{{ group.grouper|date:"l, d M Y" }}</h3>
-                  <p class="text-sm text-gray-500 mt-0.5 slot-count">{{ group.list|length }} slot</p> </div>
-              </div>
+        {% if not has_profile %}
+            <!-- No Profile State -->
+            <div style="background: #fff; border-radius: 20px; padding: 60px 40px;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
+                        max-width: 600px; margin: 60px auto;">
+               
+                <div style="font-size: 80px; margin-bottom: 24px; animation: pulse 2s infinite;">📋</div>
+               
+                <h2 style="color: #003F3F; font-size: 28px; font-weight: 700; margin-bottom: 16px;">
+                    Profil Belum Lengkap
+                </h2>
+               
+                <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 32px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai mengatur ketersediaan jadwal dan menerima klien.
+                </p>
 
-              <div class="flex flex-wrap gap-3 slot-container">
-                {% for s in group.list %}
-                  <label class="relative inline-flex items-center slot-label"> <input type="checkbox" class="delete-checkbox" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} /> {% if s.is_booked %}
-                      <span class="slot-card booked"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
-                        <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
-                        <span style="font-size:0.75rem; font-weight: 700; margin-left: 4px;">(BOOKED)</span>
-                      </span>
-                    {% else %}
-                      <span class="slot-card available"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                        <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
-                      </span>
-                    {% endif %}
-                  </label>
-                {% endfor %}
-              </div>
+                <button onclick="showManageModal()"
+                    style="display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+                            padding: 16px 32px;
+                            background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+                            color: #FFFFFF; border: none;
+                            text-decoration: none; border-radius: 12px;
+                            font-weight: 600; font-size: 16px;
+                            transition: all 0.3s ease;
+                            box-shadow: 0 4px 16px rgba(0,63,63,0.3);
+                            cursor: pointer;">
+                    <span style="font-size: 20px;">✏️</span>
+                    <span>Kelola Profil</span>
+                </button>
 
+                <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 14px;">
+                        💡 Setelah melengkapi profil, Anda dapat melihat dan mengatur jadwal di halaman ini.
+                    </p>
+                </div>
             </div>
-          {% endfor %}
+
         {% else %}
-          <div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message">
-            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3>
-            <p class="mt-1 text-sm text-gray-500">Tambahkan jadwal menggunakan form di samping.</p>
-          </div>
+            <!-- Schedule Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 space-y-6">
+
+                    <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            
+                            <div class="flex items-center gap-2">
+                                <label for="filter-date" class="text-sm font-medium text-gray-600 flex-shrink-0">Tampilkan Tanggal:</label>
+                                <input id="filter-date" type="date" class="datepicker bg-gray-50 border border-gray-300 text-slate-800 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Pilih tanggal" />
+                                <button id="apply-filter" class="px-3 py-2 bg-teal-800 text-white hover:bg-teal-900 rounded-lg text-sm font-medium transition">Terapkan</button>
+                                <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Tampilkan Semua</button>
+                            </div>
+
+                            <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="flex-shrink-0">
+                                {% csrf_token %}
+                                <div class="flex items-center gap-3">
+                                    <button type="button" id="delete-toggle-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block -mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                                        Hapus Jadwal
+                                    </button>
+                                    <div id="delete-controls-container" class="hidden flex items-center gap-3">
+                                        <button type="button" id="select-all" class="px-3 py-2 bg-slate-50 border rounded-lg text-sm">Pilih Semua</button>
+                                        <button type="button" id="cancel-delete-btn" class="px-3 py-2 bg-gray-100 border rounded-lg text-sm">Batal</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6" id="schedules-list-container">
+                        {% if schedules %}
+                            {% regroup schedules by date as grouped_schedules %}
+                            {% for group in grouped_schedules %}
+                                <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="{{ group.grouper|date:'Y-m-d' }}">
+                                    <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-slate-800">{{ group.grouper|date:"l, d M Y" }}</h3>
+                                            <p class="text-sm text-gray-500 mt-0.5 slot-count">{{ group.list|length }} slot</p> </div>
+                                    </div>
+
+                                    <div class="flex flex-wrap gap-3 slot-container">
+                                        {% for s in group.list %}
+                                            <label class="relative inline-flex items-center slot-label"> <input type="checkbox" class="delete-checkbox" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} /> {% if s.is_booked %}
+                                                <span class="slot-card booked"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
+                                                    <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
+                                                    <span style="font-size:0.75rem; font-weight: 700; margin-left: 4px;">(BOOKED)</span>
+                                                </span>
+                                            {% else %}
+                                                <span class="slot-card available"> <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                                                    <span>{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</span>
+                                                </span>
+                                            {% endif %}
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message">
+                                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3>
+                                <p class="mt-1 text-sm text-gray-500">Tambahkan jadwal menggunakan form di samping.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <aside class="lg:col-span-1">
+                    <div class="sticky top-6 bg-white border-t-4 border-teal-800 rounded-xl shadow-lg">
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
+                            <p class="text-sm text-gray-500 mb-5">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
+
+                            <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'coach_schedule' %}">
+                                {% csrf_token %}
+                                
+                                <div>
+                                    <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date.label }}</label>
+                                    {{ form.date|cut:"form-input-style" }}
+                                    <style>#{{ form.date.id_for_label }} { {{ form.date.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
+                                    {% if form.date.help_text %}
+                                        <p class="text-xs text-gray-400 mt-1">{{ form.date.help_text }}</p>
+                                    {% endif %}
+                                    {% if form.date.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{% for error in form.date.errors %} <div>{{ error }}</div> {% endfor %}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.start_time.label }}</label>
+                                    {{ form.start_time|cut:"form-input-style" }}
+                                    <style>#{{ form.start_time.id_for_label }} { {{ form.start_time.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
+                                    {% if form.start_time.help_text %}
+                                        <p class="text-xs text-gray-400 mt-1">{{ form.start_time.help_text }}</p>
+                                    {% endif %}
+                                    {% if form.start_time.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{% for error in form.start_time.errors %} <div>{{ error }}</div> {% endfor %}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.end_time_global.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.end_time_global.label }}</label>
+                                    {{ form.end_time_global|cut:"form-input-style" }}
+                                    <style>#{{ form.end_time_global.id_for_label }} { {{ form.end_time_global.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
+                                    {% if form.end_time_global.help_text %}
+                                        <p class="text-xs text-gray-400 mt-1">{{ form.end_time_global.help_text }}</p>
+                                    {% endif %}
+                                    {% if form.end_time_global.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{% for error in form.end_time_global.errors %} <div>{{ error }}</div> {% endfor %}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="pt-2">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-800 text-white rounded-lg hover:bg-teal-900 transition font-semibold shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
+                                        &nbsp;Tambah Jadwal
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </aside>
+            </div>
         {% endif %}
-      </div>
     </div>
-
-    <aside class="lg:col-span-1">
-      <div class="sticky top-6 bg-white border-t-4 border-teal-800 rounded-xl shadow-lg">
-        <div class="p-6">
-          <h3 class="text-lg font-semibold text-slate-800 mb-2">Tambah Jadwal Baru</h3>
-          <p class="text-sm text-gray-500 mb-5">Tambahkan rentang waktu. Sistem akan menyimpan slot per jam.</p>
-
-          <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'coach_schedule' %}">
-            {% csrf_token %}
-            
-            <div>
-              <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.date.label }}</label>
-              {{ form.date|cut:"form-input-style" }}
-              <style>#{{ form.date.id_for_label }} { {{ form.date.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.date.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.date.help_text }}</p>
-              {% endif %}
-              {% if form.date.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.date.errors %} <div>{{ error }}</div> {% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.start_time.label }}</label>
-              {{ form.start_time|cut:"form-input-style" }}
-              <style>#{{ form.start_time.id_for_label }} { {{ form.start_time.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.start_time.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.start_time.help_text }}</p>
-              {% endif %}
-              {% if form.start_time.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.start_time.errors %} <div>{{ error }}</div> {% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <label for="{{ form.end_time_global.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.end_time_global.label }}</label>
-              {{ form.end_time_global|cut:"form-input-style" }}
-              <style>#{{ form.end_time_global.id_for_label }} { {{ form.end_time_global.field.widget.attrs.style|default:'' }} width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-sizing: border-box; font-size: 1rem; line-height: 1.5; }</style>
-              {% if form.end_time_global.help_text %}
-                <p class="text-xs text-gray-400 mt-1">{{ form.end_time_global.help_text }}</p>
-              {% endif %}
-              {% if form.end_time_global.errors %}
-                <div class="text-red-500 text-sm mt-1">{% for error in form.end_time_global.errors %} <div>{{ error }}</div> {% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div classs="pt-2">
-              <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-800 text-white rounded-lg hover:bg-teal-900 transition font-semibold shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" /></svg>
-                Tambah Jadwal
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </aside>
-  </div>
 </div>
 
 <div id="custom-toast" style="background-color: #333;">
     <span id="toast-icon"></span>
     <span id="toast-message"></span>
 </div>
+
+{% if not has_profile %}
+<!-- Manage Profile Modal -->
+<div id="manageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.6); z-index: 9999;
+                            align-items: center; justify-content: center;
+                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+                            overflow-y: auto; padding: 20px;">
+ 
+  <div style="background: #fff; border-radius: 20px; max-width: 900px; width: 100%;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              animation: slideUp 0.3s ease; overflow: hidden; position: relative;
+              max-height: 90vh; display: flex; flex-direction: column;">
+   
+    <button onclick="hideManageModal()"
+            style="position: absolute; top: 15px; right: 20px; z-index: 10;
+                   background: transparent; border: none; color: white;
+                   font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1;
+                   text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
+      &times;
+    </button>
+
+    <div style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+                padding: 24px 30px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 12px;">✏️</div>
+      <h2 style="color: #fff; margin: 0; font-size: 22px; font-weight: 600;">
+        Kelola Profil Pelatih
+      </h2>
+    </div>
+
+    <div id="formContainer" style="padding: 24px 30px; overflow-y: auto; flex: 1;">
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <div style="font-size: 32px; margin-bottom: 12px;">⏳</div>
+        Memuat formulir...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px;
+                        color: #fff; padding: 18px 24px; border-radius: 12px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10000;
+                        min-width: 300px; animation: slideInRight 0.4s ease;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <span id="toastIcon" style="font-size: 24px;"></span>
+    <div>
+      <div id="toastTitle" style="font-weight: 600; font-size: 15px; margin-bottom: 4px;"></div>
+      <div id="toastMessage" style="font-size: 13px; opacity: 0.9;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
+   
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+   
+    if (type === 'success') {
+      toast.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      toastIcon.textContent = '✅';
+    } else if (type === 'error') {
+      toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c1121f 100%)';
+      toastIcon.textContent = '❌';
+    }
+   
+    toast.style.display = 'block';
+   
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3000);
+  }
+
+  function showManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    loadProfileForm();
+  }
+
+  function hideManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+
+  function loadProfileForm() {
+    const formContainer = document.getElementById('formContainer');
+   
+    fetch("{% url 'get_coach_profile_form_ajax' %}")
+      .then(response => response.text())
+      .then(html => {
+        formContainer.innerHTML = html;
+        attachFormHandler();
+      })
+      .catch(error => {
+        formContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;">' +
+          '<div style="font-size: 32px; margin-bottom: 12px;">❌</div>' +
+          '<p>Gagal memuat formulir. Silakan coba lagi.</p>' +
+          '<button onclick="loadProfileForm()" style="margin-top: 16px; padding: 10px 20px; background: #003F3F; color: white; border: none; border-radius: 8px; cursor: pointer;">Coba Lagi</button>' +
+          '</div>';
+      });
+  }
+
+  function attachFormHandler() {
+    const form = document.getElementById('coachProfileForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+     
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerHTML;
+     
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2" style="animation: spin 1s linear infinite;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+        '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+        '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>' +
+        '</svg> Menyimpan...';
+     
+      document.querySelectorAll('.field-error').forEach(el => {
+        el.style.display = 'none';
+        el.textContent = '';
+      });
+     
+      const formErrors = document.getElementById('formErrors');
+      if (formErrors) formErrors.style.display = 'none';
+     
+      const formData = new FormData(form);
+      const csrftoken = getCookie('csrftoken');
+     
+      fetch("{% url 'save_coach_profile_ajax' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          hideManageModal();
+          showToast('Berhasil!', data.message, 'success');
+         
+          // Reload page after 1.5 seconds to show schedule page
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          displayFormErrors(data.errors);
+          showToast('Gagal!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Error!', 'Terjadi kesalahan saat menyimpan profil', 'error');
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+
+  function displayFormErrors(errors) {
+    const errorSummary = document.getElementById('formErrors');
+    const errorList = document.getElementById('errorList');
+   
+    if (!errorSummary || !errorList) return;
+   
+    errorList.innerHTML = '';
+   
+    for (const [field, messages] of Object.entries(errors)) {
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errorList.appendChild(li);
+      });
+     
+      const fieldInput = document.getElementById('id_' + field);
+      if (fieldInput) {
+        const formGroup = fieldInput.closest('.form-group');
+        if (formGroup) {
+          const errorSpan = formGroup.querySelector('.field-error');
+          if (errorSpan) {
+            errorSpan.textContent = messages.join(', ');
+            errorSpan.style.display = 'block';
+          }
+        }
+      }
+    }
+   
+    if (errorList.children.length > 0) {
+      errorSummary.style.display = 'block';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const manageModal = document.getElementById('manageModal');
+    if (manageModal) {
+      manageModal.addEventListener('click', function(e) {
+        if (e.target === manageModal) {
+          hideManageModal();
+        }
+      });
+    }
+  });
+
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+</script>
+{% endif %}
 {% endblock content %}
 
 {% block extra_js %}
@@ -236,336 +544,337 @@
 <script>
 // --- UTILITY: GET CSRF TOKEN ---
 function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
+// --- [START] KODE YANG DIPERBAIKI ---
 // --- UTILITY: TOAST NOTIFICATION ---
 function showToast(message, type = 'success') {
-    const toast = document.getElementById('custom-toast');
-    const msgEl = document.getElementById('toast-message');
-    const iconEl = document.getElementById('toast-icon');
+    const toast = document.getElementById('custom-toast');
+    const msgEl = document.getElementById('toast-message');
+    const iconEl = document.getElementById('toast-icon');
 
-    let color = '';
-    let icon = '';
-    if (type === 'success') {
-        color = '#10b981'; // Hijau
-        icon = '✅';
-    } else if (type === 'error') {
-        color = '#ef4444'; // Merah
-        icon = '❌';
-    } else {
-        color = '#f97316'; // Oranye
-        icon = '⚠️';
-    }
+    let color = '';
+    let icon = '';
+    
+    // Logika ini diperbaiki:
+    if (type === 'success') {
+        color = '#10b981'; // Hijau
+        icon = '✅'; // Emoji centang
+    } else if (type === 'error') {
+        color = '#ef4444'; // Merah
+        icon = '❌';
+    } else {
+        // Tipe lain (misal 'warning') akan tetap oranye
+        color = '#f97316'; // Oranye
+        icon = '⚠️';
+    }
 
-    toast.style.backgroundColor = color;
-    msgEl.textContent = message;
-    iconEl.textContent = icon;
-    toast.classList.add('show-toast');
+    toast.style.backgroundColor = color;
+    msgEl.textContent = message;
+    iconEl.textContent = icon;
+    toast.classList.add('show-toast');
 
-    setTimeout(() => {
-        toast.classList.remove('show-toast');
-    }, 3000);
+    setTimeout(() => {
+        toast.classList.remove('show-toast');
+    }, 3000);
 }
+// --- [END] KODE YANG DIPERBAIKI ---
 
-// --- FUNGSI HELPER BARU UNTUK DOM (VENUE VERSION) ---
+// --- FUNGSI HELPER BARU UNTUK DOM ---
 function createSlotHtml(slot) {
-    // HTML ini disesuaikan dengan styling baru
-    return `
-    <label class="relative inline-flex items-center slot-label">
-        <input type="checkbox" class="delete-checkbox rounded border-gray-300" data-id="${slot.id}" />
-        <span class="slot-card available">
-            <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-            <span>${slot.start_time} - ${slot.end_time}</span>
-        </span>
-    </label>
-    `;
+    return `
+    <label class="relative inline-flex items-center slot-label">
+        <input type="checkbox" class="delete-checkbox rounded border-gray-300" data-id="${slot.id}" />
+        <span class="slot-card available">
+            <svg class="h-4 w-4 icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+            <span>${slot.start_time} - ${slot.end_time}</span>
+        </span>
+    </label>
+    `;
 }
 
 function createGroupCardHtmlForAjax(firstSlot, allSlots) {
-    let slotsHtml = '';
-    allSlots.forEach(slot => {
-        slotsHtml += createSlotHtml(slot);
-    });
-    
-    const count = allSlots.length;
-    const slotText = count > 1 ? 'slots' : 'slot';
+    let slotsHtml = '';
+    allSlots.forEach(slot => {
+        slotsHtml += createSlotHtml(slot);
+    });
+    
+    const count = allSlots.length;
+    const slotText = count > 1 ? 'slots' : 'slot';
 
-    // HTML ini disesuaikan dengan styling baru
-    return `
-    <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="${firstSlot.date_str_iso}">
-        <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-            <div>
-                <h3 class="text-lg font-semibold text-slate-800">${firstSlot.date_str_display}</h3>
-                <p class="text-sm text-gray-500 mt-0.5 slot-count">${count} ${slotText}</p>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-3 slot-container">
-            ${slotsHtml}
-        </div>
-    </div>
-    `;
+    return `
+    <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm group" data-date="${firstSlot.date_str_iso}">
+        <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-800">${firstSlot.date_str_display}</h3>
+                <p class="text-sm text-gray-500 mt-0.5 slot-count">${count} ${slotText}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-3 slot-container">
+            ${slotsHtml}
+        </div>
+    </div>
+    `;
 }
-
 
 // --- LOGIC UTAMA (DOM & AJAX) ---
 document.addEventListener('DOMContentLoaded',function(){
-    // Inisialisasi Flatpickr
-    flatpickr(".datepicker", { altInput: true, altFormat: "d M Y", dateFormat: "Y-m-d", minDate: "today" });
-    flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, minuteIncrement: 15, static: true });
+    // Inisialisasi Flatpickr
+    flatpickr(".datepicker", { altInput: true, altFormat: "d M Y", dateFormat: "Y-m-d", minDate: "today" });
+    flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, minuteIncrement: 15, static: true });
 
-    // Elemen
-    const filter = document.getElementById('filter-date');
-    const applyBtn = document.getElementById('apply-filter');
-    const clearBtn = document.getElementById('clear-filter');
-    const bodyEl = document.body;
-    const deleteToggleBtn = document.getElementById('delete-toggle-btn');
-    const cancelBtn = document.getElementById('cancel-delete-btn');
-    const selectAllBtn = document.getElementById('select-all');
-    const bulkForm = document.getElementById('bulk-delete-form');
-    const addScheduleForm = document.getElementById('add-schedule-form');
+    // Elemen
+    const filter = document.getElementById('filter-date');
+    const applyBtn = document.getElementById('apply-filter');
+    const clearBtn = document.getElementById('clear-filter');
+    const bodyEl = document.body;
+    const deleteToggleBtn = document.getElementById('delete-toggle-btn');
+    const cancelBtn = document.getElementById('cancel-delete-btn');
+    const selectAllBtn = document.getElementById('select-all');
+    const bulkForm = document.getElementById('bulk-delete-form');
+    const addScheduleForm = document.getElementById('add-schedule-form');
 
-    let selectionActive = false;
+    let selectionActive = false;
+    
+    // --- AJAX TAMBAH JADWAL ---
+    addScheduleForm?.addEventListener('submit', async function(e){
+        e.preventDefault(); 
+        const formData = new FormData(this);
+
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken') 
+                }
+            });
+            
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(data.message || 'Jadwal berhasil ditambahkan!', 'success');
+
+                if (data.new_slots && data.new_slots.length > 0) {
+                    
+                    const mainContainer = document.getElementById('schedules-list-container');
+                    if (!mainContainer) return;
+
+                    const noScheduleMsg = document.getElementById('no-schedule-message');
+                    if (noScheduleMsg) {
+                        noScheduleMsg.remove(); 
+                    }
+
+                    const slotsByDate = data.new_slots.reduce((acc, slot) => {
+                        const date = slot.date_str_iso;
+                        if (!acc[date]) acc[date] = [];
+                        acc[date].push(slot);
+                        return acc;
+                    }, {});
+
+                    for (const dateISO in slotsByDate) {
+                        const slotsForThisDate = slotsByDate[dateISO];
+                        if (slotsForThisDate.length === 0) continue;
+
+                        const firstSlot = slotsForThisDate[0];
+                        let groupCard = mainContainer.querySelector(`.group[data-date="${dateISO}"]`);
+
+                        if (groupCard) {
+                            const slotContainer = groupCard.querySelector('.slot-container');
+                            if (slotContainer) {
+                                let slotsHtml = '';
+                                slotsForThisDate.forEach(slot => {
+                                    slotsHtml += createSlotHtml(slot);
+                                });
+                                slotContainer.insertAdjacentHTML('beforeend', slotsHtml);
+                                
+                                const countEl = groupCard.querySelector('.slot-count');
+                                if (countEl) {
+                                    const newCount = slotContainer.querySelectorAll('label.slot-label').length;
+                                    const slotText = newCount > 1 ? 'slots' : 'slot';
+                                    countEl.textContent = `${newCount} ${slotText}`;
+                                }
+                            }
+                        } else {
+                            const newGroupHtml = createGroupCardHtmlForAjax(firstSlot, slotsForThisDate);
+                            
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = newGroupHtml.trim();
+                            const newGroupCard = tempDiv.firstChild;
+
+                            let allCards = Array.from(mainContainer.querySelectorAll('.group[data-date]'));
+                            allCards.push(newGroupCard);
+
+                            allCards.sort((a, b) => a.getAttribute('data-date').localeCompare(b.getAttribute('data-date')));
+                            
+                            mainContainer.innerHTML = '';
+                            allCards.forEach(card => mainContainer.appendChild(card));
+                        }
+                    }
+                }
+                
+                addScheduleForm.reset();
+                document.querySelectorAll('.datepicker').forEach(fp => {
+                    if (fp._flatpickr) fp._flatpickr.clear();
+e             });
+                document.querySelectorAll('.timepicker').forEach(fp => {
+                    if (fp._flatpickr) fp._flatpickr.clear();
+                });
+
+            } else {
+                const errorMessage = data.message || (data.errors ? JSON.stringify(data.errors) : 'Gagal menambahkan jadwal. Cek input.');
+                showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            console.error('AJAX Error:', error);
+            showToast('Terjadi kesalahan koneksi.', 'error');
+        }
+    });
+
+    // ... Sisa script Anda (ajax hapus, filter, seleksi) bisa tetap sama ...
     
-    // --- AJAX TAMBAH JADWAL (Venue Add Schedule Form Submit) ---
-    addScheduleForm?.addEventListener('submit', async function(e){
-        e.preventDefault(); 
-        const formData = new FormData(this);
+    // --- AJAX HAPUS JADWAL ---
+    deleteToggleBtn?.addEventListener('click', function(){
+        if (!selectionActive) {
+            enterSelectionMode();
+            return;
+        }
+        
+        const checked = Array.from(document.querySelectorAll('.delete-checkbox:checked')).filter(c => !c.disabled);
+        if (checked.length === 0) {
+            alert('Pilih minimal satu jadwal untuk dihapus.');
+            return;
+        }
+        if (!confirm(`Anda yakin ingin menghapus ${checked.length} jadwal terpilih?`)) return;
 
-        try {
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCookie('csrftoken') 
-                }
-            });
-            
-            const data = await response.json();
+        const idsToDelete = Array.from(checked).map(ch => ch.getAttribute('data-id'));
+        
+        fetch(bulkForm.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': getCookie('csrftoken')
+A           },
+            body: JSON.stringify({ selected_schedules: idsToDelete })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Jadwal berhasil dihapus!', 'success');
+                
+                idsToDelete.forEach(id => {
+                    const checkbox = document.querySelector(`.delete-checkbox[data-id="${id}"]`);
+                    if (checkbox) {
+                        const label = checkbox.closest('label.slot-label');
+                        if (label) {
+                            const groupContainer = label.parentElement; // .slot-container
+                            label.remove(); 
 
-            if (response.ok && data.success) {
-                showToast(data.message || 'Jadwal berhasil ditambahkan!', 'success');
+                            if (groupContainer && groupContainer.querySelectorAll('label.slot-label').length === 0) {
+s                               const card = groupContainer.closest('.group[data-date]');
+                                if (card) card.remove();
+                            }
+                        }
+                    }
+                });
 
-                if (data.new_slots && data.new_slots.length > 0) {
-                    
-                    const mainContainer = document.getElementById('schedules-list-container');
-                    if (!mainContainer) return;
+            } else {
+                showToast(data.message || 'Gagal menghapus jadwal.', 'error');
+            }
+        })
+        .catch(() => showToast('Kesalahan koneksi saat menghapus.', 'error'))
+        .finally(() => {
+            exitSelectionMode(); 
+        });
+    });
+    
+    // --- LOGIC FILTER ---
+    function applyFilterValue(val) {
+        const allGroups = document.querySelectorAll('.group[data-date]');
+a       allGroups.forEach(g => {
+            g.style.display = (!val || g.getAttribute('data-date') === val) ? '' : 'none';
+        });
+    }
 
-                    const noScheduleMsg = document.getElementById('no-schedule-message');
-                    if (noScheduleMsg) {
-                        noScheduleMsg.remove(); 
-                    }
+    applyBtn?.addEventListener('click', function(){
+        const v = filter.value;
+        applyFilterValue(v);
+        if (v) { clearBtn.classList.remove('hidden'); } 
+        else { clearBtn.classList.add('hidden'); }
+    });
 
-                    const slotsByDate = data.new_slots.reduce((acc, slot) => {
-                        const date = slot.date_str_iso;
-                        if (!acc[date]) acc[date] = [];
-                        acc[date].push(slot);
-                        return acc;
-                    }, {});
+    clearBtn?.addEventListener('click', function(){
+        filter.value = '';
+        if(filter._flatpickr) filter._flatpickr.clear(); // Clear flatpickr
+        applyFilterValue('');
+        clearBtn.classList.add('hidden');
+    });
 
-                    for (const dateISO in slotsByDate) {
-                        const slotsForThisDate = slotsByDate[dateISO];
-                        if (slotsForThisDate.length === 0) continue;
+    // --- LOGIC SELEKSI ---
+    function enterSelectionMode() {
+        selectionActive = true;
+        bodyEl.classList.add('selection-active');
+a       deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Konfirmasi Hapus';
+        deleteToggleBtn.style.backgroundColor = '#2563eb'; // Biru
+        document.getElementById('delete-controls-container').classList.remove('hidden');
+        
+        document.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => { 
+            cb.addEventListener('change', onCheckboxChange); 
+        });
+    }
 
-                        const firstSlot = slotsForThisDate[0];
-                        let groupCard = mainContainer.querySelector(`.group[data-date="${dateISO}"]`);
+    function exitSelectionMode() {
+        selectionActive = false;
+        bodyEl.classList.remove('selection-active');
+        deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Hapus Jadwal';
+        deleteToggleBtn.style.backgroundColor = '#dc2626'; // Merah
+        document.getElementById('delete-controls-container').classList.add('hidden');
+        
+        document.querySelectorAll('.delete-checkbox').forEach(cb => {
+            cb.checked = false;
+            cb.removeEventListener('change', onCheckboxChange);
+            const span = cb.closest('label')?.querySelector('.slot-card');
+            if (span) span.classList.remove('selected');
+        });
+    }
 
-                        if (groupCard) {
-                            const slotContainer = groupCard.querySelector('.slot-container');
-                            if (slotContainer) {
-                                let slotsHtml = '';
-                                slotsForThisDate.forEach(slot => {
-                                    slotsHtml += createSlotHtml(slot);
-                                });
-                                slotContainer.insertAdjacentHTML('beforeend', slotsHtml);
-                                
-                                const countEl = groupCard.querySelector('.slot-count');
-                                if (countEl) {
-                                    const newCount = slotContainer.querySelectorAll('label.slot-label').length;
-                                    const slotText = newCount > 1 ? 'slots' : 'slot';
-                                    countEl.textContent = `${newCount} ${slotText}`;
-                                }
-                            }
-                        } else {
-                            const newGroupHtml = createGroupCardHtmlForAjax(firstSlot, slotsForThisDate);
-                            
-                            const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = newGroupHtml.trim();
-                            const newGroupCard = tempDiv.firstChild;
+    function onCheckboxChange(e) {
+        const cb = e.target;
+        const span = cb.closest('label')?.querySelector('.slot-card');
+        if (!span) return;
+        if (cb.checked) span.classList.add('selected');
+        else span.classList.remove('selected');
+  s }
+    
+    cancelBtn?.addEventListener('click', function(){ exitSelectionMode(); });
+    
+    selectAllBtn?.addEventListener('click', function(){
+        const visibleChecks = Array.from(document.querySelectorAll('.delete-checkbox')).filter(c => {
+            const grp = c.closest('.group[data-date]');
+            return grp && grp.style.display !== 'none' && !c.disabled;
+        });
+        
+        visibleChecks.forEach(c => {
+            c.checked = true;
+            c.dispatchEvent(new Event('change'));
+s       });
+    });
 
-                            let allCards = Array.from(mainContainer.querySelectorAll('.group[data-date]'));
-                            allCards.push(newGroupCard);
-
-                            allCards.sort((a, b) => a.getAttribute('data-date').localeCompare(b.getAttribute('data-date')));
-                            
-                            mainContainer.innerHTML = '';
-                            allCards.forEach(card => mainContainer.appendChild(card));
-                        }
-                    }
-                }
-                
-                addScheduleForm.reset();
-                document.querySelectorAll('.datepicker').forEach(fp => {
-                    if (fp._flatpickr) fp._flatpickr.clear();
-                });
-                document.querySelectorAll('.timepicker').forEach(fp => {
-                    if (fp._flatpickr) fp._flatpickr.clear();
-                });
-
-            } else {
-                const errorMessage = data.message || (data.errors ? JSON.stringify(data.errors) : 'Gagal menambahkan jadwal. Cek input.');
-                showToast(errorMessage, 'error');
-            }
-        } catch (error) {
-            console.error('AJAX Error:', error);
-            showToast('Terjadi kesalahan koneksi.', 'error');
-        }
-    });
-
-    // --- AJAX HAPUS JADWAL (Venue Bulk Delete Logic) ---
-    deleteToggleBtn?.addEventListener('click', function(){
-        if (!selectionActive) {
-          enterSelectionMode();
-          return;
-        }
-        
-        const checked = Array.from(document.querySelectorAll('.delete-checkbox:checked')).filter(c => !c.disabled);
-        if (checked.length === 0) {
-          alert('Pilih minimal satu jadwal untuk dihapus.');
-          return;
-        }
-        if (!confirm(`Anda yakin ingin menghapus ${checked.length} jadwal terpilih?`)) return;
-
-        const idsToDelete = Array.from(checked).map(ch => ch.getAttribute('data-id'));
-        
-        fetch(bulkForm.action, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json', 
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ selected_schedules: idsToDelete })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message || 'Jadwal berhasil dihapus!', 'success');
-                
-                idsToDelete.forEach(id => {
-                    const checkbox = document.querySelector(`.delete-checkbox[data-id="${id}"]`);
-                    if (checkbox) {
-                        const label = checkbox.closest('label.slot-label');
-                        if (label) {
-                            const groupContainer = label.parentElement; // .slot-container
-                            label.remove(); 
-
-                            if (groupContainer && groupContainer.querySelectorAll('label.slot-label').length === 0) {
-                                // [MODIFIKASI] Selector diubah ke .group
-                                const card = groupContainer.closest('.group[data-date]');
-                                if (card) card.remove();
-                            }
-                        }
-                    }
-                });
-
-            } else {
-                showToast(data.message || 'Gagal menghapus jadwal.', 'error');
-            }
-        })
-        .catch(() => showToast('Kesalahan koneksi saat menghapus.', 'error'))
-        .finally(() => {
-            exitSelectionMode(); 
-        });
-    });
-    
-    // --- LOGIC FILTER (Adaptasi) ---
-    function applyFilterValue(val) {
-      // [MODIFIKASI] Selector diubah ke .group
-      const allGroups = document.querySelectorAll('.group[data-date]');
-      allGroups.forEach(g => {
-        g.style.display = (!val || g.getAttribute('data-date') === val) ? '' : 'none';
-      });
-    }
-
-    applyBtn?.addEventListener('click', function(){
-      const v = filter.value;
-      applyFilterValue(v);
-      if (v) { clearBtn.classList.remove('hidden'); } 
-      else { clearBtn.classList.add('hidden'); }
-    });
-
-    clearBtn?.addEventListener('click', function(){
-      filter.value = '';
-      if(filter._flatpickr) filter._flatpickr.clear(); // Clear flatpickr
-      applyFilterValue('');
-      clearBtn.classList.add('hidden');
-    });
-
-    // --- LOGIC SELEKSI (Adaptasi) ---
-    function enterSelectionMode() {
-        selectionActive = true;
-        bodyEl.classList.add('selection-active');
-        deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Konfirmasi Hapus';
-        deleteToggleBtn.style.backgroundColor = '#2563eb'; // Biru
-        document.getElementById('delete-controls-container').classList.remove('hidden');
-        
-        document.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => { 
-            cb.addEventListener('change', onCheckboxChange); 
-        });
-    }
-
-    function exitSelectionMode() {
-        selectionActive = false;
-        bodyEl.classList.remove('selection-active');
-        deleteToggleBtn.innerHTML = '<svg style="height: 1rem; width: 1rem; display: inline-block; margin-right: 0.25rem; margin-top: -2px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Hapus Jadwal';
-        deleteToggleBtn.style.backgroundColor = '#dc2626'; // Merah
-        document.getElementById('delete-controls-container').classList.add('hidden');
-        
-        document.querySelectorAll('.delete-checkbox').forEach(cb => {
-            cb.checked = false;
-            cb.removeEventListener('change', onCheckboxChange);
-            const span = cb.closest('label')?.querySelector('.slot-card');
-            if (span) span.classList.remove('selected');
-        });
-    }
-
-    function onCheckboxChange(e) {
-        const cb = e.target;
-        const span = cb.closest('label')?.querySelector('.slot-card');
-        if (!span) return;
-        if (cb.checked) span.classList.add('selected');
-        else span.classList.remove('selected');
-    }
-    
-    cancelBtn?.addEventListener('click', function(){ exitSelectionMode(); });
-    
-    selectAllBtn?.addEventListener('click', function(){
-        const visibleChecks = Array.from(document.querySelectorAll('.delete-checkbox')).filter(c => {
-            // [MODIFIKASI] Selector diubah ke .group
-            const grp = c.closest('.group[data-date]');
-            return grp && grp.style.display !== 'none' && !c.disabled;
-        });
-        
-        visibleChecks.forEach(c => {
-            c.checked = true;
-            c.dispatchEvent(new Event('change'));
-        });
-    });
-
-    // ensure UI resets on page load
-    exitSelectionMode(); 
+    // ensure UI resets on page load
+    exitSelectionMode(); 
 });
 </script>
 {% endblock extra_js %}

@@ -1,0 +1,223 @@
+<div id="coach-grid" class="coach-grid">
+  {% for coach in coaches %}
+  <article class="coach-card" role="article" aria-labelledby="coach-name-{{ coach.id }}">
+    {% if coach.profile_picture %}
+      <img class="coach-img" src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}">
+    {% elif coach.profile_picture_url %}
+      <img class="coach-img" src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}">
+    {% else %}
+      <div class="coach-noimg">Tidak ada gambar</div>
+    {% endif %}
+
+
+    <div class="coach-body">
+      <h3 id="coach-name-{{ coach.id }}" class="coach-name">
+        {{ coach.user.get_full_name|default:coach.user.username }}
+      </h3>
+
+
+      <div class="coach-meta">
+        <p><strong>Umur:</strong> {{ coach.age|default:"-" }} tahun</p>
+        <p><strong>Olahraga:</strong> {{ coach.main_sport_trained.name }}</p>
+        <p><strong>Tarif:</strong> Rp {{ coach.rate_per_hour|floatformat:0 }}/jam</p>
+        <p><strong>Area Layanan:</strong>
+          {% for area in coach.service_areas.all %}{{ area.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+        </p>
+      </div>
+
+
+      <p class="coach-excerpt">
+        {{ coach.experience_desc|default:"Belum ada deskripsi pengalaman." }}
+      </p>
+
+
+      <button
+        type="button"
+        class="btn btn-primary open-detail-modal-btn"
+        data-ajax-url="{% url 'get_coach_detail_ajax' coach.id %}"
+        aria-label="Lihat detail {{ coach.user.get_full_name|default:coach.user.username }}">
+        Lihat Detail
+      </button>
+    </div>
+  </article>
+  {% empty %}
+  <div class="no-coaches">Belum ada pelatih yang tersedia.</div>
+  {% endfor %}
+</div>
+
+
+{% if coaches.has_other_pages %}
+<nav id="pagination-links" class="pagination" role="navigation" aria-label="Pagination">
+  <div class="pagination-inner">
+    {% if coaches.has_previous %}
+      <button type="button" class="pagination-btn" data-page="{{ coaches.previous_page_number }}" aria-label="Previous page">← Prev</button>
+    {% else %}
+      <span class="pagination-disabled">← Prev</span>
+    {% endif %}
+
+
+    <span class="pagination-info">Halaman {{ coaches.number }} dari {{ coaches.paginator.num_pages }}</span>
+
+
+    {% if coaches.has_next %}
+      <button type="button" class="pagination-btn" data-page="{{ coaches.next_page_number }}" aria-label="Next page">Next →</button>
+    {% else %}
+      <span class="pagination-disabled">Next →</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
+
+<style>
+  /* Grid */
+  .coach-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+
+  /* Card */
+  .coach-card {
+    border: 1px solid #eef2f2;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+    transition: transform .18s ease, box-shadow .18s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .coach-card:hover { transform: translateY(-6px); box-shadow: 0 12px 28px rgba(0,0,0,0.06); }
+
+
+  .coach-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+
+  .coach-noimg {
+    width: 100%;
+    height: 200px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#f5f7f7;
+    color:#999;
+    font-size: 14px;
+  }
+
+
+  .coach-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+
+
+  .coach-name {
+    margin: 0;
+    color: #003F3F;
+    font-size: 18px;
+  }
+
+
+  .coach-meta { color: #475569; font-size: 14px; margin: 0; }
+  .coach-meta p { margin: 4px 0; }
+
+
+  .coach-excerpt {
+    color: #6b7280;
+    font-size: 13px;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+  }
+
+
+  .btn-primary {
+    background: linear-gradient(135deg,#003F3F 0%,#005757 100%);
+    color: #fff;
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+
+
+  /* No coaches */
+  .no-coaches {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #666;
+  }
+
+
+  /* Pagination */
+  .pagination { margin-top: 40px; text-align: center; }
+  .pagination-inner {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    background: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .pagination-btn {
+    padding: 10px 16px;
+    background: #003F3F;
+    color: white;
+    border-radius: 8px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+  }
+  .pagination-disabled {
+    padding: 10px 16px;
+    background: #e5e7eb;
+    color: #9ca3af;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .pagination-info {
+    padding: 10px 16px;
+    background: #f8fafc;
+    color: #003F3F;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 1px solid #e5e7eb;
+  }
+
+
+  /* Responsive tweaks */
+  @media (max-width: 480px) {
+    .coach-excerpt { -webkit-line-clamp: 4; }
+  }
+</style>
+
+
+
+
+

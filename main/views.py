@@ -16,7 +16,8 @@ from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 from django.http import JsonResponse
-
+from django.views.decorators.http import require_http_methods
+from django.template.loader import render_to_string
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -620,37 +621,85 @@ def coach_profile_view(request):
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
-def manage_coach_profile(request):
+@require_http_methods(["POST"])
+def save_coach_profile_ajax(request):
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
         coach_profile = CoachProfile(user=request.user)
 
-    if request.method == 'POST':
-        form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
-        if form.is_valid():
-            profile = form.save()
-            messages.success(request, "Perubahan profil berhasil disimpan.")
-            return redirect('coach_profile') 
+    form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
+    
+    if form.is_valid():
+        profile = form.save()
         
-        else:
-            messages.error(request, "Perubahan gagal disimpan. Mohon periksa input Anda.")
+        # Prepare response data
+        response_data = {
+            'success': True,
+            'message': 'Profil berhasil disimpan!',
+            'profile': {
+                'age': profile.age,
+                'experience_desc': profile.experience_desc,
+                'rate_per_hour': float(profile.rate_per_hour),
+                'main_sport_trained': profile.main_sport_trained.name,
+                'service_areas': [area.name for area in profile.service_areas.all()],
+                'is_verified': profile.is_verified,
+                'profile_picture': profile.profile_picture.url if profile.profile_picture else None,
+            }
+        }
+        return JsonResponse(response_data)
     else:
-        form = CoachProfileForm(instance=coach_profile)
-
-    return render(request, 'main/manage_coach_profile.html', {'form': form, 'coach_profile': coach_profile})
+        # Return validation errors
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'message': 'Terjadi kesalahan validasi',
+            'errors': errors
+        }, status=400)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
-def delete_coach_profile(request):
-    coach_profile = get_object_or_404(CoachProfile, user=request.user)
-
-    if request.method == 'POST':
+@require_http_methods(["POST"])
+def delete_coach_profile_ajax(request):
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
         coach_profile.delete()
-        messages.success(request, "Profil pelatih berhasil dihapus.")
-        return redirect('home') 
-
-    return render(request, 'main/confirm_delete_coach_profile.html', {'coach_profile': coach_profile})
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Profil pelatih berhasil dihapus!'
+        })
+    except CoachProfile.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Profil tidak ditemukan'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Terjadi kesalahan: {str(e)}'
+        }, status=500)
+    
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def get_coach_profile_form_ajax(request):
+    """Return form HTML for modal"""
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+    except CoachProfile.DoesNotExist:
+        coach_profile = None
+    
+    form = CoachProfileForm(instance=coach_profile)
+    
+    context = {
+        'form': form,
+        'coach_profile': coach_profile,
+    }
+    
+    return render(request, 'main/coach_profile_form.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
@@ -754,10 +803,12 @@ def coach_schedule(request):
 
     # --- Logika Menampilkan Halaman (GET Request) ---
     # Form sudah diinisialisasi di atas (kosong karena bukan POST)
+    user_has_profile = coach_profile is not None
     context = {
         'coach_profile': coach_profile, # Bisa None
         'schedules': schedules,         # Bisa queryset kosong
         'form': form,                   # Form kosong
+        'has_profile': user_has_profile
     }
     return render(request, 'main/coach_schedule.html', context)
 
@@ -870,19 +921,121 @@ def coach_detail_public_view(request, coach_id):
     }
     return render(request, 'main/coach_detail.html', context)
 
+def filter_coaches_ajax(request):
+    """
+    View AJAX untuk memfilter dan paginasi daftar coach.
+    Hanya mengembalikan potongan HTML dari daftar coach.
+    """
+    coaches_list = CoachProfile.objects.all().select_related(
+        'user', 'main_sport_trained'
+    ).prefetch_related('service_areas').order_by('user__first_name')
+    
+    # Ambil parameter GET
+    query = request.GET.get('q')
+    sport_filter = request.GET.get('sport')
+    area_filter = request.GET.get('area')
+    
+    # Filter berdasarkan pencarian
+    if query:
+        coaches_list = coaches_list.filter(
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__username__icontains=query)
+        )
+    
+    # Filter berdasarkan olahraga
+    if sport_filter:
+        coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
+    
+    # Filter berdasarkan area
+    if area_filter:
+        coaches_list = coaches_list.filter(service_areas__id=area_filter)
+    
+    paginator = Paginator(coaches_list, 6)
+    page_number = request.GET.get('page')
+    
+    try:
+        coaches = paginator.page(page_number)
+    except PageNotAnInteger:
+        coaches = paginator.page(1)
+    except EmptyPage:
+        # Jika request AJAX meminta halaman di luar jangkauan,
+        # kembalikan halaman terakhir.
+        coaches = paginator.page(paginator.num_pages)
+    
+    context = {
+        'coaches': coaches,
+        # Kita teruskan parameter GET agar pagination link tetap benar
+        'query': query,
+        'sport_filter': sport_filter,
+        'area_filter': area_filter,
+    }
+    
+    # Render potongan HTML parsial, BUKAN seluruh halaman
+    html = render_to_string(
+        'main/coach_list_partial.html', 
+        context,
+        request=request
+    )
+    return JsonResponse({'html': html})
+
+
+def get_coach_detail_ajax(request, coach_id):
+    """
+    View AJAX untuk mengambil detail coach untuk ditampilkan di modal.
+    """
+    coach = get_object_or_404(
+        CoachProfile.objects.select_related('user', 'main_sport_trained')
+        .prefetch_related('service_areas'),
+        id=coach_id
+    )
+    
+    reviews = Review.objects.filter(target_coach=coach).select_related('customer').order_by('-created_at')[:5]
+    
+    avg_rating = reviews.aggregate(avg=Sum('rating'))['avg']
+    if avg_rating and reviews.count() > 0:
+        avg_rating = avg_rating / reviews.count()
+    else:
+        avg_rating = 0
+    
+    context = {
+        'coach': coach,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'total_reviews': reviews.count(),
+    }
+    
+    # Render potongan HTML parsial untuk modal
+    html = render_to_string(
+        'main/coach_detail_partial.html', 
+        context,
+        request=request
+    )
+    return JsonResponse({'html': html})
+
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_revenue_report(request):
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
+        has_profile = True
     except CoachProfile.DoesNotExist:
-        messages.info(request, "Silakan lengkapi profil pelatih terlebih dahulu sebelum melihat laporan pendapatan.")
-        return redirect('manage_coach_profile')
+        coach_profile = None
+        has_profile = False
 
-    transactions = Transaction.objects.filter(booking__coach_schedule__coach=coach_profile, status='CONFIRMED')
-    total_revenue = transactions.aggregate(Sum('revenue_coach'))['revenue_coach__sum'] or 0
+    if has_profile:
+        transactions = Transaction.objects.filter(
+            booking__coach_schedule__coach=coach_profile, 
+            status='CONFIRMED'
+        )
+        total_revenue = transactions.aggregate(Sum('revenue_coach'))['revenue_coach__sum'] or 0
+    else:
+        transactions = []
+        total_revenue = 0
 
     context = {
+        'coach_profile': coach_profile,
+        'has_profile': has_profile,
         'transactions': transactions,
         'total_revenue': total_revenue,
     }
