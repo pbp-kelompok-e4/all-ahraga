@@ -105,7 +105,27 @@ class EquipmentForm(forms.ModelForm):
     class Meta:
         model = Equipment
         fields = ['name', 'rental_price', 'stock_quantity']
-        # 'venue' akan diisi otomatis oleh view
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-700 focus:border-transparent transition-all',
+                'placeholder': 'e.g., Basketball, Racket, etc.'
+            }),
+            'rental_price': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-700 focus:border-transparent transition-all',
+                'placeholder': '0',
+                'min': '0'
+            }),
+            'stock_quantity': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-700 focus:border-transparent transition-all',
+                'placeholder': '0',
+                'min': '0'
+            }),
+        }
+        labels = {
+            'name': 'Equipment Name',
+            'rental_price': 'Rental Price (Rp)',
+            'stock_quantity': 'Stock Quantity',
+        }
 
 class CoachProfileForm(forms.ModelForm):
     # pakai upload image sesuai CoachProfile.profile_picture
