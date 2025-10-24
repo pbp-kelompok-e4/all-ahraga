@@ -139,25 +139,33 @@
         <hr class="border-slate-200 my-8">
 
         {% if equipment_list %}
-        <div id="equipment-section">
-          <h3 class="text-xl font-semibold mb-4">Add Equipment</h3>
-          <div class="space-y-3 max-h-[240px] overflow-y-auto pr-2">
-            {% for eq in equipment_list %}
-            <label class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
-              <div>
-                <div class="font-medium">{{ eq.name }}</div>
-                <div class="text-sm text-slate-600">Stock: {{ eq.stock_quantity|default:0 }}</div>
-              </div>
-              <div class="flex items-center gap-4">
-                <span class="text-sm">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
-                <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
-                  class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-              </div>
-            </label>
-            {% endfor %}
+          <div id="equipment-section">
+            <h3 class="text-xl font-semibold mb-4">Add Equipment</h3>
+            <div class="space-y-3 max-h-[240px] overflow-y-auto pr-2">
+              {% for eq in equipment_list %}
+              <label class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50 transition-all">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
+                        id="eq-cb-{{ eq.id }}"
+                        class="eq-checkbox w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                  <div>
+                    <div class="font-medium">{{ eq.name }}</div>
+                    <div class="text-sm text-slate-600">Stock: {{ eq.stock_quantity|default:0 }}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-4">
+                  <span class="text-sm">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
+                  <input type="number" name="quantity_{{ eq.id }}" value="1" min="1" max="{{ eq.stock_quantity|default:1 }}" 
+                        id="eq-qty-{{ eq.id }}"
+                        data-eq-id="{{ eq.id }}"
+                        class="eq-quantity w-16 p-1 text-center border border-slate-300 rounded-md disabled:bg-slate-200 disabled:opacity-50" 
+                        disabled>
+                </div>
+              </label>
+              {% endfor %}
+            </div>
           </div>
-        </div>
-        {% endif %}
+          {% endif %}
         
         <input type="hidden" name="payment_method" id="payment-method-input" value="CASH">
       </div>
@@ -251,9 +259,8 @@
   const showCoachBtn = document.getElementById('show-coach-btn');
   const coachSection = document.getElementById('coach-section');
   let isCoachSectionVisible = false;
-  
-  const eqBoxes = Array.from(document.querySelectorAll('input[type="checkbox"][name="equipment"]') || []);
-  
+  const eqCheckboxes = Array.from(document.querySelectorAll('.eq-checkbox') || []);
+  const eqQuantities = Array.from(document.querySelectorAll('.eq-quantity') || []);
   const coachListWrapper = document.getElementById('coach-list-wrapper');
   const coachPlaceholder = document.getElementById('coach-placeholder');
   const noCoachCard = document.getElementById('no-coach-card');
@@ -272,7 +279,15 @@
 
   function calc() {
     let eqTotal = 0;
-    if (eqBoxes.length) eqBoxes.forEach(cb => { if (cb.checked) eqTotal += parseFloat(cb.dataset.price || 0); });
+    eqCheckboxes.forEach(cb => {
+      if (cb.checked) {
+        const eqId = cb.value;
+        const qtyInput = document.getElementById(`eq-qty-${eqId}`);
+        const quantity = parseInt(qtyInput.value, 10) || 1; 
+        const price = parseFloat(cb.dataset.price || 0);
+        eqTotal += price * quantity; 
+      }
+    });
     
     let coachFee = 0;
     coachRadios = Array.from(coachListWrapper.querySelectorAll('input[type="radio"][name="coach"]') || []);
@@ -290,11 +305,9 @@
 
   function loadCoaches(scheduleId) {
     if (!isCoachSectionVisible) return;
-
     function clearDynamicCoaches() {
       document.querySelectorAll('.dynamic-coach-card').forEach(card => card.remove());
     }
-
     if (!scheduleId) {
       clearDynamicCoaches();
       coachPlaceholder.style.display = 'block';
@@ -304,42 +317,30 @@
       calc();
       return;
     }
-    
     coachPlaceholder.style.display = 'block';
     coachPlaceholder.textContent = 'Memuat coach...';
-    
-    // !!! PERBAIKAN: clearDynamicCoaches() DIHAPUS DARI SINI
     
     fetch(`/api/schedule/${scheduleId}/coaches/`)
       .then(response => response.json())
       .then(data => {
-        // !!! PERBAIKAN: clearDynamicCoaches() DIPINDAH KE SINI
-        // Ini memastikan list dibersihkan HANYA saat data BARU siap ditampilkan
         clearDynamicCoaches(); 
-        
         coachPlaceholder.style.display = 'none';
         
         if (data.error) {
           coachPlaceholder.textContent = data.error;
           coachPlaceholder.style.display = 'block';
         } else if (data.coaches && data.coaches.length > 0) {
-          
           data.coaches.forEach(coach => {
             const coachCard = document.createElement('label');
             coachCard.className = 'coach-card dynamic-coach-card slot-card relative block rounded-lg border border-slate-200 bg-white transition-all cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md overflow-hidden';
-            
             let avatarHtml = '';
             if (coach.profile_picture_url) {
                 avatarHtml = `<img src="${coach.profile_picture_url}" alt="${coach.name}" class="w-full h-32 object-cover">`;
             } else {
                 const initial = coach.name ? coach.name.charAt(0).toUpperCase() : '?';
-                avatarHtml = `<div class="w-full h-32 bg-slate-200 flex items-center justify-center">
-                                <span class="text-4xl font-bold text-slate-500">${initial}</span>
-                              </div>`;
+                avatarHtml = `<div class="w-full h-32 bg-slate-200 flex items-center justify-center"><span class="text-4xl font-bold text-slate-500">${initial}</span></div>`;
             }
-
             const areas = coach.areas && coach.areas.length > 0 ? coach.areas.join(', ') : 'N/A';
-            
             coachCard.innerHTML = `
               <input type="radio" name="coach" value="${coach.id}" data-rate="${coach.rate_per_hour || 0}" class="absolute opacity-0">
               ${avatarHtml}
@@ -354,41 +355,30 @@
                   <div class="text-sm text-slate-500 mt-2">
                       <strong class="font-medium text-slate-600">Area:</strong> ${areas}
                   </div>
-                  <p class="text-sm text-slate-600 mt-2 line-clamp-2" title="${coach.experience_desc || ''}">
-                      ${coach.experience_desc || 'Tidak ada deskripsi.'}
-                  </p>
-              </div>
-            `;
-            
+                  <p class="text-sm text-slate-600 mt-2 line-clamp-2" title="${coach.experience_desc || ''}">${coach.experience_desc || 'Tidak ada deskripsi.'}</p>
+              </div>`;
             const newRadio = coachCard.querySelector('input[type="radio"]');
             if (newRadio) {
                 newRadio.addEventListener('change', calc);
                 coachCard.addEventListener('click', () => {
-                    coachListWrapper.querySelectorAll('.slot-card').forEach(c => {
-                         c.classList.remove('border-blue-400', 'shadow-md');
-                    });
+                    coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-blue-400', 'shadow-md'));
                     coachCard.classList.add('border-blue-400', 'shadow-md');
                     newRadio.checked = true;
                     newRadio.dispatchEvent(new Event('change'));
                 });
             }
-            
             coachListWrapper.appendChild(coachCard);
           });
-
         } else {
           coachPlaceholder.textContent = 'Tidak ada coach tersedia untuk jadwal ini.';
           coachPlaceholder.style.display = 'block';
         }
-        
         if (noCoachRadio) noCoachRadio.checked = true;
         if (noCoachCard) noCoachCard.classList.add('border-blue-400', 'shadow-md');
         calc();
       })
       .catch(error => {
-        // !!! PERBAIKAN: Bersihkan juga jika terjadi error
         clearDynamicCoaches(); 
-        
         console.error('Error loading coaches:', error);
         coachPlaceholder.textContent = 'Gagal memuat daftar coach.';
         coachPlaceholder.style.display = 'block';
@@ -404,11 +394,7 @@
       const radio = label.querySelector('input[type="radio"]');
       if (radio) radio.checked = false;
     });
-
-    if (isCoachSectionVisible) {
-      loadCoaches(null); 
-    }
-    
+    if (isCoachSectionVisible) loadCoaches(null); 
     calc();
   }
 
@@ -428,10 +414,8 @@
         label.style.display = 'none';
       }
     });
-
     if (found) { noScheduleMessage.style.display = 'none'; } 
     else { noScheduleMessage.style.display = 'block'; }
-    
     scheduleSection.style.display = 'block';
     schedulePlaceholder.style.display = 'none';
   }
@@ -485,18 +469,13 @@
     });
   }
 
-  // --- Inisialisasi Halaman ---
-
   generateDateScroller(30);
   setupScroller('date-scroller-wrapper', 'date-scroller', '.date-scroll-btn');
   setupScroller('schedule-scroller-wrapper', 'schedule-scroller', '.schedule-scroll-btn');
 
   const firstDateButton = document.querySelector('.date-button');
-  if (firstDateButton) {
-    firstDateButton.click();
-  } else {
-    schedulePlaceholder.textContent = 'Gagal memuat tanggal.';
-  }
+  if (firstDateButton) { firstDateButton.click(); } 
+  else { schedulePlaceholder.textContent = 'Gagal memuat tanggal.'; }
 
   allSlotLabels.forEach(lbl => {
     lbl.addEventListener('click', function (e) {
@@ -514,9 +493,7 @@
   if (noCoachCard && noCoachRadio) {
       noCoachRadio.addEventListener('change', calc);
       noCoachCard.addEventListener('click', () => {
-          coachListWrapper.querySelectorAll('.slot-card').forEach(c => {
-            c.classList.remove('border-blue-400', 'shadow-md');
-          });
+          coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-blue-400', 'shadow-md'));
           noCoachCard.classList.add('border-blue-400', 'shadow-md');
           noCoachRadio.checked = true;
           noCoachRadio.dispatchEvent(new Event('change'));
@@ -529,15 +506,52 @@
       coachSection.style.display = 'block';
       showCoachBtn.style.display = 'none'; 
       const checkedSchedule = form.querySelector('input[name="schedule_id"]:checked');
-      if (checkedSchedule) {
-        loadCoaches(checkedSchedule.value);
-      } else {
-        loadCoaches(null);
-      }
+      if (checkedSchedule) { loadCoaches(checkedSchedule.value); } 
+      else { loadCoaches(null); }
     });
   }
+  
+  eqCheckboxes.forEach(cb => {
+    const qtyInput = document.getElementById(`eq-qty-${cb.value}`);
+    if (!qtyInput) return;
+    
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        qtyInput.disabled = false;
+        qtyInput.value = 1; 
+      } else {
+        qtyInput.disabled = true;
+        qtyInput.value = 1; 
+      }
+      calc();
+    });
+  });
 
-  if (eqBoxes.length) eqBoxes.forEach(cb => cb.addEventListener('change', calc));
+  eqQuantities.forEach(qtyInput => {
+    qtyInput.addEventListener('input', () => { 
+      const cb = document.getElementById(`eq-cb-${qtyInput.dataset.eqId}`);
+      if (cb && !cb.checked) {
+        cb.checked = true;
+        qtyInput.disabled = false;
+      }
+      
+      const maxStock = parseInt(qtyInput.max, 10);
+      let currentValue = parseInt(qtyInput.value, 10);
+      
+      if (isNaN(currentValue)) currentValue = 1;
+      
+      if (currentValue > maxStock) {
+        alert(`Stok untuk item ini hanya ${maxStock}.`);
+        qtyInput.value = maxStock;
+      }
+      if (currentValue < 1) {
+        qtyInput.value = 1;
+      }
+      
+      calc(); 
+    });
+  });
+
   if (paymentSelect) paymentSelect.addEventListener('change', () => { if (paymentInput) paymentInput.value = paymentSelect.value; });
 
   calc(); 
