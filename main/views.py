@@ -538,42 +538,54 @@ def delete_venue_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def get_available_coaches(request, schedule_id):
+    editing_booking_id = request.GET.get('editing_booking_id')
+
     try:
-        schedule = VenueSchedule.objects.select_related('venue__location', 'venue__sport_category').get(id=schedule_id, is_booked=False)
+        schedule_query = Q(id=schedule_id)
+        schedule_booked_filter = Q(is_booked=False)
+        if editing_booking_id:
+            schedule_booked_filter |= Q(booking__id=editing_booking_id)
+        
+        schedule_query &= schedule_booked_filter
+        
+        schedule = VenueSchedule.objects.select_related('venue__location', 'venue__sport_category').get(schedule_query)
         venue = schedule.venue
     except VenueSchedule.DoesNotExist:
         return JsonResponse({'error': 'Jadwal tidak ditemukan atau sudah dibooking.'}, status=404)
-
-    # [FIX] LANGKAH 1: Dapatkan HANYA ID coach yang jadwalnya cocok.
-    available_coach_ids = CoachSchedule.objects.filter(
+    coach_schedule_query = Q(
         date=schedule.date,
         start_time=schedule.start_time,
         is_available=True,
-        is_booked=False
-    ).values_list('coach_id', flat=True) # Hanya ambil daftar [1, 2, 5, ...]
+    )
+    
+    coach_booked_filter = Q(is_booked=False)
+    if editing_booking_id:
+        coach_booked_filter |= Q(booking__id=editing_booking_id)
 
-    # [FIX] LANGKAH 2: Filter CoachProfile berdasarkan daftar ID tersebut
+    coach_schedule_query &= coach_booked_filter
+
+    available_coach_ids = CoachSchedule.objects.filter(
+        coach_schedule_query
+    ).values_list('coach_id', flat=True)
+
     coaches_for_schedule = CoachProfile.objects.filter(
         id__in=available_coach_ids,
         service_areas=venue.location,
         main_sport_trained=venue.sport_category
-    ).distinct().select_related(  # <-- .distinct() DIPINDAHKAN KE SINI
+    ).distinct().select_related(
         'user', 'main_sport_trained'
-    ).prefetch_related('service_areas') # <-- .distinct() DIHAPUS DARI SINI
+    ).prefetch_related('service_areas')
 
     coaches_data = []
     for coach in coaches_for_schedule:
         full_name = coach.user.get_full_name() or coach.user.username
-
         profile_picture_url = None
         if coach.profile_picture:
             try:
                 profile_picture_url = coach.profile_picture.url
             except ValueError:
                 profile_picture_url = None 
-
         areas_list = [area.name for area in coach.service_areas.all()]
-
         coaches_data.append({
             'id': coach.id,
             'name': full_name,
@@ -1288,7 +1300,11 @@ def customer_payment(request, booking_id):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
     bookings = Booking.objects.filter(customer=request.user).select_related(
-        'venue_schedule__venue', 'transaction'
+        'venue_schedule__venue', 
+        'transaction', 
+        'coach_schedule__coach__user'  
+    ).prefetch_related(
+        'equipment_details__equipment' 
     ).order_by('-venue_schedule__date')
 
     query = request.GET.get('q', '').strip()
@@ -1369,7 +1385,8 @@ def delete_booking(request, booking_id):
                 coach_schedule.is_booked = False
                 coach_schedule.is_available = True
                 coach_schedule.save()
-
+            
+            booking.transaction.status = 'CANCELLED'
             booking.transaction.delete()
             booking.delete()
             
@@ -1393,6 +1410,254 @@ def delete_booking(request, booking_id):
         
         messages.error(request, error_msg)
         return redirect('my_bookings')
-  
 
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def update_booking(request, booking_id):
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False, 
+            'message': 'Metode tidak diizinkan.'
+        }, status=405)
+    
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    
+    try:
+        booking = get_object_or_404(
+            Booking.objects.select_related(
+                'transaction', 
+                'venue_schedule__venue', 
+                'coach_schedule__coach'
+            ), 
+            id=booking_id, 
+            customer=request.user
+        )
+        
+        if booking.transaction.status != 'PENDING':
+            error_msg = 'Hanya booking dengan status PENDING yang dapat diubah.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return redirect('my_bookings')
+        
+        new_schedule_id = request.POST.get('schedule_id')
+        new_coach_id = request.POST.get('coach_id')  
+        equipment_ids = request.POST.getlist('equipment')  
+        
+        if not new_schedule_id:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Jadwal harus dipilih.'
+            }, status=400)
+        
+        with db_transaction.atomic():
+            venue = booking.venue_schedule.venue
+            now = timezone.localtime(timezone.now())
+            today = now.date()
+            current_time = now.time()
+            
+            try:
+                schedule_query = Q(id=new_schedule_id, venue=venue, date__gte=today)
+                schedule_query &= (Q(is_booked=False) | Q(booking=booking))
 
+                new_schedule = VenueSchedule.objects.select_for_update().get(schedule_query)
+                
+                if new_schedule.date == today and new_schedule.start_time < current_time:
+                    raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
+                    
+            except VenueSchedule.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Jadwal tidak tersedia atau sudah dibooking.'
+                }, status=400)
+            
+            old_schedule = booking.venue_schedule
+            if old_schedule.id != new_schedule.id:
+                old_schedule.is_booked = False
+                old_schedule.is_available = True
+                old_schedule.save()
+            
+            if booking.coach_schedule:
+                old_coach_schedule = booking.coach_schedule
+                if (old_schedule.id != new_schedule.id) or \
+                   (str(old_coach_schedule.coach.id) != new_coach_id):
+                    old_coach_schedule.is_booked = False
+                    old_coach_schedule.is_available = True
+                    old_coach_schedule.save()
+            
+            total_price = venue.price_per_hour or 0
+            
+            new_coach_schedule_obj = None
+            if new_coach_id and new_coach_id != 'none' and new_coach_id != '':
+                try:
+                    coach_obj = CoachProfile.objects.get(id=new_coach_id)
+                    coach_schedule_query = Q(
+                        coach=coach_obj,
+                        date=new_schedule.date,
+                        start_time=new_schedule.start_time
+                    )
+                    coach_schedule_query &= (Q(is_booked=False) | Q(booking=booking))
+
+                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
+                        coach_schedule_query
+                    )
+
+                    total_price += coach_obj.rate_per_hour or 0
+                    
+                    new_coach_schedule_obj.is_booked = True
+                    new_coach_schedule_obj.save()
+                    
+                except (CoachProfile.DoesNotExist, CoachSchedule.DoesNotExist):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Coach tidak tersedia pada jadwal yang dipilih.'
+                    }, status=400)
+            
+            BookingEquipment.objects.filter(booking=booking).delete()
+      
+            if equipment_ids:
+                equipment_queryset = Equipment.objects.filter(
+                    id__in=equipment_ids, 
+                    venue=venue
+                )
+                booking_equipment_list = []
+                for eq in equipment_queryset:
+                    total_price += eq.rental_price or 0
+                    booking_equipment_list.append(
+                        BookingEquipment(
+                            booking=booking,
+                            equipment=eq,
+                            quantity=1,
+                            sub_total=eq.rental_price
+                        )
+                    )
+                if booking_equipment_list:
+                    BookingEquipment.objects.bulk_create(booking_equipment_list)
+            
+            booking.venue_schedule = new_schedule
+            booking.coach_schedule = new_coach_schedule_obj
+            booking.total_price = total_price
+            booking.save()
+            
+            new_schedule.is_booked = True
+            new_schedule.save()
+            
+            transaction = booking.transaction
+            transaction.revenue_venue = venue.price_per_hour or 0
+            transaction.revenue_coach = (
+                new_coach_schedule_obj.coach.rate_per_hour 
+                if new_coach_schedule_obj else 0
+            )
+            transaction.save()
+        
+        success_msg = 'Booking berhasil diperbarui!'
+        if is_ajax:
+            return JsonResponse({
+                'success': True,
+                'message': success_msg,
+                'redirect_url': reverse('my_bookings')
+            })
+        
+        messages.success(request, success_msg)
+        return redirect('my_bookings')
+        
+    except Booking.DoesNotExist:
+        error_msg = 'Booking tidak ditemukan.'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_msg}, status=404)
+        messages.error(request, error_msg)
+        return redirect('my_bookings')
+        
+    except IntegrityError as e:
+        error_msg = 'Terjadi konflik saat mengupdate booking. Silakan coba lagi.'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_msg}, status=400)
+        messages.error(request, error_msg)
+        return redirect('my_bookings')
+        
+    except Exception as e:
+        error_msg = f'Terjadi kesalahan: {str(e)}'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_msg}, status=500)
+        messages.error(request, error_msg)
+        return redirect('my_bookings')
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
+def update_booking_data(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related(
+            'venue_schedule__venue', 
+            'coach_schedule__coach__user'
+        ), 
+        id=booking_id,
+        customer=request.user
+    )
+    venue = booking.venue_schedule.venue
+
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    current_time = now.time()
+
+    current_schedule = booking.venue_schedule
+    current_schedule_data = {
+        'id': current_schedule.id,
+        'date_str_display': current_schedule.date.strftime('%A, %d %B %Y'),
+        'start_time': current_schedule.start_time.strftime('%H:%M'),
+        'end_time': current_schedule.end_time.strftime('%H:%M'),
+    }
+
+    schedules = VenueSchedule.objects.filter(
+        venue=venue,
+        is_booked=False,
+        date__gte=today
+    ).exclude(
+        id=current_schedule.id  
+    ).exclude(
+        date=today,
+        start_time__lt=current_time
+    ).order_by('date', 'start_time')
+
+    schedules_data = [
+        {
+            'id': s.id,
+            'date_str_display': s.date.strftime('%A, %d %B %Y'),
+            'start_time': s.start_time.strftime('%H:%M'),
+            'end_time': s.end_time.strftime('%H:%M'),
+        }
+        for s in schedules
+    ]
+
+    current_coach_id = None
+    current_coach_data = None
+    if booking.coach_schedule and booking.coach_schedule.coach:
+        coach = booking.coach_schedule.coach
+        current_coach_id = coach.id
+        current_coach_data = {
+            'id': coach.id,
+            'name': coach.user.get_full_name() or coach.user.username,
+            'rate': float(coach.rate_per_hour or 0)
+        }
+    selected_equipment_ids = list(
+        BookingEquipment.objects.filter(booking=booking).values_list('equipment_id', flat=True)
+    )
+    
+    equipments = Equipment.objects.filter(venue=venue)
+    equipments_data = [
+        {
+            'id': e.id,
+            'name': e.name,
+            'price': float(e.rental_price or 0)
+        }
+        for e in equipments
+    ]
+
+    return JsonResponse({
+        'success': True,
+        'current_schedule': current_schedule_data,
+        'schedules': schedules_data,
+        'current_coach_id': current_coach_id,
+        'current_coach_data': current_coach_data, 
+        'selected_equipment_ids': selected_equipment_ids,
+        'equipments': equipments_data,
+    })

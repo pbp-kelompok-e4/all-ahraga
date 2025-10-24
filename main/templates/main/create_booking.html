@@ -246,7 +246,7 @@
   const schedulePlaceholder = document.getElementById('schedule-placeholder');
   const scheduleSection = document.getElementById('schedule-section');
   const noScheduleMessage = document.getElementById('no-schedule-message');
-  const allSlotLabels = Array.from(document.querySelectorAll('.slot-card'));
+  const allSlotLabels = Array.from(document.querySelectorAll('#schedule-scroller-content .slot-card'));
   
   const showCoachBtn = document.getElementById('show-coach-btn');
   const coachSection = document.getElementById('coach-section');
@@ -514,8 +514,8 @@
   if (noCoachCard && noCoachRadio) {
       noCoachRadio.addEventListener('change', calc);
       noCoachCard.addEventListener('click', () => {
-          document.querySelectorAll('.dynamic-coach-card').forEach(c => {
-              c.classList.remove('border-blue-400', 'shadow-md');
+          coachListWrapper.querySelectorAll('.slot-card').forEach(c => {
+            c.classList.remove('border-blue-400', 'shadow-md');
           });
           noCoachCard.classList.add('border-blue-400', 'shadow-md');
           noCoachRadio.checked = true;
