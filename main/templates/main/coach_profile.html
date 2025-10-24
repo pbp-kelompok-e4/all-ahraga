@@ -156,8 +156,8 @@
 
       <!-- Action Buttons -->
       <div id="actionButtons" style="display: grid; grid-template-columns: {% if coach_profile %}1fr 1fr{% else %}1fr{% endif %}; gap: 16px; margin-top: 30px;">
-       
-        <button onclick="showManageModal()"
+      
+        <button onclick="showManageModal()" id="manageProfileBtn"
           style="display: flex; align-items: center; justify-content: center; gap: 8px;
                   padding: 14px 24px;
                   background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
@@ -165,9 +165,11 @@
                   text-decoration: none; border-radius: 10px;
                   font-weight: 600; font-size: 15px; transition: all 0.3s ease;
                   box-shadow: 0 4px 12px rgba(0,63,63,0.3); cursor: pointer;">
-          <span>✏️</span> Kelola Profil
+          <span>✏️</span> 
+          <span id="manageButtonText">
+            {% if coach_profile %}Update Profil{% else %}Kelola Profil{% endif %}
+          </span>
         </button>
-
 
         {% if coach_profile %}
           <button onclick="showDeleteModal()" id="deleteBtn"
@@ -188,9 +190,9 @@
       </div>
 
 
+      </div>
     </div>
   </div>
-</div>
 
 
 <!-- Manage Profile Modal -->
@@ -563,7 +565,13 @@
       errorSummary.style.display = 'block';
     }
   }
-
+  
+  function updateManageButtonText(hasProfile) {
+    const buttonText = document.getElementById('manageButtonText');
+    if (buttonText) {
+      buttonText.textContent = hasProfile ? 'Update Profil' : 'Kelola Profil';
+    }
+  }
 
   function updateProfileUI(profile) {
     const profilePicContainer = document.getElementById('profilePictureContainer');
@@ -573,17 +581,17 @@
         'style="width: 140px; height: 140px; border-radius: 50%; object-fit: cover; ' +
         'border: 5px solid #f5b800; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">';
     }
-   
+  
     const verifiedBadge = document.getElementById('verifiedBadge');
     if (profile.is_verified) {
       verifiedBadge.style.display = 'block';
     }
-   
+  
     const noProfileView = document.getElementById('noProfileView');
-   
+  
     if (noProfileView) {
       noProfileView.remove();
-     
+    
       const profileContent = document.getElementById('profileContent');
       const areasHTML = profile.service_areas.length > 0
         ? profile.service_areas.map(area =>
@@ -591,7 +599,7 @@
             area + '</span>'
           ).join('')
         : '<span style="color: #999;">Belum ada area layanan</span>';
-     
+    
       profileContent.innerHTML =
         '<div id="profileDataView">' +
           '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">' +
@@ -631,19 +639,22 @@
             '</div>' +
           '</div>' +
         '</div>';
-     
+    
+      // UPDATE: Panggil fungsi untuk update tombol
+      updateManageButtonText(true);
+    
       const deleteBtn = document.getElementById('deleteBtn');
       deleteBtn.style.display = 'flex';
-     
+    
       const actionButtons = document.getElementById('actionButtons');
       actionButtons.style.gridTemplateColumns = '1fr 1fr';
-     
+    
     } else {
       document.getElementById('displayAge').textContent = (profile.age || '-') + ' tahun';
       document.getElementById('displayRate').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(profile.rate_per_hour);
       document.getElementById('displaySport').textContent = profile.main_sport_trained;
       document.getElementById('displayExperience').textContent = profile.experience_desc || '-';
-     
+    
       const areasContainer = document.getElementById('displayAreas');
       if (profile.service_areas.length > 0) {
         areasContainer.innerHTML = profile.service_areas.map(area =>
@@ -653,6 +664,9 @@
       } else {
         areasContainer.innerHTML = '<span style="color: #999;">Belum ada area layanan</span>';
       }
+      
+      // UPDATE: Panggil fungsi untuk update tombol
+      updateManageButtonText(true);
     }
   }
 
@@ -724,9 +738,9 @@
       'border: 5px solid #f5b800;">' +
         '<span style="font-size: 48px; color: #fff;">👤</span>' +
       '</div>';
-   
+  
     document.getElementById('verifiedBadge').style.display = 'none';
-   
+  
     const profileContent = document.getElementById('profileContent');
     profileContent.innerHTML =
       '<div id="noProfileView" style="text-align: center; padding: 40px 20px; background: #f8fafa; border-radius: 12px; margin-bottom: 30px;">' +
@@ -734,10 +748,13 @@
         '<h3 style="color: #003F3F; margin-bottom: 10px;">Profil Belum Lengkap</h3>' +
         '<p style="color: #666; margin: 0;">Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.</p>' +
       '</div>';
-   
+  
+    // UPDATE: Panggil fungsi untuk update tombol
+    updateManageButtonText(false);
+  
     const deleteBtn = document.getElementById('deleteBtn');
     deleteBtn.style.display = 'none';
-   
+  
     const actionButtons = document.getElementById('actionButtons');
     actionButtons.style.gridTemplateColumns = '1fr';
   }
@@ -746,7 +763,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     const checkbox = document.getElementById('confirmCheckbox');
     const deleteBtn = document.getElementById('confirmDeleteBtn');
-   
+  
     if (checkbox && deleteBtn) {
       checkbox.addEventListener('change', function() {
         deleteBtn.disabled = !this.checked;
@@ -755,6 +772,9 @@
       });
     }
 
+    // UPDATE: Inisialisasi teks tombol saat halaman dimuat
+    const hasProfile = {% if coach_profile %}true{% else %}false{% endif %};
+    updateManageButtonText(hasProfile);
 
     const manageModal = document.getElementById('manageModal');
     manageModal.addEventListener('click', function(e) {
@@ -762,7 +782,6 @@
         hideManageModal();
       }
     });
-
 
     const deleteModal = document.getElementById('deleteModal');
     deleteModal.addEventListener('click', function(e) {
