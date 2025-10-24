@@ -1,163 +1,496 @@
 {% extends "base.html" %}
 {% block title %}Daftar Pelatih{% endblock title %}
 
-{% block content %}
-<div style="padding: 20px; max-width: 1200px; margin: auto;">
 
-  <div id="page-header" 
-       style="margin-bottom: 20px;">
-    
-    <a href="{% url 'home' %}"
-       style="display:inline-flex; align-items:center; gap:8px;
-              padding:10px 18px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%);
-              color:#fff; text-decoration:none; border-radius:10px; font-weight:500;
-              box-shadow:0 6px 18px rgba(0,63,63,0.18);">
-      <span style="font-size:18px;">←</span> Kembali
-    </a>
-    
-    <h2 style="margin-top: 16px; font-size: 22px; color:#003F3F; text-align: center;">
-      Daftar Pelatih
-    </h2>
+{% block content %}
+<div class="coach-list-container">
+  <!-- Header dengan tombol kembali -->
+  <div class="page-header">
+    <h2 class="page-title">Daftar Pelatih</h2>
+    <p class="page-subtitle">Temukan pelatih profesional sesuai kebutuhan Anda</p>
   </div>
 
-  <div id="filter-box" 
-       style="background: #fff; padding: 18px; border-radius: 12px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-    <form method="GET" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-      <input type="text" name="q" placeholder="Cari nama pelatih..."
-             value="{{ request.GET.q }}"
-             style="flex:1; min-width:200px; padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
 
-      <select name="sport" style="padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
-        <option value="">-- Semua Olahraga --</option>
-        {% for cat in categories %}
-          <option value="{{ cat.id }}" {% if request.GET.sport == cat.id|stringformat:"s" %}selected{% endif %}>
-            {{ cat.name }}
-          </option>
-        {% endfor %}
-      </select>
+  <!-- Filter Section -->
+  <div class="filter-box">
+    <form id="filter-form" class="filter-form">
+      <div class="filter-controls">
+        <input type="text" name="q" placeholder="Cari nama pelatih..."
+               value="{{ request.GET.q }}" class="search-input">
+       
+        <select name="sport" class="filter-select">
+          <option value="">-- Semua Olahraga --</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if request.GET.sport == cat.id|stringformat:"s" %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
 
-      <select name="area" style="padding:10px; border:1px solid #e6e6e6; border-radius:8px;">
-        <option value="">-- Semua Area --</option>
-        {% for area in areas %}
-          <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:"s" %}selected{% endif %}>
-            {{ area.name }}
-          </option>
-        {% endfor %}
-      </select>
 
-      <button type="submit" style="padding:10px 18px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%); color:#fff; border:none; border-radius:8px; cursor:pointer;">
-        Cari
-      </button>
-
-      <a href="{% url 'coach_list' %}" style="padding:10px 14px; background:#6c757d; color:#fff; border-radius:8px; text-decoration:none;">
-        Reset
-      </a>
+        <select name="area" class="filter-select">
+          <option value="">-- Semua Area --</option>
+          {% for area in areas %}
+            <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:"s" %}selected{% endif %}>
+              {{ area.name }}
+            </option>
+          {% endfor %}
+        </select>
+       
+        <a href="{% url 'coach_list' %}" class="reset-button">
+          Reset
+        </a>
+      </div>
     </form>
   </div>
 
-  <div id="coach-grid" 
-       style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">
-    
-    {% for coach in coaches %}
-    <div style="border:1px solid #eef2f2; border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); transition:transform .18s;">
-      
-      {% if coach.profile_picture %}
-        <img src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}"
-             style="width:100%; height:200px; object-fit:cover;">
-      {% elif coach.profile_picture_url %}
-        <img src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}"
-             style="width:100%; height:200px; object-fit:cover;">
-      {% else %}
-        <div style="width:100%; height:200px; display:flex; align-items:center; justify-content:center; background:#f5f7f7; color:#999;">
-          Tidak ada gambar
-        </div>
-      {% endif %}
 
-      <div style="padding:18px;">
-        <h3 style="margin:0 0 8px; color:#003F3F; font-size:18px;">
-          {{ coach.user.get_full_name|default:coach.user.username }}
-        </h3>
+  <!-- Coach List Container -->
+  <div id="coach-list-container">
+    {% include "main/coach_list_partial.html" %}
+  </div>
+</div>
 
-        <div style="margin:10px 0; color:#475569; font-size:14px;">
-          <p style="margin:4px 0;"><strong>Umur:</strong> {{ coach.age|default:"-" }} tahun</p>
-          <p style="margin:4px 0;"><strong>Olahraga:</strong> {{ coach.main_sport_trained.name }}</p>
-          <p style="margin:4px 0;"><strong>Tarif:</strong> Rp {{ coach.rate_per_hour|floatformat:0 }}/jam</p>
-          <p style="margin:4px 0;"><strong>Area Layanan:</strong>
-            {% for area in coach.service_areas.all %}{{ area.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
-          </p>
-        </div>
 
-        <p style="color:#6b7280; font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
-          {{ coach.experience_desc|default:"Belum ada deskripsi pengalaman." }}
-        </p>
-
-        <a href="{% url 'coach_detail_public' coach.id %}" 
-           style="display:block; margin-top:14px; padding:12px 14px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%); color:#fff; text-align:center; text-decoration:none; border-radius:8px; font-weight:600;">
-          Lihat Detail
-        </a>
+<!-- Detail Modal -->
+<div id="detailModal" class="modal">
+  <div id="detailModalContent" class="modal-content">
+    <button id="closeDetailModal" class="close-modal-btn">
+      &times;
+    </button>
+   
+    <div id="modal-body" class="modal-body">
+      <div id="modal-spinner" class="modal-spinner">
+        <div class="spinner-icon">⏳</div>
+        Memuat detail pelatih...
       </div>
     </div>
-    {% empty %}
-    <div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">
-      <p>Belum ada pelatih yang tersedia.</p>
-    </div>
-    {% endfor %}
   </div>
 </div>
 
-{% if coaches.has_other_pages %}
-  <div style="margin-top: 40px; text-align: center;">
-    <div style="display: inline-flex; gap: 8px; align-items: center; background: #fff; padding: 12px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-      
-      {% if coaches.has_previous %}
-        <a href="?page={{ coaches.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.area %}&area={{ request.GET.area }}{% endif %}"
-           style="padding: 10px 16px; background: #003F3F; color: white; text-decoration: none; border-radius: 8px; font-weight: 500; transition: all 0.3s ease;">
-          ← Prev
-        </a>
-      {% else %}
-        <span style="padding: 10px 16px; background: #e5e7eb; color: #9ca3af; border-radius: 8px; font-weight: 500;">← Prev</span>
-      {% endif %}
-
-      <span style="padding: 10px 16px; background: #f8fafc; color: #003F3F; border-radius: 8px; font-weight: 600; border: 1px solid #e5e7eb;">
-        Halaman {{ coaches.number }} dari {{ coaches.paginator.num_pages }}
-      </span>
-
-      {% if coaches.has_next %}
-        <a href="?page={{ coaches.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sport %}&sport={{ request.GET.sport }}{% endif %}{% if request.GET.area %}&area={{ request.GET.area }}{% endif %}"
-           style="padding: 10px 16px; background: #003F3F; color: white; text-decoration: none; border-radius: 8px; font-weight: 500; transition: all 0.3s ease;">
-          Next →
-        </a>
-      {% else %}
-        <span style="padding: 10px 16px; background: #e5e7eb; color: #9ca3af; border-radius: 8px; font-weight: 500;">Next →</span>
-      {% endif %}
-      
-    </div>
-  </div>
-  {% endif %}
-</div>
 
 <style>
-  #coach-grid > div:hover { 
-    transform: translateY(-6px); 
-    box-shadow:0 12px 30px rgba(0,0,0,0.08) !important; 
-  }
-  
-  a[style*="linear-gradient(135deg,#003F3F"] { 
-    transition: transform .12s, box-shadow .12s; 
-  }
-  
-  a[style*="linear-gradient(135deg,#003F3F"]:hover { 
-    transform: translateY(-3px); 
-    box-shadow:0 10px 24px rgba(0,63,63,0.14) !important; 
+  /* Global Styles */
+  .coach-list-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
   }
 
-  #page-header a:hover {
-    transform: none !important;
+
+  /* Header Styles */
+  .page-header {
+    margin-bottom: 30px;
+    text-align: left;
   }
 
-    a[style*="background: #003F3F"]:hover {
+
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #003F3F;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,63,63,0.2);
+    margin-bottom: 20px;
+  }
+
+
+  .back-button:hover {
+    background: #005757;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,63,63,0.3);
   }
+
+
+  .back-icon {
+    font-size: 18px;
+  }
+
+
+  .page-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #003F3F;
+    margin: 10px 0 5px;
+  }
+
+
+  .page-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+  }
+
+
+  /* Filter Box Styles */
+  .filter-box {
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #eaeaea;
+  }
+
+
+  .filter-form {
+    width: 100%;
+  }
+
+
+  .filter-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+
+  .search-input, .filter-select {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+  }
+
+
+  .search-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #003F3F;
+    box-shadow: 0 0 0 3px rgba(0,63,63,0.1);
+    background-color: #fff;
+  }
+
+
+  .filter-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #003F3F;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+
+  .filter-button:hover {
+    background: #005757;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,63,63,0.3);
+  }
+
+
+  .reset-button {
+    padding: 12px 20px;
+    background: #6c757d;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+
+  .reset-button:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+  }
+
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+
+  .modal-content {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+
+  .close-modal-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(0,0,0,0.1);
+    border: none;
+    color: #333;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+
+  .close-modal-btn:hover {
+    background: rgba(0,0,0,0.2);
+    transform: rotate(90deg);
+  }
+
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+
+  .modal-spinner {
+    padding: 80px;
+    text-align: center;
+    color: #666;
+  }
+
+
+  .spinner-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
+  /* Loading State */
+  #coach-list-container.loading {
+    opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .filter-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+   
+    .search-input, .filter-select {
+      min-width: 100%;
+    }
+   
+    .filter-button, .reset-button {
+      width: 100%;
+      justify-content: center;
+    }
+   
+    .page-title {
+      font-size: 24px;
+    }
+   
+    .modal-content {
+      margin: 10px;
+      max-height: 95vh;
+    }
+  }
 </style>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filterForm = document.getElementById('filter-form');
+  const coachListContainer = document.getElementById('coach-list-container');
+  const modal = document.getElementById('detailModal');
+  const modalBody = document.getElementById('modal-body');
+  const modalSpinner = document.getElementById('modal-spinner');
+  const closeModalBtn = document.getElementById('closeDetailModal');
+ 
+  const filterUrl = "{% url 'filter_coaches_ajax' %}";
+
+
+  // --- 1. FUNGSI UNTUK FETCH FILTER/PAGINATION ---
+  function fetchCoaches(url) {
+    coachListContainer.classList.add('loading');
+   
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      coachListContainer.innerHTML = data.html;
+     
+      // Update URL di browser tanpa reload
+      const pageUrl = new URL(url, window.location.origin);
+      // Ganti URL AJAX dengan URL halaman list
+      const browserUrl = new URL("{% url 'coach_list' %}", window.location.origin);
+      browserUrl.search = pageUrl.search;
+      window.history.pushState({}, '', browserUrl);
+    })
+    .catch(error => {
+      console.error('Error fetching coaches:', error);
+      coachListContainer.innerHTML = "<p style='text-align:center; color:red; padding: 20px;'>Gagal memuat data. Silakan coba lagi.</p>";
+    })
+    .finally(() => {
+      coachListContainer.classList.remove('loading');
+    });
+  }
+
+
+  // --- 2. EVENT LISTENER UNTUK FILTER FORM ---
+  // Kita gunakan 'input' untuk real-time update saat mengetik,
+  // dan 'change' untuk <select>
+  filterForm.addEventListener('input', handleFilterChange);
+  filterForm.addEventListener('change', handleFilterChange);
+
+
+  let filterTimeout;
+  function handleFilterChange(e) {
+    // Hapus 'page' dari parameter saat filter berubah
+    const formData = new FormData(filterForm);
+    formData.delete('page');
+   
+    const params = new URLSearchParams(formData);
+    const url = `${filterUrl}?${params.toString()}`;
+   
+    // Debounce: Tunda fetch agar tidak terjadi di setiap ketukan
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(() => {
+      fetchCoaches(url);
+    }, 300); // Tunda 300ms
+  }
+
+
+  // --- 3. EVENT LISTENER UNTUK PAGINATION & MODAL (Event Delegation) ---
+  coachListContainer.addEventListener('click', function(e) {
+   
+    // Cek apakah tombol PAGINATION diklik
+    const paginationButton = e.target.closest('.pagination-btn');
+    if (paginationButton) {
+      e.preventDefault();
+      const page = paginationButton.dataset.page;
+     
+      const formData = new FormData(filterForm);
+      formData.set('page', page); // Set halaman yang diklik
+     
+      const params = new URLSearchParams(formData);
+      const url = `${filterUrl}?${params.toString()}`;
+      fetchCoaches(url);
+    }
+   
+    // Cek apakah tombol DETAIL MODAL diklik
+    const detailButton = e.target.closest('.open-detail-modal-btn');
+    if (detailButton) {
+      e.preventDefault();
+      const detailUrl = detailButton.dataset.ajaxUrl;
+      openDetailModal(detailUrl);
+    }
+  });
+
+
+  // --- 4. FUNGSI UNTUK MODAL ---
+  function openDetailModal(url) {
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    // Reset konten modal ke spinner
+    modalBody.innerHTML = '';
+    modalBody.appendChild(modalSpinner);
+   
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        modalBody.innerHTML = data.html;
+      })
+      .catch(error => {
+        console.error('Error fetching detail:', error);
+        modalBody.innerHTML = "<p style='text-align:center; color:red; padding:40px;'>Gagal memuat detail pelatih. Silakan coba lagi.</p>";
+      });
+  }
+
+
+  function hideDetailModal() {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    modalBody.innerHTML = ''; // Kosongkan konten
+  }
+
+
+  // Event listener untuk tombol tutup modal
+  closeModalBtn.addEventListener('click', hideDetailModal);
+ 
+  // Event listener untuk klik di luar modal (area gelap)
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      hideDetailModal();
+    }
+  });
+
+
+  // Event listener untuk tombol escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      hideDetailModal();
+    }
+  });
+});
+</script>
 {% endblock content %}
+
+
+

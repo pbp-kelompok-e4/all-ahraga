@@ -1,0 +1,200 @@
+<style>
+  .coach-detail {
+    padding: 10px 24px 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: #333;
+  }
+
+
+  .coach-header {
+    text-align: center;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .coach-avatar {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid #003F3F;
+    display: inline-block;
+  }
+  .coach-avatar-placeholder {
+    width: 100px;
+    height: 100px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#f5f7f7;
+    color:#999;
+    border-radius:50%;
+    margin:auto;
+    font-size: 28px;
+  }
+  .coach-name {
+    color: #003F3F;
+    margin: 12px 0 4px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .coach-sport {
+    margin: 0;
+    font-size: 16px;
+    color: #005757;
+  }
+
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .info-card {
+    background: #f8fafa;
+    padding: 14px;
+    border-radius: 8px;
+  }
+  .info-label { font-size: 13px; color: #666; margin-bottom: 4px; }
+  .info-value { font-size: 16px; color: #003F3F; font-weight: 600; }
+
+
+  .rate-value { color: #f5b800; }
+
+
+  .section-title {
+    color: #003F3F;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+
+  .area-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .area-badge {
+    background: #003F3F;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+
+  .experience-text {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+
+  .reviews {
+    margin-top: 8px;
+  }
+  .review-item {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 12px 0;
+  }
+  .review-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:4px;
+  }
+  .review-author { font-size:14px; color:#333; font-weight:600; }
+  .review-comment { font-size:13px; color:#555; margin:0; }
+  .review-date { font-size:12px; color:#888; }
+
+
+  .rating-star { font-size: 18px; color: #f5b800; margin-left: 2px; }
+  .rating-star.empty { color: #ccc; }
+
+
+  @media (max-width: 560px) {
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+
+<div class="coach-detail">
+  <div class="coach-header">
+    {% if coach.profile_picture %}
+      <img class="coach-avatar" src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}">
+    {% elif coach.profile_picture_url %}
+      <img class="coach-avatar" src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}">
+    {% else %}
+      <div class="coach-avatar-placeholder" role="img" aria-label="Avatar default">👤</div>
+    {% endif %}
+
+
+    <h2 class="coach-name">
+      {{ coach.user.get_full_name|default:coach.user.username }}
+    </h2>
+    <p class="coach-sport">{{ coach.main_sport_trained.name }}</p>
+  </div>
+
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-label">UMUR</div>
+      <div class="info-value">{{ coach.age|default:"-" }} tahun</div>
+    </div>
+
+
+    <div class="info-card">
+      <div class="info-label">RATE/JAM</div>
+      <div class="info-value rate-value">Rp {{ coach.rate_per_hour|floatformat:0 }}</div>
+    </div>
+  </div>
+
+
+  <div style="margin-bottom:20px;">
+    <h4 class="section-title">Pengalaman</h4>
+    <p class="experience-text">{{ coach.experience_desc|default:"-" }}</p>
+  </div>
+
+
+  <div style="margin-bottom:24px;">
+    <h4 class="section-title">Area Layanan</h4>
+    <div class="area-badges">
+      {% for area in coach.service_areas.all %}
+        <span class="area-badge">{{ area.name }}</span>
+      {% empty %}
+        <span style="color:#999; font-size:14px;">Belum ada area layanan</span>
+      {% endfor %}
+    </div>
+  </div>
+
+
+  <div>
+    <h4 class="section-title">Ulasan Terbaru ({{ total_reviews }})</h4>
+    <div class="reviews">
+      {% for review in reviews %}
+      <div class="review-item">
+        <div class="review-header">
+          <strong class="review-author">{{ review.customer.user.get_full_name|default:review.customer.user.username }}</strong>
+          <div class="review-rating" aria-hidden="true">
+            {% for i in "x"|ljust:review.rating %}
+              <span class="rating-star">★</span>
+            {% endfor %}
+            {% for i in "x"|ljust:review.get_empty_stars %}
+              <span class="rating-star empty">★</span>
+            {% endfor %}
+          </div>
+        </div>
+
+
+        <p class="review-comment">{{ review.comment }}</p>
+        <small class="review-date">{{ review.created_at|date:"d M Y" }}</small>
+      </div>
+      {% empty %}
+      <p style="font-size:14px; color:#888; text-align:center; padding:20px 0;">Belum ada ulasan.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+
