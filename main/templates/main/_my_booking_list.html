@@ -7,44 +7,67 @@
                     <strong>{{ booking.venue_schedule.venue.name }}</strong>
                 </h4>
                 
-                <p class="mb-2">
-                    <strong>Jadwal:</strong> 
-                    {{ booking.venue_schedule.date|date:"l, d F Y" }}
+                <p class="mb-1">
+                    <strong>Tanggal:</strong> {{ booking.venue_schedule.date|date:"l, d F Y" }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-1">
+                    <strong>Waktu:</strong> {{ booking.venue_schedule.start_time|time:"H:i" }} - {{ booking.venue_schedule.end_time|time:"H:i" }}
+                </p>
+
+                {% if booking.coach_schedule %}
+                <p class="mb-1">    
+                    <strong>Coach:</strong> {{ booking.coach_schedule.coach.user.get_full_name|default:booking.coach_schedule.coach.user.username }}
+                </p>
+                {% endif %}
+
+                {% with equipment_list=booking.bookingequipment_set.all %}
+                {% if equipment_list %}
+                <p class="mb-1">
+                    <strong>Peralatan:</strong>
+                    {% for eq in equipment_list %}
+                    {{ eq.equipment.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+                {% endwith %}
+
+                <p class="mb-1">
                     <strong>Total Biaya:</strong> Rp {{ booking.total_price }}
                 </p>
-                <p class="mb-2">
+                <p class="mb-1">
                     <strong>Metode Pembayaran:</strong> {{ booking.transaction.payment_method }}
                 </p>
-                <p class="mb-4">
+                <p class="mb-3">
                     <strong>Status Pembayaran:</strong> 
-                    <span class="font-bold text-orange-500">
-                        MENUNGGU PEMBAYARAN
-                    </span>
+                    <span class="font-bold text-orange-500">MENUNGGU PEMBAYARAN</span>
                 </p>
-                
+
                 <div class="flex gap-3">
-                    <a href="{% url 'customer_payment' booking.id %}" 
-                       class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
+                    <button onclick="openEditModal({{ booking.id }})"
+                            class="px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors">
+                        Edit Booking
+                    </button>
+                    
+                    <a href="{% url 'customer_payment' booking.id %}"
+                        class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
                         Bayar Sekarang
                     </a>
                     
                     <form action="{% url 'delete_booking' booking.id %}" method="POST" class="delete-booking-form m-0">
                         {% csrf_token %}
-                        <button type="submit" 
+                        <button type="submit"
                                 class="px-4 py-2 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition-colors">
                             Cancel Booking
                         </button>
                     </form>
-                    </div>
+                </div>
             </li>
         {% endfor %}
     </ul>
 {% else %}
     <p class="text-center text-gray-600 py-10 font-medium" id="empty-message">
         {% if request.GET.q %}
-            Tidak ada booking tertunda yang cocok dengan pencarian Anda.
+            Tidak ada booking tertending yang cocok dengan pencarian Anda.
         {% else %}
             Tidak ada booking yang menunggu pembayaran. Semua booking Anda sudah lunas! 👍
         {% endif %}
