@@ -31,4 +31,6 @@ urlpatterns = [
     path('venue/<int:venue_id>/schedules/delete/', views.venue_schedule_delete, name='venue_schedule_delete'),
     path('dashboard/venue/<int:venue_id>/schedules/manage/', views.venue_manage_schedule_view, name='venue_manage_schedule'),
     path('api/schedule/<int:schedule_id>/coaches/', views.get_available_coaches, name='get_available_coaches'),
+    path('booking/update/<int:booking_id>/', views.update_booking, name='update_booking'),
+    path('api/booking/<int:booking_id>/edit-data/', views.update_booking_data, name='update_booking_data'),
 ]

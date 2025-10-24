@@ -16,102 +16,200 @@
         {% include "main/_my_booking_list.html" %}
     </div>
 
+    <div id="editBookingModal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg w-[90%] max-w-lg p-6 relative">
+            <h3 class="text-lg font-semibold mb-4">Edit Booking</h3>
+
+            <form id="editBookingForm">
+            {% csrf_token %}
+            <input type="hidden" id="editBookingId">
+
+            <label class="block mb-2 font-medium">Pilih Jadwal Baru:</label>
+            <select id="editSchedule" class="w-full p-2 border rounded mb-4"></select>
+
+            <label class="block mb-2 font-medium">Pilih Coach (opsional):</label>
+            <select id="editCoach" class="w-full p-2 border rounded mb-4">
+                <option value="">Tanpa Coach</option>
+            </select>
+
+            <label class="block mb-2 font-medium">Pilih Peralatan:</label>
+            <div id="editEquipmentList" class="mb-4 space-y-2"></div>
+
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Simpan Perubahan</button>
+            </div>
+            </form>
+
+            <button onclick="closeEditModal()" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">✕</button>
+        </div>
     </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchMyBooking');
-    const bookingListWrapper = document.getElementById('bookingListWrapper'); 
-    
-    const dataUrl = "{% url 'my_bookings' %}"; 
-    let debounceTimer;
-    function debounce(func, delay) {
-        return function(...args) {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                func.apply(this, args);
-            }, delay);
-        };
-    }
+async function loadCoachesForSchedule(scheduleId, currentCoachId = null) {
+  const coachSelect = document.getElementById('editCoach');
 
-    async function fetchMyBookings() {
-        const searchTerm = searchInput.value;
-        const url = new URL(dataUrl, window.location.origin);
-        if (searchTerm) {
-            url.searchParams.append('q', searchTerm);
-        }
-        try {
-            bookingListWrapper.innerHTML = '<p class="text-center text-gray-500 py-10">Memuat...</p>';
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            if (!response.ok) throw new Error('Network response was not ok');
-            const html = await response.text();
-            bookingListWrapper.innerHTML = html; 
-        } catch (error) {
-            console.error('Error fetching my bookings:', error);
-            bookingListWrapper.innerHTML = '<p class="text-center text-red-500 py-10">Gagal memuat data.</p>';
-        }
-    }
-    searchInput.addEventListener('input', debounce(fetchMyBookings, 300));
-   
-    bookingListWrapper.addEventListener('submit', function(e) {
-        
-        if (e.target.classList.contains('delete-booking-form')) {
-            
-            e.preventDefault(); 
-            
-            const form = e.target;
-            const deleteUrl = form.action;
-            const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+  coachSelect.innerHTML = '<option value="">Memuat coach...</option>';
 
-            if (!confirm('Anda yakin ingin membatalkan booking ini?')) {
-                return; 
+  if (!scheduleId) {
+    coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+    return;
+  }
 
-            fetch(deleteUrl, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken
-                }
-            })
-            .then(response => response.json().then(data => ({ ok: response.ok, data })))
-            .then(({ ok, data }) => {
-                if (ok) {
-                    
-                    alert(data.message); 
-                    
-                    const bookingItem = form.closest('li[id^="booking-item-"]');
-                    if (bookingItem) {
-                        bookingItem.style.transition = 'opacity 0.3s ease-out';
-                        bookingItem.style.opacity = '0';
-                        
-                        setTimeout(() => {
-                            bookingItem.remove();
-                            
-                            const remainingItems = bookingListWrapper.querySelectorAll('li');
-                            if (remainingItems.length === 0) {
-                                const emptyMsg = document.getElementById('empty-message') || document.createElement('p');
-                                emptyMsg.id = 'empty-message';
-                                emptyMsg.className = 'text-center text-gray-600 py-10 font-medium';
-                                emptyMsg.textContent = 'Tidak ada booking yang menunggu pembayaran. Semua booking Anda sudah lunas! 👍';
-                                bookingListWrapper.innerHTML = ''; 
-                                bookingListWrapper.appendChild(emptyMsg);
-                            }
-                        }, 300); 
-                    }
-                } else {
-                    throw new Error(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error: ' + error.message);
-            });
-        }
+  try {
+    const response = await fetch(`/api/schedule/${scheduleId}/coaches/`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
 
-});  
+    if (!response.ok) {
+      coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+      
+      if (currentCoachId && window.currentCoachData) {
+        const opt = document.createElement('option');
+        opt.value = window.currentCoachData.id;
+        opt.textContent = `${window.currentCoachData.name} - Rp ${window.currentCoachData.rate.toLocaleString('id-ID')}/jam`;
+        coachSelect.appendChild(opt);
+      }
+      return;
+    }
+    
+    const data = await response.json();
+
+    coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+    
+    if (data.coaches && data.coaches.length > 0) {
+      data.coaches.forEach(coach => {
+        const opt = document.createElement('option');
+        opt.value = coach.id;
+        opt.textContent = `${coach.name} - Rp ${coach.rate_per_hour.toLocaleString('id-ID')}/jam`;
+        coachSelect.appendChild(opt);
+      });
+    } else if (currentCoachId && window.currentCoachData) {
+      const opt = document.createElement('option');
+      opt.value = window.currentCoachData.id;
+      opt.textContent = `${window.currentCoachData.name} - Rp ${window.currentCoachData.rate.toLocaleString('id-ID')}/jam (Coach Saat Ini)`;
+      coachSelect.appendChild(opt);
+    }
+  } catch (err) {
+    console.error('Error loading coaches:', err);
+    coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+    
+    if (currentCoachId && window.currentCoachData) {
+      const opt = document.createElement('option');
+      opt.value = window.currentCoachData.id;
+      opt.textContent = `${window.currentCoachData.name} - Rp ${window.currentCoachData.rate.toLocaleString('id-ID')}/jam`;
+      coachSelect.appendChild(opt);
+    }
+  }
+}
+
+async function openEditModal(bookingId) {
+  const modal = document.getElementById('editBookingModal');
+  const scheduleSelect = document.getElementById('editSchedule');
+  const coachSelect = document.getElementById('editCoach');
+  const equipmentList = document.getElementById('editEquipmentList');
+  const bookingIdInput = document.getElementById('editBookingId');
+  bookingIdInput.value = bookingId;
+
+  scheduleSelect.innerHTML = '<option>Memuat...</option>';
+  coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+  equipmentList.innerHTML = 'Memuat...';
+
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/booking/${bookingId}/edit-data/`);
+    const data = await res.json();
+
+    scheduleSelect.innerHTML = '';
+    
+    if (data.current_schedule) {
+      const currentOpt = document.createElement('option');
+      currentOpt.value = data.current_schedule.id;
+      currentOpt.textContent = `${data.current_schedule.date_str_display} (${data.current_schedule.start_time} - ${data.current_schedule.end_time}) - Jadwal Saat Ini`;
+      currentOpt.selected = true;
+      scheduleSelect.appendChild(currentOpt);
+    }
+    
+    data.schedules.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = `${s.date_str_display} (${s.start_time} - ${s.end_time})`;
+      scheduleSelect.appendChild(opt);
+    });
+
+    equipmentList.innerHTML = '';
+    data.equipments.forEach(eq => {
+      const wrapper = document.createElement('div');
+      const isChecked = data.selected_equipment_ids && data.selected_equipment_ids.includes(eq.id) ? 'checked' : '';
+      wrapper.innerHTML = `
+        <label>
+          <input type="checkbox" name="equipment" value="${eq.id}" ${isChecked}>
+          ${eq.name} - Rp ${eq.price.toLocaleString('id-ID')}
+        </label>
+      `;
+      equipmentList.appendChild(wrapper);
+    });
+
+    const scheduleIdToLoad = data.current_schedule ? data.current_schedule.id : (data.schedules.length > 0 ? data.schedules[0].id : null);
+    
+    if (scheduleIdToLoad) {
+      await loadCoachesForSchedule(scheduleIdToLoad);
+    
+      if (data.current_coach_id) {
+        coachSelect.value = data.current_coach_id;
+      }
+    } else {
+      coachSelect.innerHTML = '<option value="">Tanpa Coach</option>';
+    }
+  } catch (err) {
+    console.error(err);
+    scheduleSelect.innerHTML = '<option>Gagal memuat jadwal.</option>';
+  }
+}
+
+document.getElementById('editSchedule').addEventListener('change', async function() {
+  await loadCoachesForSchedule(this.value);
+});
+
+function closeEditModal() {
+  document.getElementById('editBookingModal').classList.add('hidden');
+}
+
+document.getElementById('editBookingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const bookingId = document.getElementById('editBookingId').value;
+  const scheduleId = document.getElementById('editSchedule').value;
+  const coachId = document.getElementById('editCoach').value;
+  const csrfToken = document.querySelector('#editBookingForm input[name="csrfmiddlewaretoken"]').value;
+
+  const selectedEquipments = Array.from(
+    document.querySelectorAll('#editEquipmentList input[name="equipment"]:checked')
+  ).map(e => e.value);
+
+  const formData = new FormData();
+  formData.append('schedule_id', scheduleId);
+  formData.append('coach_id', coachId);
+  selectedEquipments.forEach(eq => formData.append('equipment', eq));
+
+  try {
+    const res = await fetch(`/booking/update/${bookingId}/`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
+      body: formData
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message);
+      closeEditModal();
+      location.reload();
+    } else {
+      alert('Gagal: ' + data.message);
+    }
+  } catch (err) {
+    alert('Terjadi kesalahan: ' + err.message);
+  }
+});
 </script>
 {% endblock content %}
