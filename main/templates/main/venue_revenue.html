@@ -1,189 +1,289 @@
 {% extends "base.html" %}
 
-{% block title %}Venue Revenue Report{% endblock title %}
+{% block title %}Laporan Pendapatan Venue{% endblock title %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 py-8">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- Header Section -->
-    <div class="mb-8">
-      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="bg-gradient-to-r from-green-600 via-emerald-700 to-teal-600 px-8 py-6">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-3 mb-2">
-                <div class="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
+<style>
+    .revenue-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .status-success {
+        background-color: #D1FAE5;
+        color: #065F46;
+    }
+
+    .status-pending {
+        background-color: #FEF3C7;
+        color: #92400E;
+    }
+
+    .status-failed {
+        background-color: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+    }
+
+    .custom-table thead {
+        background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+    }
+
+    .custom-table thead th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .custom-table tbody tr {
+        border-bottom: 1px solid #E5E7EB;
+        transition: background-color 0.2s;
+    }
+
+    .custom-table tbody tr:hover {
+        background-color: #F9FAFB;
+    }
+
+    .custom-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .custom-table tbody td {
+        padding: 1rem;
+        font-size: 0.938rem;
+        color: #374151;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6B7280;
+    }
+
+    .metric-card {
+        background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .venue-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+
+    .venue-header {
+        background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+        padding: 1.5rem;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .custom-table thead th,
+        .custom-table tbody td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.813rem;
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                Laporan Pendapatan Venue
+            </h1>
+            <p class="text-gray-600 mb-6">
+                Ringkasan pendapatan dari semua venue Anda
+            </p>
+        </div>
+
+        <!-- Revenue Card -->
+        <div class="metric-card mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-teal-100 text-sm font-medium mb-1">
+                        Total Pendapatan
+                    </p>
+                    <p id="totalRevenue" class="text-4xl md:text-5xl font-bold">
+                        Rp {{ total_revenue|floatformat:0|default:"0" }}
+                    </p>
+                    <p class="text-teal-100 text-sm mt-2">
+                        Dari {{ venue_revenue_data|length }} venue aktif
+                    </p>
                 </div>
-                <h1 class="text-3xl font-extrabold text-white">Revenue Report</h1>
-              </div>
-              <p class="text-blue-100 ml-14">Track your venue earnings and performance</p>
+                <div class="hidden md:block">
+                    <svg class="w-20 h-20 text-teal-200 opacity-50" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
             </div>
-          </div>
         </div>
 
-        <!-- Total Revenue Summary -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gradient-to-br from-slate-50 to-white">
-          <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6 hover:shadow-lg transition-shadow">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-slate-600 mb-1">Total Revenue</p>
-                <p id="totalRevenue" class="text-3xl font-bold text-green-600">Rp {{ total_revenue|floatformat:0 }}</p>
-                <small class="text-xs text-slate-500 mt-1 block">All confirmed bookings</small>
-              </div>
-              <div class="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6 hover:shadow-lg transition-shadow">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-slate-600 mb-1">Active Venues</p>
-                <p class="text-3xl font-bold text-teal-600">{{ venue_revenue_data|length }}</p>
-                <small class="text-xs text-slate-500 mt-1 block">Generating revenue</small>
-              </div>
-              <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Revenue per Venue -->
-    <div>
-      {% for data in venue_revenue_data %}
-      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden mb-6">
-        <div class="bg-gradient-to-r from-slate-100 to-slate-50 px-6 py-4 border-b border-slate-200">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-            <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center">
-                <span class="text-white font-bold">{{ data.venue.name|slice:":2"|upper }}</span>
-              </div>
-              <div>
-                <h3 class="text-xl font-bold text-slate-900">{{ data.venue.name }}</h3>
-                <small class="text-slate-500">{{ data.venue.sport_category.name }} | {{ data.venue.location.name }}</small>
-              </div>
-            </div>
-            <div class="text-left md:text-right">
-              <p class="text-2xl font-bold text-green-600">Rp {{ data.total_revenue|floatformat:0 }}</p>
-              <small class="text-slate-500">{{ data.booking_count }} booking{{ data.booking_count|pluralize }}</small>
-            </div>
-          </div>
-        </div>
-
-        {% if data.bookings %}
-        <div class="p-6">
-          <h4 class="text-lg font-semibold mb-4 flex items-center gap-2 text-slate-900">
-            <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            Booking History
-          </h4>
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-gradient-to-r from-slate-100 to-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Booking #</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Schedule</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Coach</th>
-                  <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Revenue</th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-slate-100">
-                {% for booking in data.bookings %}
-                <tr class="hover:bg-blue-50/50 transition-colors duration-200">
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex items-center gap-1 text-slate-900 font-medium">
-                      <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                      </svg>
-                      #{{ booking.id }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm">
-                    <div class="flex items-center gap-2">
-                      <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                        <span class="text-white text-xs font-bold">{{ booking.customer.username|slice:":1"|upper }}</span>
-                      </div>
-                      <span class="text-slate-900 font-medium">{{ booking.customer.username }}</span>
+        <!-- Venue Revenue List -->
+        <div id="venueRevenueContainer">
+            {% for data in venue_revenue_data %}
+            <div class="venue-card">
+                <div class="venue-header">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold mb-1">{{ data.venue.name }}</h3>
+                            <p class="text-teal-100 text-sm">
+                                {{ data.venue.sport_category.name }} • {{ data.venue.location.name }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold">Rp {{ data.total_revenue|floatformat:0 }}</p>
+                            <p class="text-teal-100 text-sm mt-1">{{ data.booking_count }} booking</p>
+                        </div>
                     </div>
-                  </td>
-                  <td class="px-4 py-3 text-sm">
-                    <div class="flex items-center gap-2 text-slate-700">
-                      <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                      </svg>
-                      <div>
-                        <div class="font-medium">{{ booking.venue_schedule.date|date:"D, d M Y" }}</div>
-                        <small class="text-slate-500">{{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}</small>
-                      </div>
+                </div>
+
+                {% if data.bookings %}
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <h4 class="text-lg font-bold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                            </svg>
+                            Riwayat Booking
+                        </h4>
                     </div>
-                  </td>
-                  <td class="px-4 py-3 text-sm">
-                    {% if booking.coach_schedule %}
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
-                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                      </svg>
-                      {{ booking.coach_schedule.coach.user.username }}
-                    </span>
-                    {% else %}
-                    <span class="text-slate-400">-</span>
-                    {% endif %}
-                  </td>
-                  <td class="px-4 py-3 text-sm text-right">
-                    <span class="font-bold text-green-600">Rp {{ booking.transaction.revenue_venue|floatformat:0 }}</span>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+
+                    <div class="table-container">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Booking</th>
+                                    <th>Customer</th>
+                                    <th>Jadwal</th>
+                                    <th>Pelatih</th>
+                                    <th>Pendapatan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in data.bookings %}
+                                <tr>
+                                    <td>
+                                        <span class="font-mono text-sm font-semibold text-gray-700">
+                                            #{{ booking.id }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center mr-2">
+                                                <span class="text-white text-xs font-bold">{{ booking.customer.username|slice:":1"|upper }}</span>
+                                            </div>
+                                            <span class="font-medium">{{ booking.customer.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center text-gray-600">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            <div>
+                                                <div class="font-medium text-sm">{{ booking.venue_schedule.date|date:"d M Y" }}</div>
+                                                <small class="text-gray-500">{{ booking.venue_schedule.start_time }} - {{ booking.venue_schedule.end_time }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if booking.coach_schedule %}
+                                        <span class="revenue-badge status-success">
+                                            <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                                            </svg>
+                                            {{ booking.coach_schedule.coach.user.username }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-gray-400">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-lg font-bold text-teal-600">
+                                            Rp {{ booking.transaction.revenue_venue|floatformat:0 }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <p class="text-lg font-semibold text-gray-600 mb-1">
+                        Tidak ada booking
+                    </p>
+                    <p class="text-sm text-gray-500">
+                        Venue ini belum memiliki booking yang terkonfirmasi
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="empty-state">
+                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    <p class="text-lg font-semibold text-gray-600 mb-1">
+                        Tidak ada venue
+                    </p>
+                    <p class="text-sm text-gray-500">
+                        Mulai dengan menambahkan venue pertama Anda
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
         </div>
-        {% else %}
-        <div class="p-12 text-center">
-          <div class="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-          </div>
-          <p class="text-slate-600 font-medium mb-2">No confirmed bookings yet</p>
-          <p class="text-sm text-slate-500">This venue hasn't generated any revenue</p>
-        </div>
-        {% endif %}
-      </div>
-      {% empty %}
-      <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        <div class="p-12 text-center">
-          <div class="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-            <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-          </div>
-          <p class="text-slate-600 font-medium mb-2">No venues yet</p>
-          <p class="text-sm text-slate-500 mb-4">Get started by adding your first venue</p>
-          <a href="{% url 'venue_create' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Add New Venue
-          </a>
-        </div>
-      </div>
-      {% endfor %}
     </div>
-  </div>
 </div>
 
 <script>
@@ -215,106 +315,101 @@ async function loadRevenueData() {
 
             if (data.venue_revenue_data.length === 0) {
                 container.innerHTML = `
-                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                        <div class="p-12 text-center">
-                            <div class="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-                                <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                </svg>
-                            </div>
-                            <p class="text-slate-600 font-medium mb-2">No venues yet</p>
-                            <p class="text-sm text-slate-500 mb-4">Get started by adding your first venue</p>
-                            <a href="{% url 'venue_create' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                Add New Venue
-                            </a>
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="empty-state">
+                            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <p class="text-lg font-semibold text-gray-600 mb-1">
+                                Tidak ada venue
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                Mulai dengan menambahkan venue pertama Anda
+                            </p>
                         </div>
                     </div>
                 `;
             } else {
                 container.innerHTML = data.venue_revenue_data.map(venueData => `
-                    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden mb-6">
-                        <div class="bg-gradient-to-r from-slate-100 to-slate-50 px-6 py-4 border-b border-slate-200">
-                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-500 rounded-xl flex items-center justify-center">
-                                        <span class="text-white font-bold">${venueData.venue_name.slice(0,2).toUpperCase()}</span>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-xl font-bold text-slate-900">${venueData.venue_name}</h3>
-                                        <small class="text-slate-500">${venueData.sport_category} | ${venueData.location}</small>
-                                    </div>
+                    <div class="venue-card">
+                        <div class="venue-header">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-xl font-bold mb-1">${venueData.venue_name}</h3>
+                                    <p class="text-teal-100 text-sm">
+                                        ${venueData.sport_category} • ${venueData.location}
+                                    </p>
                                 </div>
-                                <div class="text-left md:text-right">
-                                    <p class="text-2xl font-bold text-green-600">Rp ${formatCurrency(venueData.total_revenue)}</p>
-                                    <small class="text-slate-500">${venueData.booking_count} booking${venueData.booking_count !== 1 ? 's' : ''}</small>
+                                <div class="text-right">
+                                    <p class="text-2xl font-bold">Rp ${formatCurrency(venueData.total_revenue)}</p>
+                                    <p class="text-teal-100 text-sm mt-1">${venueData.booking_count} booking</p>
                                 </div>
                             </div>
                         </div>
 
                         ${venueData.bookings.length > 0 ? `
-                            <div class="p-6">
-                                <h4 class="text-lg font-semibold mb-4 flex items-center gap-2 text-slate-900">
-                                    <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                    </svg>
-                                    Booking History
-                                </h4>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-slate-200">
-                                        <thead class="bg-gradient-to-r from-slate-100 to-slate-50">
+                            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                    <h4 class="text-lg font-bold text-gray-800 flex items-center">
+                                        <svg class="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                        </svg>
+                                        Riwayat Booking
+                                    </h4>
+                                </div>
+
+                                <div class="table-container">
+                                    <table class="custom-table">
+                                        <thead>
                                             <tr>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Booking #</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Schedule</th>
-                                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Coach</th>
-                                                <th class="px-4 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Revenue</th>
+                                                <th>ID Booking</th>
+                                                <th>Customer</th>
+                                                <th>Jadwal</th>
+                                                <th>Pelatih</th>
+                                                <th>Pendapatan</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="bg-white divide-y divide-slate-100">
+                                        <tbody>
                                             ${venueData.bookings.map(booking => `
-                                                <tr class="hover:bg-blue-50/50 transition-colors duration-200">
-                                                    <td class="px-4 py-3 text-sm">
-                                                        <span class="inline-flex items-center gap-1 text-slate-900 font-medium">
-                                                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                                                            </svg>
+                                                <tr>
+                                                    <td>
+                                                        <span class="font-mono text-sm font-semibold text-gray-700">
                                                             #${booking.id}
                                                         </span>
                                                     </td>
-                                                    <td class="px-4 py-3 text-sm">
-                                                        <div class="flex items-center gap-2">
-                                                            <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                                                    <td>
+                                                        <div class="flex items-center">
+                                                            <div class="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full flex items-center justify-center mr-2">
                                                                 <span class="text-white text-xs font-bold">${booking.customer_username.slice(0,1).toUpperCase()}</span>
                                                             </div>
-                                                            <span class="text-slate-900 font-medium">${booking.customer_username}</span>
+                                                            <span class="font-medium">${booking.customer_username}</span>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 text-sm">
-                                                        <div class="flex items-center gap-2 text-slate-700">
-                                                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                    <td>
+                                                        <div class="flex items-center text-gray-600">
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                                             </svg>
                                                             <div>
-                                                                <div class="font-medium">${booking.date}</div>
-                                                                <small class="text-slate-500">${booking.start_time} - ${booking.end_time}</small>
+                                                                <div class="font-medium text-sm">${booking.date}</div>
+                                                                <small class="text-gray-500">${booking.start_time} - ${booking.end_time}</small>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-4 py-3 text-sm">
+                                                    <td>
                                                         ${booking.coach ? `
-                                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
-                                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                                            <span class="revenue-badge status-success">
+                                                                <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                                                                 </svg>
                                                                 ${booking.coach}
                                                             </span>
-                                                        ` : '<span class="text-slate-400">-</span>'}
+                                                        ` : '<span class="text-gray-400">-</span>'}
                                                     </td>
-                                                    <td class="px-4 py-3 text-sm text-right">
-                                                        <span class="font-bold text-green-600">Rp ${formatCurrency(booking.revenue)}</span>
+                                                    <td>
+                                                        <span class="text-lg font-bold text-teal-600">
+                                                            Rp ${formatCurrency(booking.revenue)}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             `).join('')}
@@ -323,14 +418,16 @@ async function loadRevenueData() {
                                 </div>
                             </div>
                         ` : `
-                            <div class="p-12 text-center">
-                                <div class="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-                                    <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                    </svg>
-                                </div>
-                                <p class="text-slate-600 font-medium mb-2">No confirmed bookings yet</p>
-                                <p class="text-sm text-slate-500">This venue hasn't generated any revenue</p>
+                            <div class="empty-state">
+                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                                <p class="text-lg font-semibold text-gray-600 mb-1">
+                                    Tidak ada booking
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Venue ini belum memiliki booking yang terkonfirmasi
+                                </p>
                             </div>
                         `}
                     </div>
@@ -340,19 +437,6 @@ async function loadRevenueData() {
 
     } catch (error) {
         console.error('Error loading revenue data:', error);
-        container.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl border border-red-200 overflow-hidden">
-                <div class="p-12 text-center">
-                    <div class="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-                        <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-red-600 font-medium mb-2">Failed to load revenue data</p>
-                    <p class="text-sm text-slate-500">Please try refreshing the page</p>
-                </div>
-            </div>
-        `;
     }
 }
 
@@ -370,11 +454,4 @@ document.addEventListener('visibilitychange', function() {
     }
 });
 </script>
-
-<style>
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-</style>
 {% endblock content %}
