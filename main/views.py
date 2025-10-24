@@ -181,6 +181,9 @@ def venue_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_revenue_view(request):
+    # Check if it's an AJAX request
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    
     # 1. Ambil semua venue milik user ini
     venues = Venue.objects.filter(owner=request.user)
     venue_ids = venues.values_list('id', flat=True)
@@ -209,13 +212,48 @@ def venue_revenue_view(request):
             status='CONFIRMED'
         ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
         
-        venue_revenue_data.append({
+        venue_data = {
             'venue': venue,
             'bookings': confirmed_bookings,
             'total_revenue': venue_total,
             'booking_count': confirmed_bookings.count()
+        }
+        
+        # If AJAX, convert to serializable format
+        if is_ajax:
+            bookings_data = []
+            for booking in confirmed_bookings:
+                bookings_data.append({
+                    'id': booking.id,
+                    'customer_username': booking.customer.username,
+                    'date': booking.venue_schedule.date.strftime('%a, %d %b %Y'),
+                    'start_time': booking.venue_schedule.start_time.strftime('%H:%M'),
+                    'end_time': booking.venue_schedule.end_time.strftime('%H:%M'),
+                    'coach': booking.coach_schedule.coach.user.username if booking.coach_schedule else None,
+                    'revenue': float(booking.transaction.revenue_venue)
+                })
+            
+            venue_data = {
+                'venue_id': venue.id,
+                'venue_name': venue.name,
+                'sport_category': venue.sport_category.name,
+                'location': venue.location.name,
+                'total_revenue': float(venue_total),
+                'booking_count': confirmed_bookings.count(),
+                'bookings': bookings_data
+            }
+        
+        venue_revenue_data.append(venue_data)
+
+    # Return JSON for AJAX requests
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'total_revenue': float(total_revenue),
+            'venue_revenue_data': venue_revenue_data
         })
 
+    # Return HTML for normal requests
     context = {
         'total_revenue': total_revenue,
         'venue_revenue_data': venue_revenue_data,
@@ -262,6 +300,7 @@ def venue_manage_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
     if request.method == 'POST':
+        # Handle Venue Edit
         if 'submit_venue_edit' in request.POST:
             venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)
             if venue_edit_form.is_valid():
@@ -279,6 +318,7 @@ def venue_manage_view(request, venue_id):
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'errors': venue_edit_form.errors}, status=400)
 
+        # Handle Equipment Add
         elif 'submit_equipment' in request.POST:
             equipment_form = EquipmentForm(request.POST)
             if equipment_form.is_valid():
@@ -305,7 +345,6 @@ def venue_manage_view(request, venue_id):
                 return redirect('venue_manage', venue_id=venue.id)
             else:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    # Format error lebih detail
                     errors_dict = {}
                     for field, error_list in equipment_form.errors.items():
                         errors_dict[field] = [str(error) for error in error_list]
@@ -316,6 +355,84 @@ def venue_manage_view(request, venue_id):
                         'message': 'Validasi gagal. Periksa input Anda.'
                     }, status=400)
 
+        # Handle Equipment Edit
+        elif request.POST.get('action') == 'edit':
+            equipment_id = request.POST.get('equipment_id')
+            try:
+                equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                equipment_form = EquipmentForm(request.POST, instance=equipment)
+                
+                if equipment_form.is_valid():
+                    equipment_form.save()
+                    
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        equipments_data = []
+                        for item in venue.equipment.all():
+                            equipments_data.append({
+                                'id': item.id,
+                                'name': item.name,
+                                'stock': item.stock_quantity,
+                                'price': float(item.rental_price)
+                            })
+                        return JsonResponse({
+                            'success': True,
+                            'message': 'Equipment berhasil diperbarui.',
+                            'equipments': equipments_data
+                        })
+                    
+                    messages.success(request, "Equipment berhasil diperbarui.")
+                    return redirect('venue_manage', venue_id=venue.id)
+                else:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        errors_dict = {}
+                        for field, error_list in equipment_form.errors.items():
+                            errors_dict[field] = [str(error) for error in error_list]
+                        
+                        return JsonResponse({
+                            'success': False, 
+                            'errors': errors_dict,
+                            'message': 'Validasi gagal. Periksa input Anda.'
+                        }, status=400)
+            except Equipment.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan.'
+                    }, status=404)
+
+        # Handle Equipment Delete
+        elif request.POST.get('action') == 'delete':
+            equipment_id = request.POST.get('equipment_id')
+            try:
+                equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                equipment_name = equipment.name
+                equipment.delete()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    equipments_data = []
+                    for item in venue.equipment.all():
+                        equipments_data.append({
+                            'id': item.id,
+                            'name': item.name,
+                            'stock': item.stock_quantity,
+                            'price': float(item.rental_price)
+                        })
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Equipment "{equipment_name}" berhasil dihapus.',
+                        'equipments': equipments_data
+                    })
+                
+                messages.success(request, f'Equipment "{equipment_name}" berhasil dihapus.')
+                return redirect('venue_manage', venue_id=venue.id)
+            except Equipment.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan.'
+                    }, status=404)
+
+    # GET request - display forms
     venue_edit_form = VenueForm(instance=venue)
     equipment_form = EquipmentForm()
     venue_location = venue.location 
@@ -1046,10 +1163,6 @@ def admin_dashboard_view(request):
         return redirect('home')
     return redirect('home')
 
-# ======================================================
-# ======================================================
-# ======================================================
-
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def create_booking(request, venue_id):
@@ -1058,46 +1171,38 @@ def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     equipment_list = Equipment.objects.filter(venue=venue)
 
-    # --- Filter Jadwal yang Relevan untuk Ditampilkan (GET Request) ---
     now = timezone.localtime(timezone.now())
     today = now.date()
     current_time = now.time()
 
     schedules = VenueSchedule.objects.filter(
         venue=venue,
-        is_booked=False,  # Hanya yang belum dibooking
-        date__gte=today   # Hanya tanggal hari ini atau masa depan
+        is_booked=False,  
+        date__gte=today   
     ).exclude(
-        # Kecualikan jadwal hari ini yang waktunya sudah lewat
         date=today,
         start_time__lt=current_time
     ).order_by('date', 'start_time')
-    # --- Akhir Filter Jadwal ---
 
     if request.method == 'POST':
-        # --- Proses Pembuatan Booking (POST Request) ---
         schedule_id = request.POST.get('schedule_id')
-        equipment_ids = request.POST.getlist('equipment') # Bisa multiple
-        coach_id = request.POST.get('coach') # Bisa kosong
-        payment_method = request.POST.get('payment_method', 'CASH') # Default ke CASH jika tidak ada
+        equipment_ids = request.POST.getlist('equipment') 
+        coach_id = request.POST.get('coach') 
+        payment_method = request.POST.get('payment_method', 'CASH') 
 
         if not schedule_id:
             messages.error(request, "Anda harus memilih jadwal terlebih dahulu!")
             return redirect('create_booking', venue_id=venue.id)
 
         try:
-            # Gunakan transaksi database atomik untuk memastikan konsistensi
             with db_transaction.atomic():
-                # 1. Ambil dan Kunci Jadwal Venue
                 try:
-                    # select_for_update() mengunci baris ini hingga transaksi selesai
                     schedule = VenueSchedule.objects.select_for_update().get(
                         id=schedule_id,
                         venue=venue,
                         is_booked=False,
-                        date__gte=today # Validasi ulang tanggal
+                        date__gte=today
                     )
-                    # Validasi ulang waktu jika tanggalnya hari ini
                     if schedule.date == today and schedule.start_time < current_time:
                          raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
 
@@ -1105,105 +1210,102 @@ def create_booking(request, venue_id):
                     messages.error(request, f"Jadwal tidak tersedia atau sudah dibooking. Silakan pilih jadwal lain. ({e})")
                     return redirect('create_booking', venue_id=venue.id)
 
-                # 2. Hitung Harga Awal
                 total_price = venue.price_per_hour or 0
 
-                # 3. Proses Equipment yang Dipilih
-                selected_equipment = []
+                selected_equipment_data = [] 
+                equipment_revenue = 0
+                
                 if equipment_ids:
-                    # Ambil semua equipment valid dalam satu query
                     equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
                     for eq in equipment_queryset:
-                        selected_equipment.append(eq)
-                        total_price += eq.rental_price or 0
+                        quantity_str = request.POST.get(f'quantity_{eq.id}', '1')
+                        try:
+                            quantity = int(quantity_str)
+                            if quantity <= 0: quantity = 1
+                        except (ValueError, TypeError):
+                            quantity = 1
+                        
+                        if quantity > eq.stock_quantity:
+                            messages.error(request, f"Stock untuk {eq.name} tidak mencukupi (tersisa {eq.stock_quantity}).")
+                            raise IntegrityError(f"Stock tidak cukup for {eq.name}.")
+                    
+                        item_sub_total = (eq.rental_price or 0) * quantity
+                        equipment_revenue += item_sub_total
+                        
+                        selected_equipment_data.append((eq, quantity, item_sub_total))
 
-                # 4. Proses Coach yang Dipilih (jika ada)
                 coach_obj = None
                 coach_schedule_obj = None
+                coach_revenue = 0 
                 if coach_id:
                     try:
                         coach_obj = CoachProfile.objects.get(id=coach_id)
-                        # Ambil dan kunci jadwal coach yang sesuai
                         coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
                             coach=coach_obj,
-                            date=schedule.date,         # Tanggal harus sama
-                            start_time=schedule.start_time, # Jam mulai harus sama
-                            is_booked=False              # Pastikan coach masih available
+                            date=schedule.date,
+                            start_time=schedule.start_time,
+                            is_booked=False
                         )
-                        total_price += coach_obj.rate_per_hour or 0
+                        coach_revenue = coach_obj.rate_per_hour or 0 
                     except CoachProfile.DoesNotExist:
                         messages.error(request, "Coach yang Anda pilih tidak valid.")
-                        raise IntegrityError("Coach profile does not exist.") # Batalkan transaksi
+                        raise IntegrityError("Coach profile does not exist.")
                     except CoachSchedule.DoesNotExist:
                         messages.error(request, f"Coach {coach_obj.user.username} tidak lagi tersedia pada jadwal yang dipilih.")
-                        raise IntegrityError("Coach schedule not available.") # Batalkan transaksi
+                        raise IntegrityError("Coach schedule not available.")
 
-                # 5. Buat Objek Booking Utama
+                total_price += equipment_revenue + coach_revenue 
+                
                 booking = Booking.objects.create(
                     customer=request.user,
                     venue_schedule=schedule,
-                    coach_schedule=coach_schedule_obj, # Bisa None jika tanpa coach
+                    coach_schedule=coach_schedule_obj,
                     total_price=total_price,
                 )
 
-                # 6. Update Status Jadwal Venue
                 schedule.is_booked = True
-                # Sebaiknya jangan ubah is_available di sini jika itu flag statis
-                # schedule.is_available = False
                 schedule.save()
 
-                # 7. Update Status Jadwal Coach (jika ada)
                 if coach_schedule_obj:
                     coach_schedule_obj.is_booked = True
-                    # coach_schedule_obj.is_available = False
                     coach_schedule_obj.save()
 
-                # 8. Buat Relasi BookingEquipment
                 booking_equipment_list = []
-                for equipment in selected_equipment:
+                for equipment, quantity, sub_total in selected_equipment_data: 
                     booking_equipment_list.append(
                         BookingEquipment(
                             booking=booking,
                             equipment=equipment,
-                            quantity=1, # Asumsi kuantitas selalu 1
-                            sub_total=equipment.rental_price
+                            quantity=quantity, 
+                            sub_total=sub_total 
                         )
                     )
                 if booking_equipment_list:
                     BookingEquipment.objects.bulk_create(booking_equipment_list)
 
-                # 9. Buat Transaksi Awal (Status PENDING)
                 Transaction.objects.create(
                     booking=booking,
                     status='PENDING',
                     payment_method=payment_method,
-                    # Bagi hasil pendapatan (sesuaikan jika ada logika platform fee)
-                    revenue_venue=venue.price_per_hour or 0,
-                    revenue_coach=coach_obj.rate_per_hour if coach_obj else 0,
-                    revenue_platform=0 # Ganti jika perlu
+                    revenue_venue=(venue.price_per_hour or 0) + equipment_revenue,
+                    revenue_coach=coach_revenue, 
+                    revenue_platform=0 
                 )
 
-        # Tangani error jika terjadi konflik selama transaksi
         except IntegrityError as e:
-            # Pesan error spesifik (misal coach/jadwal tidak tersedia) sudah ditangani di atas
-            # Tampilkan pesan generik hanya jika bukan error spesifik tersebut
-             if "Coach" not in str(e) and "Jadwal" not in str(e):
-                  messages.error(request, "Terjadi konflik saat menyimpan booking (mungkin jadwal sudah diambil). Silakan coba lagi.")
              return redirect('create_booking', venue_id=venue.id)
-        except Exception as e: # Tangkap error tak terduga lainnya
+        except Exception as e: 
              messages.error(request, f"Terjadi kesalahan tidak terduga: {e}. Silakan coba lagi.")
              return redirect('create_booking', venue_id=venue.id)
 
-        # Jika semua proses dalam 'try' berhasil
         messages.success(request, "Booking berhasil dibuat! Segera lakukan pembayaran untuk mengonfirmasi jadwal Anda.")
-        return redirect('my_bookings') # Arahkan ke halaman daftar booking pending
-
-    # --- Konteks untuk Menampilkan Halaman (GET Request) ---
+        return redirect('my_bookings') 
+    
     context = {
         'venue': venue,
-        'schedules': schedules, # Gunakan jadwal yang sudah difilter
+        'schedules': schedules, 
         'equipment_list': equipment_list,
-        'coaches': [], # List coach akan diisi oleh AJAX saat jadwal dipilih
+        'coaches': [], 
     }
     return render(request, 'main/create_booking.html', context)
 
@@ -1250,6 +1352,21 @@ def customer_payment(request, booking_id):
                     messages.error(request, error_msg)
                     return redirect('booking_history')
 
+                booked_items = BookingEquipment.objects.filter(booking=booking).select_related('equipment')
+                items_to_update = []
+                
+                for item in booked_items:
+                    equipment = Equipment.objects.select_for_update().get(id=item.equipment.id)
+                    
+                    if equipment.stock_quantity < item.quantity:
+                        raise IntegrityError(f"Pembayaran gagal, stok untuk {equipment.name} tidak lagi mencukupi.")
+                    
+                    equipment.stock_quantity -= item.quantity
+                    items_to_update.append(equipment)
+                
+                if items_to_update:
+                    Equipment.objects.bulk_update(items_to_update, ['stock_quantity'])
+    
                 venue_schedule.is_booked = True
                 venue_schedule.is_available = False
                 venue_schedule.save()
@@ -1272,8 +1389,9 @@ def customer_payment(request, booking_id):
                     pending.transaction.status = 'CANCELLED'
                     pending.transaction.save()
 
-        except IntegrityError:
-            error_msg = "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
+        except IntegrityError as e: 
+            error_msg = str(e) if "stok" in str(e) else "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
+            
             if is_ajax and not is_cash_auto_confirm:
                 return JsonResponse({'success': False, 'message': error_msg}, status=400)
             messages.error(request, error_msg)
@@ -1459,17 +1577,11 @@ def update_booking(request, booking_id):
             try:
                 schedule_query = Q(id=new_schedule_id, venue=venue, date__gte=today)
                 schedule_query &= (Q(is_booked=False) | Q(booking=booking))
-
                 new_schedule = VenueSchedule.objects.select_for_update().get(schedule_query)
-                
                 if new_schedule.date == today and new_schedule.start_time < current_time:
                     raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
-                    
             except VenueSchedule.DoesNotExist:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Jadwal tidak tersedia atau sudah dibooking.'
-                }, status=400)
+                return JsonResponse({ 'success': False, 'message': 'Jadwal tidak tersedia atau sudah dibooking.'}, status=400)
             
             old_schedule = booking.venue_schedule
             if old_schedule.id != new_schedule.id:
@@ -1479,56 +1591,55 @@ def update_booking(request, booking_id):
             
             if booking.coach_schedule:
                 old_coach_schedule = booking.coach_schedule
-                if (old_schedule.id != new_schedule.id) or \
-                   (str(old_coach_schedule.coach.id) != new_coach_id):
+                if (old_schedule.id != new_schedule.id) or (str(old_coach_schedule.coach.id) != new_coach_id):
                     old_coach_schedule.is_booked = False
                     old_coach_schedule.is_available = True
                     old_coach_schedule.save()
             
             total_price = venue.price_per_hour or 0
+            coach_revenue = 0
             
             new_coach_schedule_obj = None
             if new_coach_id and new_coach_id != 'none' and new_coach_id != '':
                 try:
                     coach_obj = CoachProfile.objects.get(id=new_coach_id)
-                    coach_schedule_query = Q(
-                        coach=coach_obj,
-                        date=new_schedule.date,
-                        start_time=new_schedule.start_time
-                    )
+                    coach_schedule_query = Q(coach=coach_obj, date=new_schedule.date, start_time=new_schedule.start_time)
                     coach_schedule_query &= (Q(is_booked=False) | Q(booking=booking))
+                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(coach_schedule_query)
 
-                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(
-                        coach_schedule_query
-                    )
-
-                    total_price += coach_obj.rate_per_hour or 0
+                    coach_revenue = coach_obj.rate_per_hour or 0 
                     
                     new_coach_schedule_obj.is_booked = True
                     new_coach_schedule_obj.save()
-                    
                 except (CoachProfile.DoesNotExist, CoachSchedule.DoesNotExist):
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Coach tidak tersedia pada jadwal yang dipilih.'
-                    }, status=400)
+                    return JsonResponse({'success': False, 'message': 'Coach tidak tersedia pada jadwal yang dipilih.'}, status=400)
             
-            BookingEquipment.objects.filter(booking=booking).delete()
-      
+            BookingEquipment.objects.filter(booking=booking).delete() 
+            
+            equipment_revenue = 0 
             if equipment_ids:
-                equipment_queryset = Equipment.objects.filter(
-                    id__in=equipment_ids, 
-                    venue=venue
-                )
+                equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
                 booking_equipment_list = []
                 for eq in equipment_queryset:
-                    total_price += eq.rental_price or 0
+                    quantity_str = request.POST.get(f'quantity_{eq.id}', '1')
+                    try:
+                        quantity = int(quantity_str)
+                        if quantity <= 0: quantity = 1
+                    except (ValueError, TypeError):
+                        quantity = 1
+
+                    if quantity > eq.stock_quantity:
+                         return JsonResponse({'success': False, 'message': f"Stock untuk {eq.name} tidak mencukupi."}, status=400)
+                    
+                    item_sub_total = (eq.rental_price or 0) * quantity
+                    equipment_revenue += item_sub_total 
+                    
                     booking_equipment_list.append(
                         BookingEquipment(
                             booking=booking,
                             equipment=eq,
-                            quantity=1,
-                            sub_total=eq.rental_price
+                            quantity=quantity, 
+                            sub_total=item_sub_total 
                         )
                     )
                 if booking_equipment_list:
@@ -1536,18 +1647,15 @@ def update_booking(request, booking_id):
             
             booking.venue_schedule = new_schedule
             booking.coach_schedule = new_coach_schedule_obj
-            booking.total_price = total_price
+            booking.total_price = total_price + equipment_revenue + coach_revenue 
             booking.save()
             
             new_schedule.is_booked = True
             new_schedule.save()
             
             transaction = booking.transaction
-            transaction.revenue_venue = venue.price_per_hour or 0
-            transaction.revenue_coach = (
-                new_coach_schedule_obj.coach.rate_per_hour 
-                if new_coach_schedule_obj else 0
-            )
+            transaction.revenue_venue = (venue.price_per_hour or 0) + equipment_revenue 
+            transaction.revenue_coach = coach_revenue 
             transaction.save()
         
         success_msg = 'Booking berhasil diperbarui!'
@@ -1638,16 +1746,19 @@ def update_booking_data(request, booking_id):
             'name': coach.user.get_full_name() or coach.user.username,
             'rate': float(coach.rate_per_hour or 0)
         }
-    selected_equipment_ids = list(
-        BookingEquipment.objects.filter(booking=booking).values_list('equipment_id', flat=True)
-    )
+
+    selected_equipment_map = {
+        item['equipment_id']: item['quantity']
+        for item in BookingEquipment.objects.filter(booking=booking).values('equipment_id', 'quantity')
+    }
     
     equipments = Equipment.objects.filter(venue=venue)
-    equipments_data = [
+    available_equipments_data = [
         {
             'id': e.id,
             'name': e.name,
-            'price': float(e.rental_price or 0)
+            'price': float(e.rental_price or 0),
+            'stock_quantity': e.stock_quantity  
         }
         for e in equipments
     ]
@@ -1658,6 +1769,6 @@ def update_booking_data(request, booking_id):
         'schedules': schedules_data,
         'current_coach_id': current_coach_id,
         'current_coach_data': current_coach_data, 
-        'selected_equipment_ids': selected_equipment_ids,
-        'equipments': equipments_data,
+        'selected_equipment_map': selected_equipment_map, 
+        'available_equipments': available_equipments_data,
     })
