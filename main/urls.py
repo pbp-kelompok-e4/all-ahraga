@@ -36,4 +36,5 @@ urlpatterns = [
     path('ajax/coach-detail/<int:coach_id>/', views.get_coach_detail_ajax, name='get_coach_detail_ajax'),
     path('booking/update/<int:booking_id>/', views.update_booking, name='update_booking'),
     path('api/booking/<int:booking_id>/edit-data/', views.update_booking_data, name='update_booking_data'),
+    path('ajax/filter-venues/', views.filter_venues_ajax, name='filter_venues_ajax'),
 ]

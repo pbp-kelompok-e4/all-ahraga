@@ -18,6 +18,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
+from django.db.models import Q, Avg
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -124,20 +125,23 @@ def logout_view(request):
 @login_required(login_url='login') # Ganti 'login' ke 'index' jika mau
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='index') # Arahkan non-customer ke index
 def main_view(request):
-    venues = Venue.objects.all().select_related('location', 'sport_category')
-    categories = SportCategory.objects.all()
-    areas = LocationArea.objects.all()
+    """Main page untuk customer - list venues dengan filter"""
+    # Hanya customer yang bisa akses
+    if not request.user.is_authenticated or not request.user.profile.is_customer:
+        return redirect('home')
     
-    query = request.GET.get('q')
-    if query:
-        venues = venues.filter(name__icontains=query)
-
+    venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
+    
+    # Get filter options
+    locations = LocationArea.objects.all().order_by('name')
+    sports = SportCategory.objects.all().order_by('name')
+    
     context = {
         'venues': venues,
-        'categories': categories,
-        'areas': areas,
+        'locations': locations,
+        'sports': sports,
     }
-    return render(request, 'main/home.html', context) # Tetap render home.html
+    return render(request, 'main/home.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
@@ -1776,4 +1780,49 @@ def update_booking_data(request, booking_id):
         'current_coach_data': current_coach_data, 
         'selected_equipment_map': selected_equipment_map, 
         'available_equipments': available_equipments_data,
+    })
+
+def filter_venues_ajax(request):
+    """AJAX endpoint untuk filter venues"""
+    search = request.GET.get('search', '').strip()
+    location_id = request.GET.get('location', '')
+    sport_id = request.GET.get('sport', '')
+    
+    venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
+    
+    # Apply filters
+    if search:
+        venues = venues.filter(
+            Q(name__icontains=search) | 
+            Q(description__icontains=search)
+        )
+    
+    if location_id:
+        venues = venues.filter(location_id=location_id)
+    
+    if sport_id:
+        venues = venues.filter(sport_category_id=sport_id)
+    
+    # Prepare JSON response
+    venues_data = []
+    for venue in venues:
+        # Calculate average rating
+        avg_rating = venue.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        
+        venues_data.append({
+            'id': venue.id,
+            'name': venue.name,
+            'description': venue.description[:100] + '...' if len(venue.description) > 100 else venue.description,
+            'location': venue.location.name if venue.location else '-',
+            'sport': venue.sport_category.name,
+            'price': float(venue.price_per_hour),
+            'image': venue.main_image.url if venue.main_image else None,
+            'rating': round(avg_rating, 1),
+            'detail_url': f'/venue/{venue.id}/',
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'venues': venues_data,
+        'count': len(venues_data)
     })
