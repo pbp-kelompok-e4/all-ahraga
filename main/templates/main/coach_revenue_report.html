@@ -94,6 +94,33 @@
             font-size: 0.813rem;
         }
     }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { 
+            opacity: 0;
+            transform: translateY(50px); 
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0); 
+        }
+    }
+
+    @keyframes slideInRight {
+        from { 
+            opacity: 0;
+            transform: translateX(100px); 
+        }
+        to { 
+            opacity: 1;
+            transform: translateX(0); 
+        }
+    }
 </style>
 
 <div class="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
@@ -106,8 +133,8 @@
                         padding:10px 20px; background: linear-gradient(135deg,#003F3F 0%,#005757 100%);
                         color:#fff; text-decoration:none; border-radius:8px; font-size:14px;
                         font-weight:500; transition:all .2s ease; box-shadow:0 2px 8px rgba(0,63,63,0.18);">
-                    <span style="font-size:18px; line-height:1;">←</span>
-                    <span>Kembali</span>
+                <span style="font-size:18px; line-height:1;">←</span>
+                <span>Kembali</span>
             </a>
         </div>
 
@@ -119,9 +146,50 @@
             <p class="text-gray-600 mb-6">
                 Ringkasan pendapatan dari semua transaksi kelas
             </p>
+        </div>
 
+        {% if not has_profile %}
+            <!-- No Profile State -->
+            <div style="background: #fff; border-radius: 20px; padding: 60px 40px; 
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; 
+                        max-width: 600px; margin: 60px auto;">
+                
+                <div style="font-size: 80px; margin-bottom: 24px; animation: pulse 2s infinite;">📋</div>
+                
+                <h2 style="color: #003F3F; font-size: 28px; font-weight: 700; margin-bottom: 16px;">
+                    Profil Belum Lengkap
+                </h2>
+                
+                <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 32px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien dan melihat laporan pendapatan.
+                </p>
+
+                <button onclick="showManageModal()" 
+                    style="display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+                            padding: 16px 32px; 
+                            background: linear-gradient(135deg, #003F3F 0%, #005757 100%); 
+                            color: #FFFFFF; border: none;
+                            text-decoration: none; border-radius: 12px;
+                            font-weight: 600; font-size: 16px; 
+                            transition: all 0.3s ease;
+                            box-shadow: 0 4px 16px rgba(0,63,63,0.3); 
+                            cursor: pointer;">
+                    <span style="font-size: 20px;">✏️</span> 
+                    <span>Kelola Profil</span>
+                </button>
+
+                <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 14px;">
+                        💡 Setelah melengkapi profil, Anda dapat melihat laporan pendapatan di halaman ini
+                    </p>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Revenue Content (Existing) -->
+            
             <!-- Revenue Card -->
-            <div class="metric-card">
+            <div class="metric-card mb-8">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-teal-100 text-sm font-medium mb-1">
@@ -142,165 +210,408 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Transactions Table -->
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center">
-                    <svg class="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                    </svg>
-                    Riwayat Transaksi
-                </h2>
-            </div>
+            <!-- Transactions Table -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        Riwayat Transaksi
+                    </h2>
+                </div>
 
-            <div class="table-container">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th>ID Transaksi</th>
-                            <th>Metode Pembayaran</th>
-                            <th>Status</th>
-                            <th>Pendapatan</th>
-                            <th>Tanggal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in transactions %}
-                        <tr>
-                            <td>
-                                <span class="font-mono text-sm font-semibold text-gray-700">
-                                    #{{ transaction.id }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="flex items-center">
-                                    {% if transaction.payment_method == 'Credit Card' %}
-                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
-                                        <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
-                                    </svg>
-                                    {% elif transaction.payment_method == 'Bank Transfer' %}
-                                    <svg class="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
-                                    </svg>
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>ID Transaksi</th>
+                                <th>Metode Pembayaran</th>
+                                <th>Status</th>
+                                <th>Pendapatan</th>
+                                <th>Tanggal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>
+                                    <span class="font-mono text-sm font-semibold text-gray-700">
+                                        #{{ transaction.id }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center">
+                                        {% if transaction.payment_method == 'Credit Card' %}
+                                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                                            <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {% elif transaction.payment_method == 'Bank Transfer' %}
+                                        <svg class="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {% endif %}
+                                        <span class="font-medium">{{ transaction.payment_method }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if transaction.status == 'CONFIRMED' %}
+                                    <span class="revenue-badge status-success">
+                                        <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Berhasil
+                                    </span>
+                                    {% elif transaction.status == 'PENDING' %}
+                                    <span class="revenue-badge status-pending">
+                                        <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Menunggu
+                                    </span>
                                     {% else %}
-                                    <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                                    </svg>
+                                    <span class="revenue-badge status-failed">
+                                        <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Gagal
+                                    </span>
                                     {% endif %}
-                                    <span class="font-medium">{{ transaction.payment_method }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                {% if transaction.status == 'CONFIRMED' %}
-                                <span class="revenue-badge status-success">
-                                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </td>
+                                <td>
+                                    <span class="text-lg font-bold text-teal-600">
+                                        Rp {{ transaction.revenue_coach|floatformat:0 }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center text-gray-600">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span class="text-sm">{{ transaction.transaction_time|date:"d M Y, H:i" }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
-                                    Berhasil
-                                </span>
-                                {% elif transaction.status == 'PENDING' %}
-                                <span class="revenue-badge status-pending">
-                                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Menunggu
-                                </span>
-                                {% else %}
-                                <span class="revenue-badge status-failed">
-                                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Gagal
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="text-lg font-bold text-teal-600">
-                                    Rp {{ transaction.revenue_coach|floatformat:0 }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="flex items-center text-gray-600">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    <span class="text-sm">{{ transaction.transaction_time|date:"d M Y, H:i" }}</span>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="empty-state">
-                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                <p class="text-lg font-semibold text-gray-600 mb-1">
-                                    Tidak ada transaksi
-                                </p>
-                                <p class="text-sm text-gray-500">
-                                    Transaksi akan muncul di sini setelah ada pembelian kelas
-                                </p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                    <p class="text-lg font-semibold text-gray-600 mb-1">
+                                        Tidak ada transaksi
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        Transaksi akan muncul di sini setelah ada pembelian kelas
+                                    </p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Summary Footer -->
-        {% if transactions %}
-        <div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="flex items-center">
-                    <div class="bg-teal-100 rounded-lg p-3 mr-4">
-                        <svg class="w-6 h-6 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
+            <!-- Summary Footer -->
+            {% if transactions %}
+            <div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flex items-center">
+                        <div class="bg-teal-100 rounded-lg p-3 mr-4">
+                            <svg class="w-6 h-6 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Transaksi Berhasil</p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ transactions|length }}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Transaksi Berhasil</p>
-                        <p class="text-2xl font-bold text-gray-900">
-                            {{ transactions|length }}
-                        </p>
+                    
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 rounded-lg p-3 mr-4">
+                            <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Total Pendapatan</p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                Rp {{ total_revenue|floatformat:0 }}
+                            </p>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="flex items-center">
-                    <div class="bg-blue-100 rounded-lg p-3 mr-4">
-                        <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Total Pendapatan</p>
-                        <p class="text-2xl font-bold text-gray-900">
-                            Rp {{ total_revenue|floatformat:0 }}
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center">
-                    <div class="bg-purple-100 rounded-lg p-3 mr-4">
-                        <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Periode</p>
-                        <p class="text-lg font-bold text-gray-900">
-                            Semua Waktu
-                        </p>
+                    
+                    <div class="flex items-center">
+                        <div class="bg-purple-100 rounded-lg p-3 mr-4">
+                            <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Periode</p>
+                            <p class="text-lg font-bold text-gray-900">
+                                Semua Waktu
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            {% endif %}
+
         {% endif %}
     </div>
 </div>
+
+<!-- Manage Profile Modal (Only if no profile) -->
+{% if not has_profile %}
+<div id="manageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                            background: rgba(0,0,0,0.6); z-index: 9999; 
+                            align-items: center; justify-content: center; 
+                            backdrop-filter: blur(4px); animation: fadeIn 0.3s ease;
+                            overflow-y: auto; padding: 20px;">
+  
+  <div style="background: #fff; border-radius: 20px; max-width: 900px; width: 100%; 
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+              animation: slideUp 0.3s ease; overflow: hidden; position: relative;
+              max-height: 90vh; display: flex; flex-direction: column;">
+    
+    <button onclick="hideManageModal()" 
+            style="position: absolute; top: 15px; right: 20px; z-index: 10;
+                   background: transparent; border: none; color: white; 
+                   font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1;
+                   text-shadow: 0 1px 2px rgba(0,0,0,0.4);">
+      &times;
+    </button>
+
+    <div style="background: linear-gradient(135deg, #003F3F 0%, #005757 100%); 
+                padding: 24px 30px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 12px;">✏️</div>
+      <h2 style="color: #fff; margin: 0; font-size: 22px; font-weight: 600;">
+        Kelola Profil Pelatih
+      </h2>
+    </div>
+
+    <div id="formContainer" style="padding: 24px 30px; overflow-y: auto; flex: 1;">
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <div style="font-size: 32px; margin-bottom: 12px;">⏳</div>
+        Memuat formulir...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px; 
+                        color: #fff; padding: 18px 24px; border-radius: 12px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10000;
+                        min-width: 300px; animation: slideInRight 0.4s ease;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <span id="toastIcon" style="font-size: 24px;"></span>
+    <div>
+      <div id="toastTitle" style="font-weight: 600; font-size: 15px; margin-bottom: 4px;"></div>
+      <div id="toastMessage" style="font-size: 13px; opacity: 0.9;"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+</style>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+    
+    if (type === 'success') {
+      toast.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      toastIcon.textContent = '✅';
+    } else if (type === 'error') {
+      toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c1121f 100%)';
+      toastIcon.textContent = '❌';
+    }
+    
+    toast.style.display = 'block';
+    
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3000);
+  }
+
+  function showManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    loadProfileForm();
+  }
+
+  function hideManageModal() {
+    const modal = document.getElementById('manageModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+
+  function loadProfileForm() {
+    const formContainer = document.getElementById('formContainer');
+    
+    fetch("{% url 'get_coach_profile_form_ajax' %}")
+      .then(response => response.text())
+      .then(html => {
+        formContainer.innerHTML = html;
+        attachFormHandler();
+      })
+      .catch(error => {
+        formContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #dc3545;">' +
+          '<div style="font-size: 32px; margin-bottom: 12px;">❌</div>' +
+          '<p>Gagal memuat formulir. Silakan coba lagi.</p>' +
+          '<button onclick="loadProfileForm()" style="margin-top: 16px; padding: 10px 20px; background: #003F3F; color: white; border: none; border-radius: 8px; cursor: pointer;">Coba Lagi</button>' +
+          '</div>';
+      });
+  }
+
+  function attachFormHandler() {
+    const form = document.getElementById('coachProfileForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerHTML;
+      
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2" style="animation: spin 1s linear infinite;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+        '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+        '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>' +
+        '</svg> Menyimpan...';
+      
+      document.querySelectorAll('.field-error').forEach(el => {
+        el.style.display = 'none';
+        el.textContent = '';
+      });
+      
+      const formErrors = document.getElementById('formErrors');
+      if (formErrors) formErrors.style.display = 'none';
+      
+      const formData = new FormData(form);
+      const csrftoken = getCookie('csrftoken');
+      
+      fetch("{% url 'save_coach_profile_ajax' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+        },
+        body: formData,
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          hideManageModal();
+          showToast('Berhasil!', data.message, 'success');
+          
+          // Reload page after 1.5 seconds to show revenue report
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          displayFormErrors(data.errors);
+          showToast('Gagal!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Error!', 'Terjadi kesalahan saat menyimpan profil', 'error');
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+
+  function displayFormErrors(errors) {
+    const errorSummary = document.getElementById('formErrors');
+    const errorList = document.getElementById('errorList');
+    
+    if (!errorSummary || !errorList) return;
+    
+    errorList.innerHTML = '';
+    
+    for (const [field, messages] of Object.entries(errors)) {
+      messages.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        errorList.appendChild(li);
+      });
+      
+      const fieldInput = document.getElementById('id_' + field);
+      if (fieldInput) {
+        const formGroup = fieldInput.closest('.form-group');
+        if (formGroup) {
+          const errorSpan = formGroup.querySelector('.field-error');
+          if (errorSpan) {
+            errorSpan.textContent = messages.join(', ');
+            errorSpan.style.display = 'block';
+          }
+        }
+      }
+    }
+    
+    if (errorList.children.length > 0) {
+      errorSummary.style.display = 'block';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const manageModal = document.getElementById('manageModal');
+    if (manageModal) {
+      manageModal.addEventListener('click', function(e) {
+        if (e.target === manageModal) {
+          hideManageModal();
+        }
+      });
+    }
+  });
+
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+</script>
+{% endif %}
+
 {% endblock content %}
