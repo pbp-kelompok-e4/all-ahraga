@@ -37,4 +37,8 @@ urlpatterns = [
     path('booking/update/<int:booking_id>/', views.update_booking, name='update_booking'),
     path('api/booking/<int:booking_id>/edit-data/', views.update_booking_data, name='update_booking_data'),
     path('ajax/filter-venues/', views.filter_venues_ajax, name='filter_venues_ajax'),
+    path('booking/<int:booking_id>/review/', views.submit_review, name='submit_review'),
+    path('review/edit/<int:review_id>/', views.edit_review, name='edit_review'),
+    path('review/<int:review_id>/edit-page/', views.edit_review_page, name='edit_review_page'),
+    path('review/<int:review_id>/delete/', views.delete_review, name='delete_review'),
 ]
