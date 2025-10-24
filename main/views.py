@@ -572,11 +572,6 @@ def venue_schedule_delete(request, venue_id):
     deletable_qs.delete()
     return JsonResponse({"success": True, "message": f"{count} jadwal berhasil dihapus."})
 
-# ======================================================
-# ======================================================
-# ======================================================
-
-
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def delete_venue_view(request, venue_id):
@@ -592,64 +587,74 @@ def delete_venue_view(request, venue_id):
             messages.error(request, "You don't have permission to delete this venue.")
             return redirect('venue_dashboard')
         
-        # Get statistics about what will be deleted
-        schedules_count = venue.schedules.count()
-        bookings_count = Booking.objects.filter(venue_schedule__venue=venue).count()
-        
-        # Check if there's a confirmation parameter
-        if request.method == 'POST' and not request.POST.get('confirm_delete'):
-            # If no confirmation and there are schedules/bookings, ask for confirmation
+        if request.method == 'POST':
+            schedules_count = venue.schedules.count()
+            bookings_count = Booking.objects.filter(venue_schedule__venue=venue).count()
+            
+            bookings = Booking.objects.filter(venue_schedule__venue=venue)
+            
+            transactions = Transaction.objects.filter(booking__in=bookings)
+            transactions_count = transactions.count()
+            transactions.delete()
+            
+            BookingEquipment.objects.filter(booking__in=bookings).delete()
+            
+            bookings.delete()
+            
+            venue.schedules.all().delete()
+            
+            venue_name = venue.name
+            venue.delete()
+            
+            success_message = f"Lapangan '{venue_name}' berhasil dihapus"
             if schedules_count > 0 or bookings_count > 0:
-                warning_message = f"This venue has {schedules_count} schedules and {bookings_count} bookings. Deleting it will remove all associated data."
-                
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': False,
-                        'require_confirmation': True,
-                        'message': warning_message,
-                        'schedules_count': schedules_count,
-                        'bookings_count': bookings_count
-                    }, status=400)
-                
-                messages.warning(request, warning_message)
-                # You could render a confirmation page here instead
-                return redirect('venue_dashboard')
-        
-        # Find all related bookings to delete their transactions first
-        bookings = Booking.objects.filter(venue_schedule__venue=venue)
-        
-        # Delete all related transactions first (to avoid integrity errors)
-        Transaction.objects.filter(booking__in=bookings).delete()
-        
-        # Now delete the bookings
-        bookings.delete()
-        
-        # Finally delete the venue (this will cascade delete schedules due to FK relationship)
-        venue_name = venue.name
-        venue.delete()
+                success_message += f" beserta {schedules_count} jadwal dan {bookings_count} booking terkait"
+            success_message += "."
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': success_message,
+                    'deleted_stats': {
+                        'schedules': schedules_count,
+                        'bookings': bookings_count,
+                        'transactions': transactions_count
+                    }
+                })
+            
+            messages.success(request, success_message)
+            return redirect('venue_dashboard')
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            schedules_count = venue.schedules.count()
+            bookings_count = Booking.objects.filter(venue_schedule__venue=venue).count()
+            
             return JsonResponse({
                 'success': True,
-                'message': f"Lapangan '{venue_name}' and all associated bookings successfully deleted."
+                'venue': {
+                    'id': venue.id,
+                    'name': venue.name,
+                    'schedules_count': schedules_count,
+                    'bookings_count': bookings_count
+                }
             })
         
-        messages.success(request, f"Lapangan '{venue_name}' and all associated bookings successfully deleted.")
         return redirect('venue_dashboard')
         
     except Exception as e:
-        # Log the error for debugging
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error deleting venue {venue_id}: {str(e)}")
         
+        error_message = f"Terjadi kesalahan saat menghapus venue: {str(e)}"
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': False,
-                'message': f"Error deleting venue: {str(e)}"
+                'message': error_message
             }, status=500)
         
-        messages.error(request, f"Error deleting venue: {str(e)}")
+        messages.error(request, error_message)
         return redirect('venue_dashboard')
 
 @login_required(login_url='login')
