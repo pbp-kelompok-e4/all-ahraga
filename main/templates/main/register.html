@@ -6,50 +6,49 @@
 {% block extra_head %}
 <style>
   /* === Background Layers === */
-  .bg-img {
-    position: fixed;
-    inset: 0;
-    background-image: url("{% static 'image/bg-court.jpg' %}");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    filter: blur(8px);
-    will-change: transform;
-    z-index: 0;
+  .bg-img{
+    position:fixed; inset:0;
+    background-image:url("{% static 'image/bg-court.jpg' %}");
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    filter:blur(8px); will-change:transform; z-index:0;
   }
-  .bg-tint {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 1;
-    pointer-events: none;
-  }
+  .bg-tint{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1; pointer-events:none; }
 
   header, nav, footer { position: relative; z-index: 5; }
 
-  .page-center {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 80vh; gap: 1rem; position: relative; z-index: 2; padding: 2rem;
+  .page-center{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:80vh; gap:1rem; position:relative; z-index:2; padding:2rem;
   }
 
-  .register-card {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(12px);
-    border-radius: 1.5rem;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  .register-card{
+    background:rgba(255,255,255,.85);
+    backdrop-filter:blur(12px);
+    border-radius:1.5rem;
+    box-shadow:0 8px 25px rgba(0,0,0,.15);
   }
 
-  .btn-register { background-color: #90b4aa; }
-  .btn-register:hover { background-color: #7ea59a; }
+  .btn-register{ background-color:#90b4aa; }
+  .btn-register:hover{ background-color:#7ea59a; }
 
-  .styled-input {
-    width: 100%; padding: 0.6rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;
-    background: rgba(229,231,235,0.7); outline: none;
+  .styled-input{
+    width:100%; padding:.6rem 1rem; border:1px solid #d1d5db; border-radius:.5rem;
+    background:rgba(229,231,235,.7); outline:none;
   }
-  .styled-input:focus { box-shadow: 0 0 0 2px rgba(45,212,191,0.35); }
-  input::placeholder { color: #9ca3af; }
+  .styled-input:focus{ box-shadow:0 0 0 2px rgba(45,212,191,.35); }
+  input::placeholder{ color:#9ca3af; }
 
-  .err { color: #b91c1c; font-size: 0.85rem; margin-top: 0.25rem; }
+  .err{ color:#b91c1c; font-size:.85rem; margin-top:.25rem; }
+
+  /* === Toast === */
+  #custom-toast{
+    position:fixed; bottom:20px; right:20px; min-width:280px;
+    padding:12px 18px; border-radius:8px; color:#fff;
+    box-shadow:0 4px 10px rgba(0,0,0,.2); z-index:10000;
+    transition:all .3s ease-out; transform:translateX(120%); opacity:0;
+    display:flex; align-items:center; gap:10px;
+  }
+  .show-toast{ transform:translateX(0)!important; opacity:1!important; }
 </style>
 {% endblock extra_head %}
 
@@ -65,10 +64,10 @@
     <h3 class="text-lg font-semibold mb-4 text-gray-800 tracking-wide">SIGN UP</h3>
     <hr class="border-gray-300 mb-6">
 
-    <!-- Placeholder error AJAX -->
+    <!-- Error box -->
     <div id="register-errors" class="text-red-600 text-sm text-left mb-2" style="display:none"></div>
 
-    <form method="post" class="space-y-5" id="register-form" enctype="multipart/form-data">
+    <form method="post" class="space-y-5" id="register-form" enctype="multipart/form-data" action="{% url 'register' %}">
       {% csrf_token %}
       {% if form.non_field_errors %}
         <div class="err text-left">{{ form.non_field_errors }}</div>
@@ -122,83 +121,93 @@
   </div>
 </div>
 
+<!-- Toast -->
+<div id="custom-toast" style="background-color:#333">
+  <span id="toast-icon"></span>
+  <span id="toast-message"></span>
+</div>
+
 <script>
-  // Styling input
+  // Utility: toast
+  function showToast(message,type='success'){
+    const t=document.getElementById('custom-toast');
+    const m=document.getElementById('toast-message');
+    const i=document.getElementById('toast-icon');
+    let color='',icon='';
+    if(type==='success'){ color='#10b981'; icon='✅'; }
+    else if(type==='error'){ color='#ef4444'; icon='❌'; }
+    else { color='#f97316'; icon='⚠️'; }
+    t.style.backgroundColor=color; m.textContent=message; i.textContent=icon;
+    t.classList.add('show-toast');
+    setTimeout(()=>t.classList.remove('show-toast'), 2500);
+  }
+
+  // Styling inputs & placeholders
   (function(){
-    const set = (id, ph) => {
-      const el = document.getElementById(id);
-      if (!el) return;
+    const set=(id,ph)=>{
+      const el=document.getElementById(id);
+      if(!el) return;
       el.classList.add('styled-input');
-      if (ph) el.placeholder = ph;
-      if (el.type !== 'password') el.autocomplete = 'off';
+      if(ph) el.placeholder=ph;
+      if(el.type!=='password') el.autocomplete='off';
     };
-    set('id_username', 'Enter your username');
-    set('id_email', 'Enter your email');
-    set('id_phone_number', 'Enter your phone number');
-    set('id_role_type');
-    set('id_password1', 'Enter your password');
-    set('id_password2', 'Enter your password');
+    set('id_username','Enter your username');
+    set('id_email','Enter your email');
+    set('id_phone_number','Enter your phone number');
+    set('id_role_type'); // select—no placeholder
+    set('id_password1','Enter your password');
+    set('id_password2','Re-type your password');
   })();
 
-  // Parallax background
+  // Parallax bg
   (function(){
-    const img = document.querySelector('.bg-img');
-    if (!img) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    const dirAttr = (img.getAttribute('data-parallax-direction') || 'with').toLowerCase();
-    const DIR = dirAttr === 'against' ? -1 : 1;
-    const factorAttr = parseFloat(img.getAttribute('data-parallax-factor'));
-    const PARALLAX_FACTOR = isNaN(factorAttr) ? 0.25 : factorAttr;
-    const SCALE = 1.08;
-
-    img.style.willChange = 'transform';
-    img.style.backfaceVisibility = 'hidden';
-    img.style.transform = `translate3d(0,0,0) scale(${SCALE})`;
-
-    let raf = null, lastY = window.scrollY || 0;
-    function update(){
-      raf = null;
-      const y = Math.max(0, Math.min(lastY, 3000)) * PARALLAX_FACTOR * DIR;
-      img.style.transform = `translate3d(0, ${y}px, 0) scale(${SCALE})`;
-    }
-    function onScroll(){
-      lastY = window.scrollY || 0;
-      if (!raf) raf = requestAnimationFrame(update);
-    }
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const img=document.querySelector('.bg-img');
+    if(!img) return;
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dirAttr=(img.getAttribute('data-parallax-direction')||'with').toLowerCase();
+    const DIR=dirAttr==='against'?-1:1;
+    const factorAttr=parseFloat(img.getAttribute('data-parallax-factor'));
+    const PARALLAX_FACTOR=isNaN(factorAttr)?0.25:factorAttr;
+    const SCALE=1.08;
+    img.style.willChange='transform';
+    img.style.backfaceVisibility='hidden';
+    img.style.transform=`translate3d(0,0,0) scale(${SCALE})`;
+    let raf=null,lastY=window.scrollY||0;
+    function update(){ raf=null; const y=Math.max(0,Math.min(lastY,3000))*PARALLAX_FACTOR*DIR;
+      img.style.transform=`translate3d(0,${y}px,0) scale(${SCALE})`; }
+    function onScroll(){ lastY=window.scrollY||0; if(!raf) raf=requestAnimationFrame(update); }
+    update(); window.addEventListener('scroll',onScroll,{passive:true});
   })();
 
-  // AJAX submit register
+  // AJAX submit register + toast
   (function(){
-    const form = document.getElementById('register-form');
-    const errorBox = document.getElementById('register-errors');
-    if (!form) return;
+    const form=document.getElementById('register-form');
+    const errorBox=document.getElementById('register-errors');
+    if(!form) return;
 
     form.addEventListener('submit', async function(e){
-      e.preventDefault(); 
-      const fd = new FormData(form);
-      try {
-        const resp = await fetch("", {
-          method: "POST",
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-CSRFToken": fd.get("csrfmiddlewaretoken"),
-          },
-          body: fd
+      e.preventDefault();
+      const fd=new FormData(form);
+      try{
+        const resp=await fetch(form.action,{
+          method:'POST',
+          headers:{ 'X-Requested-With':'XMLHttpRequest', 'X-CSRFToken':fd.get('csrfmiddlewaretoken') },
+          body:fd
         });
-        const data = await resp.json();
-        if (resp.ok && data.ok) {
-          window.location.href = data.redirect || "{% url 'login' %}";
+        const data=await resp.json();
+        if(resp.ok && data.ok){
+          showToast('Akun berhasil dibuat', 'success');
+          setTimeout(()=>{ window.location.href = data.redirect || "{% url 'login' %}"; }, 800);
           return;
         }
-        const messages = data.errors ? Object.values(data.errors).flat() : ["Registration failed."];
-        errorBox.style.display = 'block';
-        errorBox.innerHTML = messages.join('<br>');
-      } catch (err) {
-        errorBox.style.display = 'block';
-        errorBox.textContent = "Network error. Please try again.";
+        const messages = data.errors ? Object.values(data.errors).flat() : ['Registration failed.'];
+        errorBox.style.display='block';
+        errorBox.innerHTML=messages.join('<br>');
+        showToast(messages[0] || 'Registration failed.', 'error');
+      }catch(err){
+        errorBox.style.display='block';
+        errorBox.textContent='Network error. Please try again.';
+        showToast('Network error. Please try again.','error');
       }
     });
   })();

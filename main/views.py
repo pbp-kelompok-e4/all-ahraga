@@ -18,7 +18,8 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
-from django.db.models import Q, Avg
+from django.views.decorators.http import require_POST
+from .forms import ReviewForm
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -59,7 +60,38 @@ def index_view(request):
         return redirect(reverse(redirect_url_name))
     
     # Pengguna anonim (visitor) akan melihat landing page
-    return render(request, 'main/landing.html')
+    # === Data untuk landing ===
+    # Stats ringkas
+    stats = {
+        "total_venues": Venue.objects.count(),
+        "total_coaches": CoachProfile.objects.count(),
+        # anggap "booking terselesaikan" = transaksi CONFIRMED
+        "total_bookings": Booking.objects.filter(transaction__status='CONFIRMED').count(),
+    }
+
+    # Venue & Coach pilihan (acak) + select_related agar hemat query
+    featured_venues = (
+        Venue.objects.select_related('sport_category', 'location')
+        .order_by('?')[:6]
+    )
+    featured_coaches = (
+        CoachProfile.objects.select_related('user', 'main_sport_trained')
+        .order_by('?')[:6]
+    )
+
+    # Testimoni terbaru
+    testimonials = (
+        Review.objects.select_related('customer')
+        .order_by('-created_at')[:5]
+    )
+
+    context = {
+        "stats": stats,
+        "featured_venues": featured_venues,
+        "featured_coaches": featured_coaches,
+        "testimonials": testimonials,
+    }
+    return render(request, 'main/landing.html', context)
 
 def is_admin(user):
     return user.is_superuser or user.is_staff
@@ -70,57 +102,81 @@ def register_view(request):
 
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST, request.FILES)
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if form.is_valid():
             form.save()
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            if is_ajax:
                 return JsonResponse({'ok': True, 'redirect': reverse('login')})
             messages.success(request, "Registration successful! Please log in.")
             return redirect('login')
-        else:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
-            messages.error(request, "Please check your input.")
+
+        # jika form invalid
+        if is_ajax:
+            return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+        messages.error(request, "Please check your input.")
     else:
         form = CustomUserCreationForm()
     return render(request, 'main/register.html', {'form': form})
 
+
 def login_view(request):
     if request.user.is_authenticated:
-        return get_user_dashboard(request.user) # Tetap panggil ini
+        return get_user_dashboard(request.user)  # Tetap panggil ini
+
+    # Simpan next ke session saat GET agar tetap terbawa meski form AJAX tidak menyertakan hidden input
+    if request.method == 'GET':
+        nxt = request.GET.get('next')
+        if nxt:
+            request.session['post_login_next'] = nxt
 
     if request.method == 'POST':
+        from django.utils.http import url_has_allowed_host_and_scheme  # import lokal biar snippet ini self-contained
         form = AuthenticationForm(request, data=request.POST)
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if form.is_valid():
             user = form.get_user()
             login(request, user)
 
-            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-            
-            # --- PERBAIKAN LOGIKA REDIRECT ---
-            # Gunakan helper baru untuk menentukan URL
-            redirect_url_name = get_dashboard_redirect_url_name(user)
-            final_redirect_url = reverse(redirect_url_name)
-            # --- AKHIR PERBAIKAN ---
+            # Ambil next dari POST -> GET -> session (fallback)
+            next_from_post = request.POST.get('next')
+            next_from_get = request.GET.get('next')
+            next_from_session = request.session.pop('post_login_next', None)
+            candidate_next = next_from_post or next_from_get or next_from_session
+
+            # Validasi next agar hanya redirect ke host yang sama / skema aman
+            if candidate_next and url_has_allowed_host_and_scheme(candidate_next, allowed_hosts={request.get_host()}):
+                final_redirect_url = candidate_next
+            else:
+                # --- PERBAIKAN LOGIKA REDIRECT ---
+                # Gunakan helper baru untuk menentukan URL
+                redirect_url_name = get_dashboard_redirect_url_name(user)
+                final_redirect_url = reverse(redirect_url_name)
+                # --- AKHIR PERBAIKAN ---
 
             if is_ajax:
                 return JsonResponse({'ok': True, 'redirect': final_redirect_url})
-            else:
-                messages.info(request, f"Welcome back, {user.username}.")
-                return redirect(final_redirect_url)
+            messages.info(request, f"Welcome back, {user.username}.")
+            return redirect(final_redirect_url)
 
-        else: # Form tidak valid
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
-            messages.error(request, "Invalid username or password.")
+        # form tidak valid
+        if is_ajax:
+            return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+        messages.error(request, "Invalid username or password.")
     else:
         form = AuthenticationForm()
-    return render(request, 'main/login.html', {'form': form})
+
+    # Kirimkan next ke template juga (kalau mau dipakai hidden input di form)
+    next_ctx = request.GET.get('next') or request.session.get('post_login_next', '')
+    return render(request, 'main/login.html', {'form': form, 'next': next_ctx})
+
 
 @login_required(login_url='login')
 def logout_view(request):
     logout(request)
-    messages.info(request, "You have been logged out.")
-    return redirect('index') 
+    messages.info(request, "Logout Berhasil.")
+    return redirect('index')
 
 @login_required(login_url='login') # Ganti 'login' ke 'index' jika mau
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='index') # Arahkan non-customer ke index
@@ -1426,34 +1482,53 @@ def customer_payment(request, booking_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
-    bookings = Booking.objects.filter(customer=request.user).select_related(
-        'venue_schedule__venue', 
-        'transaction', 
-        'coach_schedule__coach__user'  
-    ).prefetch_related(
-        'equipment_details__equipment' 
-    ).order_by('-venue_schedule__date')
+    qs = (Booking.objects
+          .select_related(
+              'transaction',
+              'venue_schedule__venue__location',
+              'coach_schedule__coach__user'
+          )
+          .filter(customer=request.user)
+          .order_by('-id'))
 
-    query = request.GET.get('q', '').strip()
-    status = request.GET.get('status', '').strip()
-
-    if query:
-        bookings = bookings.filter(
-            Q(venue_schedule__venue__name__icontains=query) |
-            Q(id__icontains=query) 
-        )
-
+    # filter q & status kalau kamu sudah punya logika AJAX-nya
+    q = (request.GET.get('q') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+    if q:
+        qs = qs.filter(venue_schedule__venue__name__icontains=q) | qs.filter(id__icontains=q)
     if status:
-        bookings = bookings.filter(transaction__status=status)
+        qs = qs.filter(transaction__status=status)
 
-    context = {
-        'bookings': bookings
-    }
+    bookings = list(qs)
 
+    # Sematkan review user untuk setiap booking (venue & coach)
+    for b in bookings:
+        b.my_venue_review = None
+        b.my_coach_review = None
+
+        venue = b.venue_schedule.venue if b.venue_schedule else None
+        coach = b.coach_schedule.coach if b.coach_schedule else None
+
+        if venue:
+            b.my_venue_review = (Review.objects
+                                 .filter(customer=request.user,
+                                         target_venue=venue,
+                                         target_coach__isnull=True)
+                                 .order_by('-id')
+                                 .first())
+        if coach:
+            b.my_coach_review = (Review.objects
+                                 .filter(customer=request.user,
+                                         target_coach=coach,
+                                         target_venue__isnull=True)
+                                 .order_by('-id')
+                                 .first())
+
+    # Untuk permintaan AJAX (partial list) kamu bisa render template partial (booking_list.html)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return render(request, 'main/_booking_list.html', context)
-    
-    return render(request, 'main/booking_history.html', context)
+        return render(request, 'main/booking_list.html', {'bookings': bookings})
+
+    return render(request, 'main/booking_history.html', {'bookings': bookings})
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
@@ -1778,51 +1853,162 @@ def update_booking_data(request, booking_id):
         'schedules': schedules_data,
         'current_coach_id': current_coach_id,
         'current_coach_data': current_coach_data, 
-        'selected_equipment_map': selected_equipment_map, 
-        'available_equipments': available_equipments_data,
+        'selected_equipment_ids': selected_equipment_ids,
+        'equipments': equipments_data,
     })
 
-def filter_venues_ajax(request):
-    """AJAX endpoint untuk filter venues"""
-    search = request.GET.get('search', '').strip()
-    location_id = request.GET.get('location', '')
-    sport_id = request.GET.get('sport', '')
-    
-    venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
-    
-    # Apply filters
-    if search:
-        venues = venues.filter(
-            Q(name__icontains=search) | 
-            Q(description__icontains=search)
+# ======================================================
+# ================== REVIEWS (VENUE/COACH) =============
+# ======================================================
+@login_required(login_url='login')
+@user_passes_test(lambda u: hasattr(u, 'profile') and u.profile.is_customer, login_url='home')
+def submit_review(request, booking_id):
+    """
+    Submit review untuk venue ATAU coach dari sebuah booking (tanpa AJAX).
+    GET  : tampilkan form.
+    POST : simpan review.
+    """
+    booking = get_object_or_404(
+        Booking.objects.select_related('transaction', 'venue_schedule__venue', 'coach_schedule__coach'),
+        id=booking_id,
+        customer=request.user
+    )
+
+    # Hanya boleh review jika CONFIRMED
+    if not booking.transaction or booking.transaction.status != 'CONFIRMED':
+        messages.error(request, "Hanya booking dengan status CONFIRMED yang bisa diberi ulasan.")
+        return redirect('booking_history')
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            target  = (form.cleaned_data.get('target') or '').strip().lower()   # 'venue' | 'coach'
+            rating  = form.cleaned_data.get('rating')
+            comment = (form.cleaned_data.get('comment') or '').strip()
+
+            if target not in ('venue', 'coach'):
+                messages.error(request, "Target review tidak valid.")
+                return redirect('booking_history')
+
+            if target == 'venue':
+                target_venue = booking.venue_schedule.venue if booking.venue_schedule else None
+                if not target_venue:
+                    messages.error(request, "Booking ini tidak memiliki venue untuk direview.")
+                    return redirect('booking_history')
+
+                # Cegah duplikasi review untuk venue ini oleh user yang sama
+                if Review.objects.filter(
+                    customer=request.user, target_venue=target_venue, target_coach__isnull=True
+                ).exists():
+                    messages.warning(request, "Anda sudah memberi ulasan untuk venue ini.")
+                    return redirect('booking_history')
+
+                Review.objects.create(
+                    customer=request.user,
+                    target_venue=target_venue,
+                    rating=rating,
+                    comment=comment
+                )
+                messages.success(request, "Terima kasih! Ulasan venue berhasil disimpan.")
+                return redirect('booking_history')
+
+            # target == 'coach'
+            target_coach = booking.coach_schedule.coach if booking.coach_schedule else None
+            if not target_coach:
+                messages.error(request, "Booking ini tidak menggunakan coach, tidak bisa memberi ulasan coach.")
+                return redirect('booking_history')
+
+            if Review.objects.filter(
+                customer=request.user, target_coach=target_coach, target_venue__isnull=True
+            ).exists():
+                messages.warning(request, "Anda sudah memberi ulasan untuk coach ini.")
+                return redirect('booking_history')
+
+            Review.objects.create(
+                customer=request.user,
+                target_coach=target_coach,
+                rating=rating,
+                comment=comment
+            )
+            messages.success(request, "Terima kasih! Ulasan coach berhasil disimpan.")
+            return redirect('booking_history')
+
+        # Form tidak valid
+        messages.error(request, "Ada kesalahan dalam pengisian form.")
+        # (biarkan terus render ulang form di bawah)
+
+    else:
+        # GET: tentukan default target
+        q_target = (request.GET.get('target') or '').strip().lower()
+        if q_target not in ('venue', 'coach'):
+            if booking.venue_schedule and booking.venue_schedule.venue:
+                q_target = 'venue'
+            elif booking.coach_schedule and booking.coach_schedule.coach:
+                q_target = 'coach'
+            else:
+                q_target = 'venue'
+
+        form = ReviewForm(initial={'target': q_target})
+
+    context = {'form': form, 'booking': booking}
+    return render(request, 'main/submit_review.html', context)
+
+
+
+# --- edit_review ---
+from django.views.decorators.http import require_POST
+
+@login_required(login_url='login')
+@user_passes_test(lambda u: hasattr(u, 'profile') and u.profile.is_customer, login_url='home')
+@require_POST
+def edit_review(request, review_id):
+    """Simpan perubahan review (POST-only)."""
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    review = get_object_or_404(
+        Review.objects.select_related('customer'),
+        id=review_id,
+        customer=request.user
+    )
+
+    comment = (request.POST.get('comment') or '').strip()
+    rating_raw = request.POST.get('rating')
+
+    try:
+        rating = int(rating_raw)
+    except (TypeError, ValueError):
+        rating = 0
+
+    if not (1 <= rating <= 5):
+        msg = 'Rating harus 1 sampai 5 bintang.'
+        return JsonResponse({'success': False, 'message': msg}, status=400) if is_ajax else (
+            messages.error(request, msg) or redirect('booking_history')
         )
-    
-    if location_id:
-        venues = venues.filter(location_id=location_id)
-    
-    if sport_id:
-        venues = venues.filter(sport_category_id=sport_id)
-    
-    # Prepare JSON response
-    venues_data = []
-    for venue in venues:
-        # Calculate average rating
-        avg_rating = venue.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-        
-        venues_data.append({
-            'id': venue.id,
-            'name': venue.name,
-            'description': venue.description[:100] + '...' if len(venue.description) > 100 else venue.description,
-            'location': venue.location.name if venue.location else '-',
-            'sport': venue.sport_category.name,
-            'price': float(venue.price_per_hour),
-            'image': venue.main_image.url if venue.main_image else None,
-            'rating': round(avg_rating, 1),
-            'detail_url': f'/venue/{venue.id}/',
-        })
-    
-    return JsonResponse({
-        'success': True,
-        'venues': venues_data,
-        'count': len(venues_data)
-    })
+    if not comment:
+        msg = 'Komentar tidak boleh kosong.'
+        return JsonResponse({'success': False, 'message': msg}, status=400) if is_ajax else (
+            messages.error(request, msg) or redirect('booking_history')
+        )
+
+    review.rating = rating
+    review.comment = comment
+    review.save()
+
+    msg = 'Ulasan berhasil diperbarui.'
+    return JsonResponse({'success': True, 'message': msg}) if is_ajax else (
+        messages.success(request, msg) or redirect('booking_history')
+    )
+
+@login_required(login_url='login')
+@require_http_methods(["GET"])
+def edit_review_page(request, review_id):
+    review = get_object_or_404(Review, id=review_id, customer=request.user)
+    # Kirim ke form edit sederhana (rating & comment)
+    return render(request, 'main/review_edit_page.html', {'review': review})
+
+@login_required(login_url='login')
+@require_POST
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, id=review_id, customer=request.user)
+    review.delete()
+    messages.success(request, "Review berhasil dihapus.")
+    return redirect('booking_history')

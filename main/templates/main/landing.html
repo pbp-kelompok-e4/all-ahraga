@@ -3,104 +3,320 @@
 
 {% block title %}Selamat Datang di All-Ahraga{% endblock title %}
 
+{% block extra_head %}
+<style>
+  /* Toast */
+  #custom-toast{
+    position:fixed;bottom:20px;right:20px;min-width:280px;padding:12px 18px;border-radius:8px;
+    color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.2);z-index:10000;transition:all .3s ease-out;
+    transform:translateX(120%);opacity:0;display:flex;align-items:center;gap:10px;background:#333;
+  }
+  #custom-toast.show-toast{ transform:translateX(0); opacity:1; }
+</style>
+{% endblock extra_head %}
+
 {% block content %}
-<div class="text-center py-12 md:py-16">
-    <h1 class="text-4xl md:text-5xl font-bold text-slate-900">
-        Booking Lapangan & Coach Olahraga
-    </h1>
-    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-        Temukan lapangan terbaik dan pelatih profesional di area Anda. Cepat, mudah, dan terpercaya.
-    </p>
-    <div class="mt-8 flex justify-center gap-4">
-        <a href="{% url 'register' %}" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:bg-blue-700 transition-transform hover:-translate-y-0.5">
-            Daftar Sekarang
-        </a>
-        <a href="{% url 'login' %}" class="px-6 py-3 bg-white text-slate-700 font-medium rounded-lg shadow-lg border border-slate-300 hover:bg-slate-50 transition-transform hover:-translate-y-0.5">
-            Masuk
-        </a>
+
+<!-- Hero Carousel -->
+<div id="hero-carousel" class="relative w-full overflow-hidden">
+  <div class="flex transition-transform duration-700 ease-in-out" id="hero-slides">
+    <!-- Slide 1 -->
+    <div class="min-w-full flex flex-col items-center justify-center text-center py-20 bg-gradient-to-r from-blue-50 to-blue-100">
+      <h1 class="text-5xl font-extrabold text-slate-900">Booking Lapangan & Coach Olahraga</h1>
+      <p class="mt-4 text-lg text-gray-700 max-w-2xl">Temukan lapangan terbaik dan pelatih profesional di area Anda. Cepat, mudah, dan terpercaya.</p>
+      <div class="mt-6 flex justify-center gap-4">
+        <a href="{% url 'register' %}" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">Daftar Sekarang</a>
+        <a href="{% url 'login' %}" class="px-6 py-3 bg-white text-slate-700 font-semibold rounded-lg border hover:bg-slate-50 transition">Masuk</a>
+      </div>
     </div>
+    <!-- Slide 2 -->
+    <div class="min-w-full flex flex-col items-center justify-center text-center py-20 bg-gradient-to-r from-green-50 to-green-100">
+      <h1 class="text-5xl font-extrabold text-slate-900">Semua Kebutuhan Olahraga Dalam Satu Tempat</h1>
+      <p class="mt-4 text-lg text-gray-700 max-w-2xl">Cari, sewa, dan pesan jadwal hanya dalam beberapa klik.</p>
+    </div>
+    <!-- Slide 3 -->
+    <div class="min-w-full flex flex-col items-center justify-center text-center py-20 bg-gradient-to-r from-indigo-50 to-indigo-100">
+      <h1 class="text-5xl font-extrabold text-slate-900">Latih Skill Bersama Pelatih Profesional</h1>
+      <p class="mt-4 text-lg text-gray-700 max-w-2xl">Pilih pelatih berlisensi sesuai kebutuhan dan jadwal Anda.</p>
+    </div>
+  </div>
+  <!-- Carousel Controls -->
+  <button id="prev-slide" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow hover:bg-white">&#10094;</button>
+  <button id="next-slide" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow hover:bg-white">&#10095;</button>
 </div>
 
+<!-- Feature Trio -->
 <div class="py-16 border-t border-slate-200">
-    <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">
-        Semua Kebutuhan Olahraga Anda
-    </h2>
-    <div class="grid md:grid-cols-3 gap-8">
-        
-        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
-            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </div>
-            <h3 class="mt-5 text-xl font-semibold text-slate-900">Venue Terlengkap</h3>
-            <p class="mt-2 text-gray-600">
-                Cari dan filter ratusan lapangan futsal, badminton, basket, dan lainnya di sekitar Anda.
-            </p>
-        </div>
-        
-        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
-            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-            </div>
-            <h3 class="mt-5 text-xl font-semibold text-slate-900">Pelatih Profesional</h3>
-            <p class="mt-2 text-gray-600">
-                Tingkatkan skill Anda dengan menyewa pelatih berlisensi sesuai dengan jadwal lapangan Anda.
-            </p>
-        </div>
-        
-        <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
-            <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </div>
-            <h3 class="mt-5 text-xl font-semibold text-slate-900">Booking Instan</h3>
-            <p class="mt-2 text-gray-600">
-                Pesan jadwal, pilih coach, dan bayar di satu tempat. Cepat, aman, dan tanpa repot.
-            </p>
-        </div>
+  <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">Semua Kebutuhan Olahraga Anda</h2>
+  <div class="grid md:grid-cols-3 gap-8">
+    <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+      <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+      <h3 class="mt-5 text-xl font-semibold text-slate-900">Venue Terlengkap</h3>
+      <p class="mt-2 text-gray-600">Cari dan filter ratusan lapangan futsal, badminton, basket, dan lainnya di sekitar Anda.</p>
     </div>
+    <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+      <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      </div>
+      <h3 class="mt-5 text-xl font-semibold text-slate-900">Pelatih Profesional</h3>
+      <p class="mt-2 text-gray-600">Tingkatkan skill dengan pelatih berlisensi sesuai jadwal Anda.</p>
+    </div>
+    <div class="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200">
+      <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <h3 class="mt-5 text-xl font-semibold text-slate-900">Booking Instan</h3>
+      <p class="mt-2 text-gray-600">Pesan jadwal, pilih coach, dan bayar di satu tempat. Cepat dan aman.</p>
+    </div>
+  </div>
 </div>
 
+<!-- Stats Section (Highlights) -->
+<div class="py-16 border-t border-slate-200 bg-slate-50">
+  <div class="text-center mb-10">
+    <h2 class="text-3xl font-bold text-slate-800">Highlights</h2>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center max-w-4xl mx-auto">
+    <div>
+      <p class="text-4xl font-extrabold text-blue-600">{{ stats.total_venues|default:"0" }}</p>
+      <p class="text-slate-600 mt-2">Lapangan Terdaftar</p>
+    </div>
+    <div>
+      <p class="text-4xl font-extrabold text-green-600">{{ stats.total_coaches|default:"0" }}</p>
+      <p class="text-slate-600 mt-2">Pelatih Aktif</p>
+    </div>
+    <div>
+      <p class="text-4xl font-extrabold text-indigo-600">{{ stats.total_bookings|default:"0" }}</p>
+      <p class="text-slate-600 mt-2">Booking Terselesaikan</p>
+    </div>
+  </div>
+</div>
+
+<!-- Venues -->
 <div class="py-16 border-t border-slate-200">
-    <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">
-        Cara Memulai
-    </h2>
-    <div class="max-w-3xl mx-auto grid md:grid-cols-3 gap-8 text-center">
-        <div>
-            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">1</div>
-            <h3 class="mt-4 text-xl font-semibold">Daftar Akun</h3>
-            <p class="mt-2 text-gray-600">Buat akun Anda sebagai customer, pemilik venue, atau pelatih.</p>
-        </div>
-        <div>
-            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">2</div>
-            <h3 class="mt-4 text-xl font-semibold">Cari & Pilih</h3>
-            <p class="mt-2 text-gray-600">Temukan jadwal lapangan atau coach yang Anda inginkan.</p>
-        </div>
-        <div>
-            <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">3</div>
-            <h3 class="mt-4 text-xl font-semibold">Booking & Main</h3>
-            <p class="mt-2 text-gray-600">Konfirmasi booking Anda dan bersiaplah berolahraga!</p>
-        </div>
-    </div>
-</div>
+  <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">Venue Pilihan</h2>
 
-<div class="py-12 mt-12 border-t border-slate-200">
-    <div class="bg-slate-800 text-white rounded-xl p-12 text-center shadow-2xl">
-        <h2 class="text-3xl font-bold">Siap Berolahraga?</h2>
-        <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">
-            Bergabunglah dengan ribuan pengguna lain dan temukan pengalaman booking olahraga terbaik hari ini.
-        </p>
-        <div class="mt-8">
-            <a href="{% url 'register' %}" class="px-8 py-3 bg-white text-slate-900 font-bold rounded-lg shadow-lg hover:bg-slate-200 transition-transform hover:scale-105 text-lg">
-                Mulai Sekarang
+  <div id="venue-carousel" class="relative max-w-6xl mx-auto overflow-hidden">
+    <div id="venue-track" class="flex gap-6 transition-transform duration-700 ease-in-out">
+      {% for venue in featured_venues %}
+      <div class="flex-none w-full sm:w-1/2 md:w-1/3">
+        <div class="h-full bg-white rounded-xl shadow-lg p-6 text-center hover:scale-[1.02] transition">
+          <h3 class="text-xl font-semibold text-slate-900">{{ venue.name }}</h3>
+          <p class="text-gray-600 mt-2">{{ venue.sport_category.name }} • {{ venue.location.name }}</p>
+
+          {% if user.is_authenticated and user.profile and user.profile.is_customer %}
+            <a href="{% url 'create_booking' venue.id %}"
+               class="mt-4 inline-block px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              Book Now
             </a>
+          {% else %}
+            <a href="{% url 'login' %}?next={% url 'create_booking' venue.id %}"
+               class="mt-4 inline-block px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              Book Now
+            </a>
+          {% endif %}
         </div>
+      </div>
+      {% empty %}
+      <div class="flex-none w-full"><p class="text-center text-gray-500">Belum ada venue tersedia.</p></div>
+      {% endfor %}
     </div>
+    <button id="venue-prev" class="hidden md:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow p-2 rounded-full">&#10094;</button>
+    <button id="venue-next" class="hidden md:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow p-2 rounded-full">&#10095;</button>
+  </div>
 </div>
+
+<!-- Coaches -->
+<div class="py-16 bg-slate-50 border-t border-slate-200">
+  <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">Pelatih Profesional</h2>
+
+  <div id="coach-carousel" class="relative max-w-6xl mx-auto overflow-hidden">
+    <div id="coach-track" class="flex gap-6 transition-transform duration-700 ease-in-out">
+      {% for coach in featured_coaches %}
+      <div class="flex-none w-full sm:w-1/2 md:w-1/3">
+        <div class="h-full bg-white rounded-xl shadow-lg p-6 text-center hover:scale-[1.02] transition">
+          <div class="w-24 h-24 rounded-full mx-auto overflow-hidden">
+            {% if coach.profile_picture %}
+              <img src="{{ coach.profile_picture.url }}" class="w-full h-full object-cover" alt="{{ coach.user.username }}">
+            {% else %}
+              <img src="{% static 'img/default-avatar.png' %}" class="w-full h-full object-cover" alt="Coach">
+            {% endif %}
+          </div>
+          <h3 class="mt-4 text-xl font-semibold text-slate-900">{{ coach.user.get_full_name|default:coach.user.username }}</h3>
+          <p class="text-gray-600 mt-2">{{ coach.main_sport_trained.name }}</p>
+        </div>
+      </div>
+      {% empty %}
+      <div class="flex-none w-full"><p class="text-center text-gray-500">Belum ada pelatih terdaftar.</p></div>
+      {% endfor %}
+    </div>
+    <button id="coach-prev" class="hidden md:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow p-2 rounded-full">&#10094;</button>
+    <button id="coach-next" class="hidden md:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow p-2 rounded-full">&#10095;</button>
+  </div>
+</div>
+
+<!-- Testimonials Carousel -->
+<div class="py-16 border-t border-slate-200">
+  <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">Apa Kata Mereka</h2>
+  <div class="relative max-w-4xl mx-auto overflow-hidden">
+    <div id="testimonial-slides" class="flex transition-transform duration-700 ease-in-out">
+      {% for review in testimonials %}
+      <div class="min-w-full text-center bg-white p-8 rounded-xl shadow-md">
+        <p class="italic text-gray-600 mb-4">"{{ review.comment }}"</p>
+        <h4 class="font-semibold text-slate-900">{{ review.customer.username }}</h4>
+        <p class="text-yellow-500 mt-1">⭐ {{ review.rating }}/5</p>
+      </div>
+      {% empty %}
+      <div class="min-w-full text-center bg-white p-8 rounded-xl shadow-md">
+        <p class="text-gray-500 italic">Belum ada testimoni untuk ditampilkan.</p>
+      </div>
+      {% endfor %}
+    </div>
+    <button id="prev-testimonial" class="absolute left-0 top-1/2 -translate-y-1/2 bg-slate-100 p-2 rounded-full shadow">&#10094;</button>
+    <button id="next-testimonial" class="absolute right-0 top-1/2 -translate-y-1/2 bg-slate-100 p-2 rounded-full shadow">&#10095;</button>
+  </div>
+</div>
+
+<!-- Cara Memulai -->
+<div class="py-16 border-t border-slate-200">
+  <h2 class="text-3xl font-bold text-center text-slate-800 mb-12">Cara Memulai</h2>
+  <div class="max-w-3xl mx-auto grid md:grid-cols-3 gap-8 text-center">
+    <div>
+      <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">1</div>
+      <h3 class="mt-4 text-xl font-semibold">Daftar Akun</h3>
+      <p class="mt-2 text-gray-600">Buat akun sebagai customer, pemilik venue, atau pelatih.</p>
+    </div>
+    <div>
+      <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">2</div>
+      <h3 class="mt-4 text-xl font-semibold">Cari & Pilih</h3>
+      <p class="mt-2 text-gray-600">Temukan jadwal lapangan atau coach yang Anda inginkan.</p>
+    </div>
+    <div>
+      <div class="w-16 h-16 bg-slate-800 text-white text-2xl font-bold rounded-full flex items-center justify-center mx-auto shadow-lg">3</div>
+      <h3 class="mt-4 text-xl font-semibold">Booking & Main</h3>
+      <p class="mt-2 text-gray-600">Konfirmasi booking Anda dan bersiaplah berolahraga!</p>
+    </div>
+  </div>
+</div>
+
+<!-- CTA Akhir -->
+<div class="py-12 mt-12 border-t border-slate-200">
+  <div class="bg-slate-800 text-white rounded-xl p-12 text-center shadow-2xl">
+    <h2 class="text-3xl font-bold">Siap Berolahraga?</h2>
+    <p class="mt-4 text-lg text-slate-300 max-w-xl mx-auto">
+      Bergabunglah dengan ribuan pengguna lain dan temukan pengalaman booking olahraga terbaik hari ini.
+    </p>
+    <div class="mt-8">
+      <a href="{% url 'register' %}" class="px-8 py-3 bg-white text-slate-900 font-bold rounded-lg shadow-lg hover:bg-slate-200 transition-transform hover:scale-105 text-lg">
+        Mulai Sekarang
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="custom-toast"><span id="toast-icon"></span><span id="toast-message"></span></div>
+
+<!-- Scripts -->
+<script>
+// ===== Hero & Testimonials Auto Slide =====
+const heroSlides = document.getElementById("hero-slides");
+const testimonials = document.getElementById("testimonial-slides");
+let heroIndex = 0, testIndex = 0;
+
+function nextHero(){ heroIndex = (heroIndex + 1) % heroSlides.children.length; heroSlides.style.transform = `translateX(-${heroIndex * 100}%)`; }
+function prevHero(){ heroIndex = (heroIndex - 1 + heroSlides.children.length) % heroSlides.children.length; heroSlides.style.transform = `translateX(-${heroIndex * 100}%)`; }
+function nextTestimonial(){ testIndex = (testIndex + 1) % testimonials.children.length; testimonials.style.transform = `translateX(-${testIndex * 100}%)`; }
+function prevTestimonial(){ testIndex = (testIndex - 1 + testimonials.children.length) % testimonials.children.length; testimonials.style.transform = `translateX(-${testIndex * 100}%)`; }
+document.getElementById("next-slide").onclick = nextHero;
+document.getElementById("prev-slide").onclick = prevHero;
+document.getElementById("next-testimonial").onclick = nextTestimonial;
+document.getElementById("prev-testimonial").onclick = prevTestimonial;
+setInterval(nextHero, 5000);
+setInterval(nextTestimonial, 7000);
+
+// ===== Generic Page-wise Carousel (Venues & Coaches) =====
+function setupCarousel({wrapperId, trackId, prevId, nextId, intervalMs = 5000}) {
+  const wrapper = document.getElementById(wrapperId);
+  const track   = document.getElementById(trackId);
+  const prevBtn = document.getElementById(prevId);
+  const nextBtn = document.getElementById(nextId);
+  if (!wrapper || !track) return;
+
+  let pageIndex = 0, maxIndex = 0, autoTimer = null;
+
+  const recalc = () => {
+    const viewport = wrapper.clientWidth;
+    const totalWidth = track.scrollWidth;
+    maxIndex = Math.max(0, Math.ceil(totalWidth / viewport) - 1);
+
+    pageIndex = Math.min(pageIndex, maxIndex);
+    track.style.transform = `translateX(-${pageIndex * viewport}px)`;
+
+    const showControls = maxIndex > 0;
+    [prevBtn, nextBtn].forEach(btn => { if (btn) btn.style.display = showControls ? 'flex' : 'none'; });
+    if (showControls) startAuto(); else stopAuto();
+  };
+
+  const goTo = (i) => {
+    if (maxIndex === 0) return;
+    const viewport = wrapper.clientWidth;
+    pageIndex = (i + (maxIndex + 1)) % (maxIndex + 1);
+    track.style.transform = `translateX(-${pageIndex * viewport}px)`;
+  };
+
+  const next = () => goTo(pageIndex + 1);
+  const prev = () => goTo(pageIndex - 1);
+
+  const startAuto = () => { stopAuto(); autoTimer = setInterval(next, intervalMs); };
+  const stopAuto  = () => { if (autoTimer) clearInterval(autoTimer); autoTimer = null; };
+
+  if (nextBtn) nextBtn.addEventListener('click', () => { next(); startAuto(); });
+  if (prevBtn) prevBtn.addEventListener('click', () => { prev(); startAuto(); });
+
+  wrapper.addEventListener('mouseenter', stopAuto);
+  wrapper.addEventListener('mouseleave', startAuto);
+
+  window.addEventListener('resize', () => window.requestAnimationFrame(recalc));
+  recalc();
+}
+
+setupCarousel({ wrapperId: 'venue-carousel', trackId: 'venue-track', prevId: 'venue-prev', nextId: 'venue-next', intervalMs: 5500 });
+setupCarousel({ wrapperId: 'coach-carousel', trackId: 'coach-track', prevId: 'coach-prev', nextId: 'coach-next', intervalMs: 6000 });
+
+// ===== Toast (baca Django messages, termasuk toast logout) =====
+function showToast(message,type='success'){
+  const t=document.getElementById('custom-toast');
+  const m=document.getElementById('toast-message');
+  const i=document.getElementById('toast-icon');
+  let color='',icon='';
+  if(type==='success'){color='#10b981';icon='✅';}
+  else if(type==='error'){color='#ef4444';icon='❌';}
+  else {color='#f97316';icon='⚠️';}
+  t.style.backgroundColor=color;m.textContent=message;i.textContent=icon;
+  t.classList.add('show-toast');
+  setTimeout(()=>t.classList.remove('show-toast'),2500);
+}
+
+(function(){ const baseMsg=document.querySelector('main .mb-8'); if(baseMsg) baseMsg.remove(); })();
+
+// Render semua messages -> toast
+const typeMap = {success:'success', info:'success', warning:'warning', error:'error'};
+const msgs = [
+  {% for message in messages %}
+    {text: "{{ message|escapejs }}", type: "{{ message.tags|default:'info' }}"},
+  {% endfor %}
+];
+msgs.forEach(({text,type},idx)=>{ setTimeout(()=>showToast(text, typeMap[type]||'success'), idx*700); });
+</script>
 
 {% endblock content %}
