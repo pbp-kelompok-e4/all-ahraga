@@ -1,0 +1,102 @@
+{% load humanize %}
+
+<div id="venue-grid-inner">
+    {% for venue in venues %}
+    <div class="venue-card" onclick="window.location.href='{% url 'create_booking' venue.id %}'">
+        <div class="venue-image-wrapper">
+            {% if venue.main_image %}
+            <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="venue-image">
+            {% else %}
+            <div class="venue-image" style="display: flex; align-items: center; justify-center; font-size: 60px;">
+                🏟️
+            </div>
+            {% endif %}
+            <div class="venue-rating">
+                ⭐ {% widthratio venue.reviews.all|length 1 1 %}
+            </div>
+        </div>
+        
+        <div class="venue-content">
+            <div class="venue-header">
+                <h3 class="venue-title">{{ venue.name }}</h3>
+                <span class="venue-location">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ venue.location.name|default:"-" }}
+                </span>
+            </div>
+
+            <div class="venue-meta">
+                <span class="venue-badge">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
+                    </svg>
+                    {{ venue.sport_category.name }}
+                </span>
+            </div>
+
+            <p class="venue-description">
+                {{ venue.description|truncatewords:15 }}
+            </p>
+
+            <div class="venue-footer">
+                <div class="venue-price">
+                    Rp {{ venue.price_per_hour|floatformat:0|intcomma }}
+                    <small>/jam</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 120px; height: 120px; color: #d1d5db; margin: 0 auto 1.5rem;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h3 style="color: #1f2937; font-size: 1.5rem; margin-bottom: 0.5rem;">Tidak Ditemukan</h3>
+        <p style="color: #6b7280;">Tidak ada lapangan yang sesuai dengan pencarian Anda</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if venues.has_other_pages %}
+<nav id="pagination-links" class="mt-12 flex justify-center" role="navigation" aria-label="Pagination" style="grid-column: 1 / -1;">
+  <div class="inline-flex items-center gap-3 bg-white px-6 py-4 rounded-xl shadow-xl border border-gray-200">
+    {% if venues.has_previous %}
+      <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" data-page="{{ venues.previous_page_number }}" aria-label="Previous page">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Sebelumnya
+      </button>
+    {% else %}
+      <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Sebelumnya
+      </span>
+    {% endif %}
+
+    <span class="px-5 py-2.5 bg-teal-50 text-teal-800 rounded-lg font-bold border border-teal-200 text-sm">
+      Halaman {{ venues.number }} dari {{ venues.paginator.num_pages }}
+    </span>
+
+    {% if venues.has_next %}
+      <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" data-page="{{ venues.next_page_number }}" aria-label="Next page">
+        Berikutnya
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    {% else %}
+      <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+        Berikutnya
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

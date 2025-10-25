@@ -1791,10 +1791,11 @@ def update_booking_data(request, booking_id):
     })
 
 def filter_venues_ajax(request):
-    """AJAX endpoint untuk filter venues"""
+    """AJAX endpoint untuk filter venues dengan pagination"""
     search = request.GET.get('search', '').strip()
     location_id = request.GET.get('location', '')
     sport_id = request.GET.get('sport', '')
+    page = request.GET.get('page', 1)
     
     venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
     
@@ -1811,26 +1812,38 @@ def filter_venues_ajax(request):
     if sport_id:
         venues = venues.filter(sport_category_id=sport_id)
     
+    # Pagination dengan 9 item per halaman
+    paginator = Paginator(venues, 6)
+    try:
+        venues_page = paginator.page(page)
+    except PageNotAnInteger:
+        venues_page = paginator.page(1)
+    except EmptyPage:
+        venues_page = paginator.page(paginator.num_pages)
+    
     # Prepare JSON response
     venues_data = []
-    for venue in venues:
-        # Calculate average rating
+    for venue in venues_page:
         avg_rating = venue.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
         
         venues_data.append({
             'id': venue.id,
             'name': venue.name,
-            'description': venue.description[:100] + '...' if len(venue.description) > 100 else venue.description,
+            'description': venue.description[:100] + '...' if venue.description and len(venue.description) > 100 else (venue.description or 'Tidak ada deskripsi'),
             'location': venue.location.name if venue.location else '-',
             'sport': venue.sport_category.name,
             'price': float(venue.price_per_hour),
             'image': venue.main_image.url if venue.main_image else None,
             'rating': round(avg_rating, 1),
-            'detail_url': f'/venue/{venue.id}/',
         })
     
+    # Return dengan data pagination yang lengkap
     return JsonResponse({
         'success': True,
         'venues': venues_data,
-        'count': len(venues_data)
+        'has_next': venues_page.has_next(),
+        'has_previous': venues_page.has_previous(),
+        'current_page': venues_page.number,
+        'total_pages': paginator.num_pages,
+        'total_count': paginator.count,
     })
