@@ -1,22 +1,206 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Daftar Akun{% endblock title %}
+{% block title %}Sign Up{% endblock title %}
+
+{% block extra_head %}
+<style>
+  /* === Background Layers === */
+  .bg-img {
+    position: fixed;
+    inset: 0;
+    background-image: url("{% static 'image/bg-court.jpg' %}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(8px);
+    will-change: transform;
+    z-index: 0;
+  }
+  .bg-tint {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  header, nav, footer { position: relative; z-index: 5; }
+
+  .page-center {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 80vh; gap: 1rem; position: relative; z-index: 2; padding: 2rem;
+  }
+
+  .register-card {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+
+  .btn-register { background-color: #90b4aa; }
+  .btn-register:hover { background-color: #7ea59a; }
+
+  .styled-input {
+    width: 100%; padding: 0.6rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;
+    background: rgba(229,231,235,0.7); outline: none;
+  }
+  .styled-input:focus { box-shadow: 0 0 0 2px rgba(45,212,191,0.35); }
+  input::placeholder { color: #9ca3af; }
+
+  .err { color: #b91c1c; font-size: 0.85rem; margin-top: 0.25rem; }
+</style>
+{% endblock extra_head %}
 
 {% block content %}
-<div style="max-width: 500px; margin: 50px auto; padding: 25px; border: 1px solid #ddd; background-color: white; border-radius: 8px;">
-    <h2 style="text-align: center;">Daftar Akun</h2>
+<!-- Background layers -->
+<div class="bg-img" data-parallax-direction="against" data-parallax-factor="0.25"></div>
+<div class="bg-tint"></div>
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        
-        <button type="submit" style="width: 100%; padding: 10px; background-color: #28a848; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Daftar
-        </button>
+<div class="page-center">
+  <h1 class="text-4xl font-semibold text-white drop-shadow-md">Create Your Account</h1>
+
+  <div class="register-card w-full max-w-md px-10 py-8 border border-gray-200 text-center">
+    <h3 class="text-lg font-semibold mb-4 text-gray-800 tracking-wide">SIGN UP</h3>
+    <hr class="border-gray-300 mb-6">
+
+    <!-- Placeholder error AJAX -->
+    <div id="register-errors" class="text-red-600 text-sm text-left mb-2" style="display:none"></div>
+
+    <form method="post" class="space-y-5" id="register-form" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="err text-left">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div>
+        <label for="id_username" class="block text-sm font-medium text-gray-700 text-left mb-1">username</label>
+        {{ form.username }}
+        {% for e in form.username.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <div>
+        <label for="id_email" class="block text-sm font-medium text-gray-700 text-left mb-1">email</label>
+        {{ form.email }}
+        {% for e in form.email.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <div>
+        <label for="id_phone_number" class="block text-sm font-medium text-gray-700 text-left mb-1">phone number</label>
+        {{ form.phone_number }}
+        {% for e in form.phone_number.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <div>
+        <label for="id_role_type" class="block text-sm font-medium text-gray-700 text-left mb-1">sign up as</label>
+        {{ form.role_type }}
+        {% for e in form.role_type.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <div>
+        <label for="id_password1" class="block text-sm font-medium text-gray-700 text-left mb-1">password</label>
+        {{ form.password1 }}
+        {% for e in form.password1.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <div>
+        <label for="id_password2" class="block text-sm font-medium text-gray-700 text-left mb-1">confirm password</label>
+        {{ form.password2 }}
+        {% for e in form.password2.errors %}<div class="err">{{ e }}</div>{% endfor %}
+      </div>
+
+      <button type="submit" class="btn-register w-full py-2 text-white rounded-full font-medium transition shadow">
+        Sign Up
+      </button>
     </form>
-    
-    <p style="text-align: center; margin-top: 15px;">
-        Sudah punya akun? <a href="{% url 'login' %}">Masuk di sini</a>
+
+    <p class="text-sm text-gray-700 mt-6">
+      Already have an account?
+      <a href="{% url 'login' %}" class="text-teal-600 hover:underline font-medium">Log in</a>
     </p>
+  </div>
 </div>
+
+<script>
+  // Styling input
+  (function(){
+    const set = (id, ph) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('styled-input');
+      if (ph) el.placeholder = ph;
+      if (el.type !== 'password') el.autocomplete = 'off';
+    };
+    set('id_username', 'Enter your username');
+    set('id_email', 'Enter your email');
+    set('id_phone_number', 'Enter your phone number');
+    set('id_role_type');
+    set('id_password1', 'Enter your password');
+    set('id_password2', 'Enter your password');
+  })();
+
+  // Parallax background
+  (function(){
+    const img = document.querySelector('.bg-img');
+    if (!img) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const dirAttr = (img.getAttribute('data-parallax-direction') || 'with').toLowerCase();
+    const DIR = dirAttr === 'against' ? -1 : 1;
+    const factorAttr = parseFloat(img.getAttribute('data-parallax-factor'));
+    const PARALLAX_FACTOR = isNaN(factorAttr) ? 0.25 : factorAttr;
+    const SCALE = 1.08;
+
+    img.style.willChange = 'transform';
+    img.style.backfaceVisibility = 'hidden';
+    img.style.transform = `translate3d(0,0,0) scale(${SCALE})`;
+
+    let raf = null, lastY = window.scrollY || 0;
+    function update(){
+      raf = null;
+      const y = Math.max(0, Math.min(lastY, 3000)) * PARALLAX_FACTOR * DIR;
+      img.style.transform = `translate3d(0, ${y}px, 0) scale(${SCALE})`;
+    }
+    function onScroll(){
+      lastY = window.scrollY || 0;
+      if (!raf) raf = requestAnimationFrame(update);
+    }
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+
+  // AJAX submit register
+  (function(){
+    const form = document.getElementById('register-form');
+    const errorBox = document.getElementById('register-errors');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e){
+      e.preventDefault(); 
+      const fd = new FormData(form);
+      try {
+        const resp = await fetch("", {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": fd.get("csrfmiddlewaretoken"),
+          },
+          body: fd
+        });
+        const data = await resp.json();
+        if (resp.ok && data.ok) {
+          window.location.href = data.redirect || "{% url 'login' %}";
+          return;
+        }
+        const messages = data.errors ? Object.values(data.errors).flat() : ["Registration failed."];
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = messages.join('<br>');
+      } catch (err) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = "Network error. Please try again.";
+      }
+    });
+  })();
+</script>
 {% endblock content %}

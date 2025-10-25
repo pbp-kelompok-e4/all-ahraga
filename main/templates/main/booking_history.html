@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Bookingan Saya{% endblock title %} {# Judul diubah agar lebih spesifik #}
+
+{% block extra_head %}
+{# Tambahkan style jika perlu #}
+<style>
+    /* Animasi (jika diperlukan) */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    
+    /* State loading */
+    #bookingListWrapper.loading { opacity: 0.5; transition: opacity 0.3s; pointer-events: none; } 
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+{# ✅ Class background gradient DIHAPUS dari div ini #}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto">
+        
+        <div class="relative overflow-hidden bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-700 rounded-2xl shadow-xl mb-8 transform hover:scale-[1.01] transition-transform duration-300 animate-fade-in">
+            <div class="absolute inset-0 bg-black opacity-10"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
+            <div class="relative p-8">
+                <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0 p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl shadow-lg">
+                        {# Ikon disesuaikan untuk 'History' #}
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-grow">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2">Riwayat Bookingan Saya</h1>
+                        <p class="text-teal-50 text-base sm:text-lg">Lihat semua booking yang pernah Anda buat.</p> {# Deskripsi disesuaikan #}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100 animate-fade-in" style="animation-delay: 0.1s;"> {# Tambah animasi delay #}
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-grow relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" 
+                           id="searchBooking" 
+                           placeholder="Cari nama venue atau ID booking..."
+                           class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-gray-700 placeholder-gray-400">
+                </div>
+                
+                <div class="relative sm:w-56 flex-shrink-0"> {# Tambah flex-shrink-0 #}
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                    </div>
+                    <select id="statusFilter" class="w-full appearance-none pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-gray-700 bg-white cursor-pointer">
+                        <option value="">Semua Status</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="PENDING">Pending</option>
+                        {# Tambahkan status lain jika ada, misal 'COMPLETED', 'CANCELLED' #}
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bookingListWrapper">
+            {# Konten awal dimuat oleh include #}
+            {% include "main/_booking_list.html" %} 
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchBooking');
+    const statusFilter = document.getElementById('statusFilter');
+    const bookingListWrapper = document.getElementById('bookingListWrapper');
+    
+    // Pastikan URL mengarah ke view yang benar untuk history (jika berbeda dari my_bookings)
+    const dataUrl = "{% url 'booking_history' %}"; 
+
+    let debounceTimer;
+    function debounce(func, delay) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
+    async function fetchBookings() {
+        const searchTerm = searchInput.value;
+        const statusTerm = statusFilter.value;
+
+        // Buat URL dengan parameter filter
+        const url = new URL(dataUrl, window.location.origin);
+        if (searchTerm) url.searchParams.append('q', searchTerm);
+        if (statusTerm) url.searchParams.append('status', statusTerm);
+
+        try {
+            // Tampilkan state loading yang lebih konsisten
+            bookingListWrapper.classList.add('loading'); // Tambah class loading
+            bookingListWrapper.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-16 text-center">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-teal-600 mb-4"></i>
+                    <p class="text-gray-500 font-medium">Memuat riwayat booking...</p>
+                </div>`; 
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest', // Penting untuk request.is_ajax
+                    'Accept': 'text/html' // Minta HTML partial
+                }
+            });
+
+            if (!response.ok) { throw new Error(`HTTP error ${response.status}`); }
+
+            const html = await response.text(); // Ambil HTML partial
+            bookingListWrapper.innerHTML = html; // Ganti konten
+            
+            // Update URL browser (opsional)
+             window.history.replaceState({}, '', url.toString());
+
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            // Tampilkan pesan error yang lebih konsisten
+            bookingListWrapper.innerHTML = `
+                <div class="text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200">
+                    <p class="font-semibold mb-2"><i class="fa-solid fa-circle-exclamation mr-2"></i>Oops! Gagal memuat data.</p>
+                    <p class="text-sm">Silakan coba refresh halaman atau periksa koneksi Anda.</p>
+                    <button onclick="fetchBookings()" class="mt-4 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm shadow">
+                        Coba Lagi
+                    </button>
+                </div>`;
+        } finally {
+            bookingListWrapper.classList.remove('loading'); // Hapus class loading
+        }
+    }
+    
+    // Pasang listener ke input dan select
+    if (searchInput) searchInput.addEventListener('input', debounce(fetchBookings, 350)); // Delay 350ms
+    if (statusFilter) statusFilter.addEventListener('change', fetchBookings); // Langsung fetch saat select berubah
+
+    // --- Jika ada fungsi JS lain dari file asli, tambahkan di sini ---
+
+});  
+</script>
+{% endblock extra_js %}

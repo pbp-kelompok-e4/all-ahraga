@@ -45,6 +45,13 @@ class Venue(models.Model):
     sport_category = models.ForeignKey(SportCategory, on_delete=models.PROTECT, 
                                        related_name='venues_by_sport')
     
+    main_image = models.ImageField(
+        upload_to='venue_photos/', # Disimpan di media/venue_photos/
+        null=True, 
+        blank=True,
+        verbose_name="Foto Utama Lapangan"
+    )
+
     PAYMENT_CHOICES = [
         ('CASH', 'Bayar di Tempat'),
         ('TRANSFER', 'Transfer Manual'),
@@ -85,35 +92,42 @@ class Equipment(models.Model):
 # --- COACH ---
 
 class CoachProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, 
-                                related_name='coach_profile_data')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='coach_profile_data')
     
     age = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(18)])
     experience_desc = models.TextField(blank=True)
-    rate_per_hour = models.DecimalField(max_digits=10, decimal_places=0, 
-                                        validators=[MinValueValidator(0)])
+    rate_per_hour = models.DecimalField(max_digits=10, decimal_places=0, validators=[MinValueValidator(0)])
     
-    main_sport_trained = models.ForeignKey(SportCategory, on_delete=models.PROTECT, 
-                                           related_name='coaches_by_sport') 
+    profile_picture = models.ImageField(
+        upload_to='coach_photos/',
+        null=True, blank=True,
+        verbose_name="Foto Profil"
+    )
     
-    service_areas = models.ManyToManyField(LocationArea, related_name='coaches_serving')
+    # kalau kategori olahraga dihapus → tolak (biar tidak merusak referensi)
+    main_sport_trained = models.ForeignKey(
+        'SportCategory', on_delete=models.PROTECT, related_name='coaches_by_sport'
+    )
+    
+    service_areas = models.ManyToManyField('LocationArea', related_name='coaches_serving')
     is_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
     
 class CoachSchedule(models.Model):
-    """Jadwal kosong dan ketersediaan pelatih."""
-    coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, related_name='schedules')
+    coach = models.ForeignKey(
+        CoachProfile, on_delete=models.CASCADE, related_name='schedules'
+    )
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
     
     is_available = models.BooleanField(default=True)
     is_booked = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"{self.coach.user.username} - {self.date} ({self.start_time}-{self.end_time})"
 
     class Meta:
         unique_together = (('coach', 'date', 'start_time'),)
@@ -122,11 +136,17 @@ class CoachSchedule(models.Model):
 # --- CUSTOMER ---
 
 class Booking(models.Model):
-    customer = models.ForeignKey(User, on_delete=models.PROTECT, 
-                                 related_name='customer_bookings')
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='customer_bookings')
 
-    venue_schedule = models.OneToOneField(VenueSchedule, on_delete=models.PROTECT) 
-    coach_schedule = models.OneToOneField(CoachSchedule, on_delete=models.PROTECT, null=True, blank=True)
+    # venue_schedule tetap CASCADE karena venue bisa dikelola internal
+    venue_schedule = models.OneToOneField(
+        'VenueSchedule', on_delete=models.CASCADE
+    )
+
+    # ubah dari CASCADE → SET_NULL agar riwayat booking tidak hilang jika coach dihapus
+    coach_schedule = models.OneToOneField(
+        'CoachSchedule', on_delete=models.SET_NULL, null=True, blank=True
+    )
     
     booking_time = models.DateTimeField(auto_now_add=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=0)
@@ -168,15 +188,15 @@ class Transaction(models.Model):
 # --- RATING & REVIEW ---
 
 class Review(models.Model):
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given') 
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given')
     
-    target_venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, blank=True, related_name='reviews')
-    target_coach = models.ForeignKey(CoachProfile, on_delete=models.CASCADE, null=True, blank=True, related_name='reviews_received') 
+    target_venue = models.ForeignKey('Venue', on_delete=models.CASCADE, null=True, blank=True, related_name='reviews')
+    
+    # review ikut hilang kalau coach dihapus
+    target_coach = models.ForeignKey(
+        'CoachProfile', on_delete=models.CASCADE, null=True, blank=True, related_name='reviews_received'
+    )
     
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        target = self.target_venue or self.target_coach
-        return f"Rating {self.rating} untuk {target}"

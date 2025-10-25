@@ -1,0 +1,326 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Laporan Pendapatan Pelatih{% endblock title %}
+
+{% block page_title %}
+  Laporan Pendapatan
+{% endblock page_title %}
+
+{% block extra_head %}
+<style>
+    /* Animasi */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse-slow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .animate-pulse-slow { animation: pulse-slow 2s infinite; }
+    .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
+    .animate-slideUp { animation: slideUp 0.3s ease forwards; }
+    .animate-slideInRight { animation: slideInRight 0.4s ease forwards; }
+    .animate-spin { animation: spin 1s linear infinite; }
+    .text-shadow-lg { text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+    
+    /* Modal Styling */
+    #manageModal:not(.hidden) { display: flex; } /* Ensure display flex when shown */
+    .modal-overlay { display: none; }
+    .modal-open { display: flex !important; animation: fadeIn 0.3s ease forwards; }
+    
+    /* Toast Styling */
+    #toast { transition: transform 0.4s ease, opacity 0.4s ease; }
+    #toast:not(.hidden) { display: flex; } /* Ensure display flex when shown */
+
+    /* Scrollbar Styling (Opsional) */
+    .table-container::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+
+{% if not has_profile %}
+    <div class="bg-white rounded-xl shadow-lg p-8 sm:p-12 text-center max-w-2xl mx-auto border border-gray-100 mt-10 animate-fadeIn">
+        <div class="text-6xl mb-6 text-teal-500 animate-pulse-slow"><i class="fa-solid fa-clipboard-question"></i></div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-3">Profil Belum Lengkap</h2>
+        <p class="text-slate-600 mb-6 max-w-md mx-auto">Anda perlu melengkapi profil pelatih untuk melihat laporan pendapatan dan mulai menerima klien.</p>
+        <button onclick="showManageModal()"
+            class="inline-flex items-center justify-center gap-2 py-3 px-6 bg-gradient-to-r from-teal-600 to-teal-800 text-white rounded-lg font-semibold text-base transition-all duration-300 shadow-md hover:from-teal-700 hover:to-teal-900 hover:scale-[1.02]">
+            <i class="fa-solid fa-user-pen"></i>
+            Kelola Profil Sekarang
+        </button>
+        <div class="mt-8 pt-6 border-t border-gray-100">
+            <p class="text-sm text-gray-500"><i class="fa-solid fa-lightbulb mr-1 text-yellow-500"></i> Setelah profil lengkap, laporan pendapatan akan muncul di sini.</p>
+        </div>
+    </div>
+
+{% else %}
+    <div class="bg-gradient-to-br from-teal-700 to-teal-900 rounded-2xl p-6 md:p-8 text-white shadow-xl mb-8 animate-fadeIn">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-teal-200 text-sm font-medium mb-1 uppercase tracking-wider">Total Pendapatan</p>
+                <p class="text-4xl md:text-5xl font-extrabold">Rp {{ total_revenue|floatformat:0|default:"0" }}</p>
+                <p class="text-teal-200 text-sm mt-2">Dari {{ transactions|length }} transaksi</p>
+            </div>
+            <div class="hidden md:block p-3 bg-white/10 rounded-xl">
+                 <i class="fa-solid fa-sack-dollar text-5xl text-teal-300 opacity-60"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 animate-fadeIn" style="animation-delay: 0.1s;">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-receipt text-teal-600"></i> Riwayat Transaksi
+            </h2>
+        </div>
+
+        <div class="overflow-x-auto table-container">
+            <table class="min-w-full table-auto">
+                <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="p-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">ID Transaksi</th>
+                        <th class="p-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Metode</th>
+                        <th class="p-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                        <th class="p-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Pendapatan</th>
+                        <th class="p-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tanggal</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {% for transaction in transactions %}
+                    <tr class="hover:bg-gray-50/70 transition-colors duration-150">
+                        <td class="p-4 text-gray-700 text-sm whitespace-nowrap"><span class="font-mono font-semibold">#{{ transaction.id }}</span></td>
+                        <td class="p-4 text-gray-700 text-sm whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                {% if transaction.payment_method == 'Credit Card' %}<i class="fa-solid fa-credit-card text-blue-600 w-5 text-center"></i>
+                                {% elif transaction.payment_method == 'Bank Transfer' %}<i class="fa-solid fa-money-bill-transfer text-green-600 w-5 text-center"></i>
+                                {% else %}<i class="fa-solid fa-wallet text-purple-600 w-5 text-center"></i>{% endif %}
+                                <span class="font-medium">{{ transaction.payment_method }}</span>
+                            </div>
+                        </td>
+                        <td class="p-4 text-gray-700 text-sm whitespace-nowrap">
+                            {% if transaction.status == 'CONFIRMED' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fa-solid fa-check-circle mr-1"></i> Berhasil</span>
+                            {% elif transaction.status == 'PENDING' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i class="fa-solid fa-clock mr-1"></i> Menunggu</span>
+                            {% else %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fa-solid fa-times-circle mr-1"></i> Gagal</span>{% endif %}
+                        </td>
+                        <td class="p-4 text-gray-900 text-base font-semibold whitespace-nowrap">Rp {{ transaction.revenue_coach|floatformat:0 }}</td>
+                        <td class="p-4 text-gray-600 text-sm whitespace-nowrap">{{ transaction.transaction_time|date:"d M Y, H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center p-12 text-gray-500">
+                            <div class="flex flex-col items-center"><i class="fa-solid fa-file-invoice-dollar text-4xl text-gray-300 mb-4"></i><p class="text-lg font-semibold text-gray-700 mb-1">Belum ada transaksi</p><p class="text-sm">Transaksi akan muncul di sini.</p></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if transactions %}
+    <div class="mt-8 bg-white rounded-xl p-6 border border-gray-100 shadow-md animate-fadeIn" style="animation-delay: 0.2s;">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-3">Ringkasan</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="flex items-center gap-4 border-l-4 border-green-500 pl-4">
+                 <div class="bg-green-100 rounded-lg p-3"><i class="fa-solid fa-check text-2xl text-green-600"></i></div>
+                <div><p class="text-xs text-gray-500 uppercase font-medium tracking-wider">Transaksi Berhasil</p><p class="text-2xl font-bold text-gray-900">{{ transactions|length }}</p></div>
+            </div>
+            <div class="flex items-center gap-4 border-l-4 border-teal-500 pl-4">
+                 <div class="bg-teal-100 rounded-lg p-3"><i class="fa-solid fa-sack-dollar text-2xl text-teal-600"></i></div>
+                <div><p class="text-xs text-gray-500 uppercase font-medium tracking-wider">Total Pendapatan</p><p class="text-2xl font-bold text-gray-900">Rp {{ total_revenue|floatformat:0 }}</p></div>
+            </div>
+            <div class="flex items-center gap-4 border-l-4 border-blue-500 pl-4">
+                <div class="bg-blue-100 rounded-lg p-3"><i class="fa-solid fa-calendar-days text-2xl text-blue-600"></i></div>
+                <div><p class="text-xs text-gray-500 uppercase font-medium tracking-wider">Periode</p><p class="text-xl font-semibold text-gray-900">Semua Waktu</p></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+{% endif %} {# Akhir dari 'if not has_profile' #}
+
+<div id="toast" class="hidden fixed bottom-6 right-6 text-white p-4 rounded-xl shadow-2xl z-[10000] min-w-[300px]"> {# Dihapus animate-slideInRight krn diatur JS #}
+  <div class="flex items-center gap-3">
+    <span id="toastIcon" class="text-2xl"></span>
+    <div>
+      <div id="toastTitle" class="font-bold text-base mb-0.5"></div>
+      <div id="toastMessage" class="text-sm opacity-90"></div>
+    </div>
+  </div>
+</div>
+
+{% if not has_profile %}
+{# ✅ TAMBAHKAN CLASS hidden DI SINI #}
+<div id="manageModal" class="hidden modal-overlay fixed inset-0 z-[9999] items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+  <div class="modal-content bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-slideUp">
+    <button class="modal-close absolute top-3 right-3 z-10 p-2 rounded-full text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors" onclick="hideManageModal()"><i class="fa-solid fa-xmark text-xl"></i></button>
+    <div class="modal-header bg-gradient-to-r from-teal-700 to-teal-800 p-6 text-center flex items-center justify-center gap-3">
+        <i class="fa-solid fa-user-pen text-white text-2xl"></i>
+        <h2 class="text-xl font-semibold text-white">Kelola Profil Pelatih</h2>
+    </div>
+    <div id="formContainer" class="modal-body p-6 overflow-y-auto flex-1">
+      <div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock content %}
+
+
+{% block extra_js %}
+{# Hanya sertakan JS untuk modal jika 'not has_profile' #}
+{% if not has_profile %}
+<script>
+  // --- UTILITIES (getCookie, showToast) ---
+  function getCookie(name) { let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)'); return v ? v[2] : null; }
+  function showToast(title, message, type = 'success') {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      const toastIcon = document.getElementById('toastIcon');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastMessage = document.getElementById('toastMessage');
+      toastTitle.textContent = title; toastMessage.textContent = message;
+      let gradientClass = ''; let iconContent = '';
+      if (type === 'success') { gradientClass = 'bg-gradient-to-br from-green-600 to-green-800'; iconContent = '✅'; }
+      else { gradientClass = 'bg-gradient-to-br from-red-600 to-red-800'; iconContent = '❌'; }
+      // Pastikan class animate-slideInRight ditambahkan saat menampilkan
+      toast.className = `fixed bottom-6 right-6 text-white p-4 rounded-xl shadow-2xl z-[10000] min-w-[300px] ${gradientClass} animate-slideInRight`;
+      toastIcon.textContent = iconContent;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+          // Opsi: Tambahkan animasi keluar sebelum hidden
+          toast.classList.add('hidden');
+      }, 3000);
+  }
+
+  // --- Profile Modal Logic ---
+  const manageModal = document.getElementById('manageModal');
+  const formContainer = document.getElementById('formContainer');
+
+  function showManageModal() {
+      if (!manageModal) return;
+      manageModal.classList.add('modal-open'); // Gunakan class ini untuk display flex
+      manageModal.classList.remove('hidden'); // Hapus hidden jika ada
+      document.body.style.overflow = 'hidden';
+      loadProfileForm();
+  }
+  function hideManageModal() {
+      if (!manageModal) return;
+      manageModal.classList.remove('modal-open');
+      manageModal.classList.add('hidden'); // Tambah hidden lagi
+      document.body.style.overflow = 'auto';
+      // Reset form container
+      formContainer.innerHTML = '<div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
+  }
+  function loadProfileForm() {
+      if (!formContainer) return;
+      formContainer.innerHTML = '<div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
+      fetch("{% url 'get_coach_profile_form_ajax' %}")
+        .then(r => r.ok ? r.text() : Promise.reject('Gagal load form'))
+        .then(html => { formContainer.innerHTML = html; attachFormHandler(); })
+        .catch(err => {
+             console.error(err);
+             formContainer.innerHTML = '<div class="text-center p-8 text-red-600"><p class="font-semibold">Gagal memuat formulir.</p><button class="mt-4 inline-block px-4 py-2 bg-teal-700 text-white rounded text-sm" onclick="loadProfileForm()">Coba Lagi</button></div>';
+         });
+  }
+  function attachFormHandler() {
+      const form = document.getElementById('coachProfileForm');
+      if (!form) return;
+      form.addEventListener('submit', function(e) { /* ... (Logic submit form Anda) ... */ });
+  }
+  function displayFormErrors(errors) { /* ... (Logic display error Anda) ... */ }
+
+  // Event listener untuk backdrop click
+  if (manageModal) manageModal.addEventListener('click', function(e){ if (e.target === manageModal) hideManageModal(); });
+
+   // --- PASTI KAN FUNGSI LAINNYA JUGA ADA ---
+   // function attachFormHandler() { ... (fungsi lengkap) ... }
+   // function displayFormErrors(errors) { ... (fungsi lengkap) ... }
+   
+   // --- CONTOH attachFormHandler (Pastikan ada) ---
+   function attachFormHandler() {
+        const form = document.getElementById('coachProfileForm');
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]'); // Target tombol submit
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg class="animate-spin inline-block w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">...</svg> Menyimpan...';
+            // Reset errors
+            form.querySelectorAll('.field-error').forEach(el => { el.classList.add('hidden'); el.textContent = ''; });
+            const formErrorsEl = document.getElementById('formErrors'); // Pastikan ID ini ada di template form AJAX
+            if (formErrorsEl) formErrorsEl.classList.add('hidden');
+
+            const formData = new FormData(form);
+            fetch("{% url 'save_coach_profile_ajax' %}", {
+                method:'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'},
+                body: formData
+            })
+            .then(r => r.ok ? r.json() : r.json().then(err => Promise.reject(err)))
+            .then(data => {
+              if (data.success) {
+                hideManageModal();
+                showToast('Berhasil!', data.message || 'Profil disimpan.', 'success');
+                setTimeout(()=>window.location.reload(), 1500); // Reload halaman ini
+              } else {
+                displayFormErrors(data.errors || {}); // Tampilkan error di form
+                showToast('Gagal!', data.message || 'Periksa form.', 'error'); // Tampilkan toast error
+              }
+            })
+            .catch(error => { // Tangkap error fetch atau reject dari server
+                 console.error('Save Profile Error:', error);
+                 let errorMsg = 'Terjadi kesalahan.';
+                 if (error && error.message) errorMsg = error.message;
+                 else if (error && error.errors) errorMsg = Object.values(error.errors).flat().join(' ');
+                 showToast('Error!', errorMsg, 'error');
+                 // Tampilkan error non-field jika ada
+                 const formErr = document.getElementById('formErrors');
+                 const errList = document.getElementById('errorList');
+                 if(formErr && errList && errors.__all__) {
+                     errList.innerHTML = errors.__all__.map(e => `<li>${e}</li>`).join('');
+                     formErr.classList.remove('hidden');
+                 }
+            })
+            .finally(()=> { submitBtn.disabled = false; submitBtn.innerHTML = originalText; });
+        });
+    }
+
+    // --- CONTOH displayFormErrors (Pastikan ada) ---
+    function displayFormErrors(errors) {
+        document.querySelectorAll('.field-error').forEach(el => { el.classList.add('hidden'); el.textContent = ''; });
+        let hasFieldErrors = false;
+        for (const [field, messages] of Object.entries(errors)) {
+           const errorElement = document.getElementById(`error_id_${field}`);
+           if (errorElement) {
+             errorElement.textContent = messages.join(', ');
+             errorElement.classList.remove('hidden');
+             hasFieldErrors = true;
+           }
+           const fieldInput = document.getElementById('id_' + field);
+           if (fieldInput) {
+               fieldInput.classList.add('border-red-500'); // Highlight error field
+               fieldInput.addEventListener('input', () => {
+                    fieldInput.classList.remove('border-red-500');
+                    if (errorElement) errorElement.classList.add('hidden');
+               }, { once: true });
+           }
+        }
+        const formErrorsEl = document.getElementById('formErrors');
+        const errorListEl = document.getElementById('errorList');
+        if (errors.__all__ && formErrorsEl && errorListEl) {
+            errorListEl.innerHTML = errors.__all__.map(msg => `<li>${msg}</li>`).join('');
+            formErrorsEl.classList.remove('hidden');
+        } else if (formErrorsEl && !hasFieldErrors) {
+             formErrorsEl.classList.add('hidden');
+        }
+    }
+
+
+</script>
+{% endif %}
+{% endblock extra_js %}
