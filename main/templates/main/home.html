@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Explore Venues - All-Ahraga{% endblock title %}
+{% load humanize %}{% block title %}Explore Venues - All-Ahraga{% endblock title %}
 
 {% block content %}
 <style>
@@ -337,7 +337,7 @@
     .venue-price {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #f5b800;
+        color: #1a73e8;
     }
 
     .venue-price small {
@@ -415,6 +415,16 @@
         .hero-container p {
             font-size: 1rem;
             margin-bottom: 1.5rem;
+        }
+    }
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 </style>
@@ -526,7 +536,7 @@
 
             <div class="venue-footer">
                 <div class="venue-price">
-                    Rp {{ venue.price_per_hour|floatformat:0 }}
+                    Rp {{ venue.price_per_hour|floatformat:0|intcomma }}
                     <small>/jam</small>
                 </div>
             </div>
@@ -611,7 +621,6 @@
     function displayVenues(venues) {
         const grid = document.getElementById('venueGrid');
         
-        // Hapus semua elemen kecuali loading spinner
         Array.from(grid.children).forEach(child => {
             if (!child.classList.contains('loading-spinner')) {
                 child.remove();
@@ -619,6 +628,7 @@
         });
 
         if (!venues || venues.length === 0) {
+            // ... (Kode empty-state Anda tidak berubah)
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-state';
             emptyState.style.gridColumn = '1 / -1';
@@ -634,12 +644,19 @@
         }
 
         // Render venues
-        venues.forEach(venue => {
+        // [MODIFIKASI] Tambahkan 'index' untuk delay animasi
+        venues.forEach((venue, index) => { 
             const venueCard = document.createElement('div');
             venueCard.className = 'venue-card';
             venueCard.onclick = () => {
                 window.location.href = `{% url 'create_booking' 0 %}`.replace('/0/', `/${venue.id}/`);
             };
+
+            // [BARU] Terapkan animasi saat kartu dibuat
+            venueCard.style.opacity = 0; // Mulai dari transparan
+            venueCard.style.animation = `fadeInUp 0.5s ease-out forwards`;
+            // Terapkan delay bertingkat (0ms, 100ms, 200ms, dst.)
+            venueCard.style.animationDelay = `${index * 100}ms`; 
 
             venueCard.innerHTML = `
                 <div class="venue-image-wrapper">
@@ -721,15 +738,38 @@
     }
 
     // Initialize ketika DOM siap
-    document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
-        console.log('DOM loaded, filters ready'); // Debug log
+        console.log('DOM loaded, filters ready');
+
+        // ... (Animasikan Hero Section) ...
+        const heroSection = document.querySelector('.hero-section');
+        if (heroSection) {
+            heroSection.style.opacity = 0;
+            heroSection.style.animation = `fadeInUp 0.6s ease-out forwards`;
+        }
+
+        // 2. Animasikan kartu statis (dari Django) satu per satu
+        const staticCards = document.querySelectorAll('#venueGrid .venue-card');
+        staticCards.forEach((card, index) => {
+            card.style.opacity = 0; 
+            card.style.animation = `fadeInUp 0.5s ease-out forwards`;
+            card.style.animationDelay = `${200 + (index * 100)}ms`;
+
+            // [BARU] Tambahkan ini untuk membersihkan animasi setelah selesai
+            card.addEventListener('animationend', () => {
+                card.style.animation = 'none'; // Hapus properti animasi
+                card.style.opacity = 1; // Pastikan opacity tetap 1
+            }, { once: true }); // { once: true } agar listener hanya berjalan sekali
+        });
     });
 
     // Fallback initialization
     if (document.readyState === 'loading') {
+        // ... (Tidak berubah)
         document.addEventListener('DOMContentLoaded', initializeEventListeners);
     } else {
+        // ... (Tidak berubah)
         initializeEventListeners();
     }
 
