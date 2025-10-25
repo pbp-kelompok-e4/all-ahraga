@@ -621,8 +621,12 @@
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dayName = date.toLocaleDateString(locale, { weekday: 'short' });
+      const monthName = date.toLocaleDateString(locale, { month: 'short' }) || '';
       const dayNum = date.getDate();
-      const dateString = date.toISOString().split('T')[0];
+      const y = date.getFullYear();
+      const m = (date.getMonth() + 1).toString().padStart(2, '0'); 
+      const d = date.getDate().toString().padStart(2, '0');
+      const dateString = `${y}-${m}-${d}`;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'date-button flex-shrink-0 w-16 h-20 rounded-lg border border-gray-300 bg-white flex flex-col items-center justify-center transition-all hover:border-teal-400 hover:shadow-md fade-in';
@@ -630,20 +634,24 @@
       button.style.opacity = '0';
       button.dataset.date = dateString;
       button.innerHTML = `
-        <span class="text-xs font-medium text-gray-500 uppercase">${dayName}</span>
-        <span class="text-xl font-bold text-gray-800 mt-1">${dayNum}</span>
+        <span class="date-day-name text-xs font-medium text-gray-500 uppercase">${dayName}</span> 
+        <span class="date-day-num text-xl font-bold text-gray-800 mt-1">${dayNum}</span>
+        <span class="date-month-name text-xs font-medium text-gray-500 uppercase mt-1">${monthName.replace('.', '')}</span>
       `;
       button.addEventListener('click', function() {
         document.querySelectorAll('.date-button').forEach(btn => {
           btn.classList.remove('bg-teal-600', 'text-white', 'border-teal-600');
           btn.classList.add('bg-white');
-          btn.querySelector('span:first-child').classList.add('text-gray-500');
-          btn.querySelector('span:last-child').classList.add('text-gray-800');
+          btn.querySelector('.date-day-name').classList.add('text-gray-500');
+          btn.querySelector('.date-day-num').classList.add('text-gray-800');
+          btn.querySelector('.date-month-name').classList.add('text-gray-500');
         });
         this.classList.add('bg-teal-600', 'text-white', 'border-teal-600');
         this.classList.remove('bg-white');
-        this.querySelector('span:first-child').classList.remove('text-gray-500');
-        this.querySelector('span:last-child').classList.remove('text-gray-800');
+        this.querySelector('.date-day-name').classList.remove('text-gray-500');
+        this.querySelector('.date-day-num').classList.remove('text-gray-800');
+        this.querySelector('.date-month-name').classList.remove('text-gray-500');
+        
         filterSchedulesByDate(this.dataset.date);
       });
       dateScrollerContent.appendChild(button);
@@ -665,7 +673,7 @@
   }
 
   // --- Event Listeners & Initial Calls ---
-  generateDateScroller(30);
+  generateDateScroller(365);
   setupScroller('date-scroller-wrapper', 'date-scroller', '.date-scroll-btn');
   setupScroller('schedule-scroller-wrapper', 'schedule-scroller', '.schedule-scroll-btn');
 

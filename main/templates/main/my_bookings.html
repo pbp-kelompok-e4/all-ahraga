@@ -95,31 +95,36 @@
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-slideUp"> 
         <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Edit Booking</h3> 
         <form id="editBookingForm">
-        {% csrf_token %}
-        <input type="hidden" id="editBookingId">
-        <div class="space-y-4 mb-6">
-            <div>
-                <label for="editSchedule" class="block mb-1 text-sm font-medium text-gray-700">Pilih Jadwal Baru:</label>
-                <select id="editSchedule" name="schedule_id" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm"></select>
+            {% csrf_token %}
+            <input type="hidden" id="editBookingId">
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label for="editSchedule" class="block mb-1 text-sm font-medium text-gray-700">Pilih Jadwal Baru:</label>
+                    <select id="editSchedule" name="schedule_id" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm"></select>
+                </div>
+                <div>
+                    <label for="editCoach" class="block mb-1 text-sm font-medium text-gray-700">Pilih Coach (opsional):</label>
+                    <select id="editCoach" name="coach_id" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm">
+                        <option value="">Tanpa Coach</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="editPaymentMethod" class="block mb-1 text-sm font-medium text-gray-700">Metode Pembayaran:</label>
+                    <select id="editPaymentMethod" name="payment_method" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm">
+                        <option value="CASH">Cash (Bayar di Tempat)</option>
+                        <option value="CARD">Transfer Bank (Virtual Account)</option>
+                        </select>
+                </div>
+                
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-gray-700">Pilih Peralatan:</label>
+                    <div id="editEquipmentList" class="space-y-2 max-h-48 overflow-y-auto pr-2 border p-3 rounded-lg bg-gray-50">
+                        {# Konten diisi JS #}
+                    </div>
+                </div>
             </div>
-            <div>
-                <label for="editCoach" class="block mb-1 text-sm font-medium text-gray-700">Pilih Coach (opsional):</label>
-                <select id="editCoach" name="coach_id" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm">
-                    <option value="">Tanpa Coach</option>
-                </select>
-            </div>
-            <div>
-                 <label class="block mb-1 text-sm font-medium text-gray-700">Pilih Peralatan:</label>
-                 <div id="editEquipmentList" class="space-y-2 max-h-48 overflow-y-auto pr-2 border p-3 rounded-lg bg-gray-50">
-                    {# Konten diisi JS #}
-                 </div>
-            </div>
-        </div>
-        <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors shadow-sm text-sm">Batal</button>
-            <button type="submit" class="px-4 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-sm text-sm">Simpan Perubahan</button>
-        </div>
-        </form>
+            </form>
         <button onclick="closeEditModal()" class="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 bg-gray-100 hover:bg-gray-200 hover:text-gray-600 transition-colors"> <i class="fa-solid fa-xmark text-lg"></i> </button>
     </div>
 </div>
@@ -176,16 +181,213 @@ document.addEventListener('DOMContentLoaded', function() {
   {% endif %}
 });
 
-// --- Fungsi AJAX Modal (Pastikan didefinisikan dengan benar) ---
-async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) { /* ... */ }
-async function openEditModal(bookingId) { /* ... */ }
-function closeEditModal() { document.getElementById('editBookingModal').classList.add('hidden'); }
 
-// --- Event Listener ---
-const editScheduleSelect = document.getElementById('editSchedule');
-if (editScheduleSelect) { editScheduleSelect.addEventListener('change', async function() { /* ... */ }); }
-const editBookingForm = document.getElementById('editBookingForm');
-if (editBookingForm) { editBookingForm.addEventListener('submit', async function(e) { /* ... */ }); }
+// ======================================================
+// ✅ AWAL DARI LOGIKA MODAL YANG HILANG
+// ======================================================
+const modal = document.getElementById('editBookingModal');
+const form = document.getElementById('editBookingForm');
+const bookingIdInput = document.getElementById('editBookingId');
+const scheduleSelect = document.getElementById('editSchedule');
+const coachSelect = document.getElementById('editCoach');
+const equipmentListDiv = document.getElementById('editEquipmentList');
+
+// --- Fungsi untuk memuat coach yang tersedia ---
+async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) {
+    // Bangun URL dengan benar, pastikan 'schedule_id_placeholder' diganti
+    let urlTemplate = "{% url 'get_available_coaches' schedule_id=99999 %}".replace('99999', scheduleId);
+    const url = new URL(urlTemplate, window.location.origin);
+    url.searchParams.append('editing_booking_id', bookingId);
+    
+    coachSelect.innerHTML = '<option value="">Memuat coach...</option>';
+    coachSelect.disabled = true;
+
+    try {
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error('Gagal memuat data coach.');
+        
+        const data = await response.json();
+        
+        coachSelect.innerHTML = '<option value="">Tanpa Coach</option>'; // Default
+        data.coaches.forEach(coach => {
+            const isSelected = currentCoachId && coach.id == currentCoachId;
+            coachSelect.innerHTML += `<option value="${coach.id}" ${isSelected ? 'selected' : ''}>
+                ${coach.name} - Rp ${parseInt(coach.rate_per_hour).toLocaleString('id-ID')}
+            </option>`;
+        });
+        
+        coachSelect.disabled = false;
+
+    } catch (error) {
+        console.error('Error loading coaches:', error);
+        coachSelect.innerHTML = '<option value="">Gagal memuat coach</option>';
+    }
+}
+
+// --- Fungsi untuk membuka dan mengisi modal ---
+async function openEditModal(bookingId) {
+    if (!modal || !form) return;
+    
+    // Reset form & set booking ID
+    form.reset();
+    bookingIdInput.value = bookingId;
+    scheduleSelect.innerHTML = '<option value="">Memuat jadwal...</option>';
+    coachSelect.innerHTML = '<option value="">Pilih jadwal dulu</option>';
+    equipmentListDiv.innerHTML = '<div class="text-gray-500 text-sm">Memuat peralatan...</div>';
+    
+    // Tampilkan modal
+    modal.classList.remove('hidden');
+
+    try {
+        // 1. Ambil data booking
+        // Pastikan 'booking_id_placeholder' diganti
+        let urlTemplate = "{% url 'update_booking_data' booking_id=99999 %}".replace('99999', bookingId);
+        const response = await fetch(urlTemplate);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Gagal mengambil data booking.');
+        }
+
+        // 2. Isi Jadwal (Schedules)
+        const currentSchedule = data.current_schedule;
+        let scheduleOptions = `<option value="${currentSchedule.id}" selected>
+            (Saat ini) ${currentSchedule.date_str_display} | ${currentSchedule.start_time} - ${currentSchedule.end_time}
+        </option>`;
+        data.schedules.forEach(s => {
+            scheduleOptions += `<option value="${s.id}">
+                ${s.date_str_display} | ${s.start_time} - ${s.end_time}
+            </option>`;
+        });
+        scheduleSelect.innerHTML = scheduleOptions;
+
+        // 3. Isi Peralatan (Equipment)
+        equipmentListDiv.innerHTML = '';
+        if (data.available_equipments.length > 0) {
+            data.available_equipments.forEach(eq => {
+                const currentQuantity = data.selected_equipment_map[eq.id] || 0;
+                equipmentListDiv.innerHTML += `
+                    <div class="flex items-center justify-between p-2 rounded-md border border-gray-200">
+                        <label for="eq_${eq.id}" class="flex-grow text-sm font-medium text-gray-700">
+                            ${eq.name} (Rp ${parseInt(eq.price).toLocaleString('id-ID')})
+                        </label>
+                        <div class="flex items-center space-x-2">
+                             <input type="checkbox" id="eq_${eq.id}" name="equipment" value="${eq.id}" class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500" ${currentQuantity > 0 ? 'checked' : ''}>
+                             <input type="number" name="quantity_${eq.id}" value="${currentQuantity || 1}" min="1" max="${eq.stock_quantity}" class="w-16 p-1 border border-gray-300 rounded-md text-sm text-center" ${currentQuantity == 0 ? 'style="display:none;"' : ''}>
+                        </div>
+                    </div>
+                `;
+            });
+            // Tambah event listener untuk show/hide input quantity
+            equipmentListDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const qtyInput = equipmentListDiv.querySelector(`input[name="quantity_${e.target.value}"]`);
+                    if (qtyInput) {
+                        qtyInput.style.display = e.target.checked ? 'block' : 'none';
+                    }
+                });
+            });
+
+        } else {
+            equipmentListDiv.innerHTML = '<div class="text-gray-500 text-sm">Tidak ada peralatan tersedia untuk venue ini.</div>';
+        }
+
+        if (data.current_payment_method) {
+            const paymentSelect = document.getElementById('editPaymentMethod');
+            if (paymentSelect) {
+                paymentSelect.value = data.current_payment_method;
+            }
+        }
+        
+        // 4. Muat Coach (berdasarkan jadwal yang dipilih saat ini)
+        await loadCoachesForSchedule(currentSchedule.id, bookingId, data.current_coach_id);
+
+    } catch (error) {
+        console.error('Error opening edit modal:', error);
+        showUserToast(`Error: ${error.message}`, 'error');
+        closeEditModal();
+    }
+}
+
+// --- Fungsi untuk menutup modal ---
+function closeEditModal() {
+    if (modal) modal.classList.add('hidden');
+}
+
+// --- Event Listener untuk Perubahan Jadwal ---
+if (scheduleSelect) {
+    scheduleSelect.addEventListener('change', async function() {
+        const scheduleId = this.value;
+        const bookingId = bookingIdInput.value;
+        if (scheduleId && bookingId) {
+            // Muat ulang daftar coach, tapi jangan pilih coach lama (karena jadwal beda)
+            await loadCoachesForSchedule(scheduleId, bookingId, null);
+        } else {
+            coachSelect.innerHTML = '<option value="">Pilih jadwal dulu</option>';
+            coachSelect.disabled = true;
+        }
+    });
+}
+
+// --- Event Listener untuk Submit Form Edit ---
+if (form) {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const bookingId = bookingIdInput.value;
+        if (!bookingId) return;
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = 'Menyimpan...';
+
+        const formData = new FormData(form);
+        // Pastikan equipment yang tidak dicheck tidak mengirim quantity
+        equipmentListDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if (!cb.checked) {
+                formData.delete(`quantity_${cb.value}`);
+            }
+        });
+
+        try {
+            // Pastikan 'booking_id_placeholder' diganti
+            let urlTemplate = "{% url 'update_booking' booking_id=99999 %}".replace('99999', bookingId);
+            const response = await fetch(urlTemplate, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                    // CSRF token sudah di-handle oleh {% csrf_token %} dalam FormData
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showUserToast(data.message || 'Booking berhasil diperbarui.', 'success');
+                // Beri waktu toast untuk tampil sebelum reload
+                setTimeout(() => {
+                    window.location.href = data.redirect_url || "{% url 'my_bookings' %}";
+                }, 1000);
+            } else {
+                throw new Error(data.message || 'Terjadi kesalahan.');
+            }
+
+        } catch (error) {
+            console.error('Error updating booking:', error);
+            showUserToast(error.message, 'error');
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Simpan Perubahan';
+        }
+    });
+}
+// ======================================================
+// ✅ AKHIR DARI LOGIKA MODAL
+// ======================================================
+
 
 // --- Event Listener Search ---
 const searchInput = document.getElementById('searchMyBooking');

@@ -19,6 +19,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.db.models import Q, Avg
+import pytz
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -1179,9 +1180,16 @@ def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     equipment_list = Equipment.objects.filter(venue=venue)
 
-    now = timezone.localtime(timezone.now())
-    today = now.date()
-    current_time = now.time()
+    try:
+        jakarta_tz = pytz.timezone('Asia/Jakarta')
+    except pytz.UnknownTimeZoneError:
+        jakarta_tz = timezone.get_default_timezone()
+
+    utc_now = timezone.now()
+    now_in_jakarta = utc_now.astimezone(jakarta_tz)
+
+    today = now_in_jakarta.date()
+    current_time = now_in_jakarta.time()
 
     schedules = VenueSchedule.objects.filter(
         venue=venue,
@@ -1566,6 +1574,7 @@ def update_booking(request, booking_id):
         new_schedule_id = request.POST.get('schedule_id')
         new_coach_id = request.POST.get('coach_id')  
         equipment_ids = request.POST.getlist('equipment')  
+        new_payment_method = request.POST.get('payment_method', 'CASH') 
         
         if not new_schedule_id:
             return JsonResponse({
@@ -1661,6 +1670,7 @@ def update_booking(request, booking_id):
             transaction = booking.transaction
             transaction.revenue_venue = (venue.price_per_hour or 0) + equipment_revenue 
             transaction.revenue_coach = coach_revenue 
+            transaction.payment_method = new_payment_method
             transaction.save()
         
         success_msg = 'Booking berhasil diperbarui!'
@@ -1711,6 +1721,7 @@ def update_booking_data(request, booking_id):
     now = timezone.localtime(timezone.now())
     today = now.date()
     current_time = now.time()
+    current_payment_method = booking.transaction.payment_method if booking.transaction else None
 
     current_schedule = booking.venue_schedule
     current_schedule_data = {
@@ -1776,6 +1787,7 @@ def update_booking_data(request, booking_id):
         'current_coach_data': current_coach_data, 
         'selected_equipment_map': selected_equipment_map, 
         'available_equipments': available_equipments_data,
+        'current_payment_method' : current_payment_method,
     })
 
 def filter_venues_ajax(request):
