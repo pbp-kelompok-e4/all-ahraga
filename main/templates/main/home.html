@@ -4,20 +4,20 @@
 
 {% block content %}
 <style>
-        .hero-section {
-            background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
-            padding: 2rem 1rem;
-            border-radius: 24px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            margin: 1rem; 
-        }
+    .hero-section {
+        background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+        padding: 2rem 1rem;
+        border-radius: 24px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        margin: 1rem; 
+    }
 
-        @media (min-width: 768px) {
-            .hero-section {
-                padding: 3rem 2rem;
-                margin: 1rem 2rem; 
-            }
+    @media (min-width: 768px) {
+        .hero-section {
+            padding: 3rem 2rem;
+            margin: 1rem 2rem; 
         }
+    }
 
     .hero-container {
         max-width: 900px;
@@ -28,11 +28,11 @@
     .filter-bar-wrapper {
         background: white;
         border-radius: 16px;
-        padding: 1rem;
+        padding: 1.25rem; /* Increased padding */
         box-shadow: 0 8px 32px rgba(0,0,0,0.15);
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.25rem; /* Increased gap */
         width: 100%;
     }
 
@@ -42,12 +42,14 @@
             flex-wrap: wrap;
             align-items: center;
             padding: 1.5rem;
+            gap: 1.5rem; /* Consistent gap */
         }
     }
 
     @media (min-width: 1024px) {
         .filter-bar-wrapper {
             flex-wrap: nowrap;
+            gap: 1.5rem;
         }
     }
 
@@ -64,11 +66,11 @@
         }
     }
 
-    /* [FIXED] Filter select groups - stack di mobile */
+    /* [FIXED] Filter select groups dengan spacing yang lebih baik */
     .filter-selects-container {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.25rem; /* Increased gap */
         width: 100%;
     }
 
@@ -76,10 +78,17 @@
         .filter-selects-container {
             flex-direction: row;
             flex: 3;
+            gap: 1rem; /* Consistent gap on tablet */
         }
     }
 
-    /* [FIXED] Individual select wrapper */
+    @media (min-width: 1024px) {
+        .filter-selects-container {
+            gap: 1.25rem; /* Slightly larger gap on desktop */
+        }
+    }
+
+    /* [FIXED] Individual select wrapper dengan spacing */
     .filter-select-wrapper {
         position: relative;
         width: 100%;
@@ -88,7 +97,7 @@
     @media (min-width: 640px) {
         .filter-select-wrapper {
             flex: 1;
-            min-width: 150px;
+            min-width: 160px; /* Slightly increased min-width */
         }
     }
 
@@ -107,9 +116,9 @@
         color: #6b7280;
         pointer-events: none;
         z-index: 2;
+        font-size: 16px; /* Ensure consistent icon size */
     }
 
-  
     .filter-input,
     .filter-select {
         width: 100%;
@@ -122,10 +131,11 @@
         background-color: white;
         box-sizing: border-box;
         text-align: left;
+        line-height: 1.5;
     }
 
     .filter-input.no-icon {
-        padding-left: 20px; /* lebih kecil karena tidak ada icon */
+        padding-left: 20px;
     }
 
     .filter-input:focus,
@@ -135,7 +145,7 @@
         box-shadow: 0 0 0 3px rgba(0, 87, 87, 0.1);
     }
 
-    /* [FIXED] Custom dropdown arrow */
+    /* [FIXED] Custom dropdown arrow dengan positioning yang lebih baik */
     .filter-select-wrapper::after {
         content: '▼';
         position: absolute;
@@ -148,7 +158,7 @@
         z-index: 1;
     }
 
-    /* [FIXED] Reset button styling */
+    /* [FIXED] Reset button dengan spacing yang lebih baik */
     .reset-btn {
         background: transparent;
         border: 2px solid #005757;
@@ -172,6 +182,7 @@
         .reset-btn {
             width: auto;
             flex: 0 0 auto;
+            min-width: 120px; /* Ensure minimum width */
         }
     }
 
@@ -179,17 +190,41 @@
         background: #f0f9f9;
     }
 
-    /* [FIXED] Mobile-specific adjustments */
+    /* [IMPROVED] Mobile-specific adjustments */
     @media (max-width: 639px) {
         .filter-input,
         .filter-select {
             padding: 16px 20px 16px 50px;
-            font-size: 16px; /* Larger for mobile touch */
+            font-size: 16px;
+            min-height: 54px; /* Better touch targets */
         }
         
         .reset-btn {
             padding: 16px 20px;
             font-size: 16px;
+            min-height: 54px;
+        }
+        
+        .filter-input-group .icon {
+            left: 20px; /* Slightly adjust icon position */
+        }
+    }
+
+    /* [IMPROVED] Very small mobile devices */
+    @media (max-width: 380px) {
+        .hero-section {
+            padding: 1.5rem 1rem;
+            margin: 0.5rem;
+            border-radius: 20px;
+        }
+        
+        .filter-bar-wrapper {
+            padding: 1rem;
+            gap: 1rem;
+        }
+        
+        .filter-selects-container {
+            gap: 1rem;
         }
     }
 
@@ -202,7 +237,15 @@
         margin: 0 auto;
     }
 
-    @media (min-width: 640px) {
+    @media (min-width: 480px) {
+        .venue-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+    }
+
+    @media (min-width: 768px) {
         .venue-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 2rem;
@@ -212,30 +255,49 @@
 
     @media (min-width: 1024px) {
         .venue-grid {
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
         }
     }
 
     @media (min-width: 1280px) {
         .venue-grid {
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2.5rem;
         }
     }
 
+    @media (min-width: 1536px) {
+        .venue-grid {
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        }
+    }
+
+    /* [IMPROVED] Venue card dengan hover animation yang bekerja */
     .venue-card {
         background: white;
         border-radius: 16px;
         overflow: hidden;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        transition: all 0.3s;
+        transition: all 0.3s ease-in-out;
         cursor: pointer;
         display: flex;
         flex-direction: column;
+        transform: translateY(0);
+        will-change: transform;
     }
 
     .venue-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        transform: translateY(-4px);
+        box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+    }
+
+    /* [NEW] Touch devices - reduce hover effect */
+    @media (hover: none) and (pointer: coarse) {
+        .venue-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
     }
 
     .venue-image-wrapper {
@@ -243,6 +305,18 @@
         width: 100%;
         height: 200px;
         background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    }
+
+    @media (min-width: 768px) {
+        .venue-image-wrapper {
+            height: 220px;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .venue-image-wrapper {
+            height: 240px;
+        }
     }
 
     .venue-image {
@@ -258,7 +332,7 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(4px);
         padding: 6px 12px;
         border-radius: 10px;
@@ -274,6 +348,12 @@
         flex-direction: column;
     }
 
+    @media (min-width: 768px) {
+        .venue-content {
+            padding: 1.75rem;
+        }
+    }
+
     .venue-header {
         margin-bottom: 0.75rem;
     }
@@ -285,6 +365,12 @@
         margin: 0;
         line-height: 1.3;
         word-wrap: break-word;
+    }
+
+    @media (min-width: 768px) {
+        .venue-title {
+            font-size: 1.3rem;
+        }
     }
 
     .venue-location {
@@ -346,10 +432,7 @@
         font-weight: 400;
     }
 
-    /* ========================================
-      LOADING & EMPTY STATE
-      ========================================
-    */
+    /* Loading & Empty State */
     .empty-state {
         text-align: center;
         padding: 3rem 1rem;
@@ -405,18 +488,32 @@
         margin: 0 auto 1rem;
     }
 
-    /* [NEW] Mobile header adjustments */
+    /* [IMPROVED] Mobile header adjustments */
     @media (max-width: 639px) {
         .hero-container h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
+            line-height: 1.2;
         }
         
         .hero-container p {
             font-size: 1rem;
             margin-bottom: 1.5rem;
+            line-height: 1.4;
         }
     }
+
+    /* [NEW] Extra small devices */
+    @media (max-width: 380px) {
+        .hero-container h1 {
+            font-size: 1.75rem;
+        }
+        
+        .hero-container p {
+            font-size: 0.9rem;
+        }
+    }
+
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -425,6 +522,41 @@
         to {
             opacity: 1;
             transform: translateY(0);
+        }
+    }
+
+    .pagination-btn {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 87, 87, 0.3);
+    }
+
+    #pagination-container {
+        margin-top: 3rem;
+        padding: 0 1rem;
+    }
+
+    @media (min-width: 640px) {
+        #pagination-container {
+            padding: 0 2rem;
+        }
+    }
+
+    /* [NEW] Improved pagination for mobile */
+    @media (max-width: 639px) {
+        #pagination-container .inline-flex {
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        #pagination-container .inline-flex > * {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
@@ -559,32 +691,36 @@
 {{ block.super }}
 <script>
     let debounceTimer;
+    let currentPage = 1;
+    let currentFilters = {
+        search: '',
+        location: '',
+        sport: ''
+    };
 
-    function filterVenues() {
+    function filterVenues(page = 1) {
         const search = document.getElementById('searchInput').value;
         const location = document.getElementById('locationFilter').value;
         const sport = document.getElementById('sportFilter').value;
 
-        console.log('Filtering:', { search, location, sport }); // Debug log
+        currentFilters = { search, location, sport };
+        currentPage = page;
 
-        // Tampilkan loading
         document.getElementById('loadingSpinner').classList.add('active');
         const venueGrid = document.getElementById('venueGrid');
         
-        // Sembunyikan kartu yang ada
+        // Sembunyikan semua kecuali loading spinner
         Array.from(venueGrid.children).forEach(child => {
             if (!child.classList.contains('loading-spinner')) {
                 child.style.display = 'none';
             }
         });
 
-        // Build query string
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (location) params.append('location', location);
         if (sport) params.append('sport', sport);
-
-        // Tambahkan timestamp untuk avoid cache
+        params.append('page', page);
         params.append('_', Date.now());
 
         fetch(`{% url 'filter_venues_ajax' %}?${params.toString()}`, {
@@ -594,33 +730,102 @@
             }
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return response.json();
         })
         .then(data => {
-            console.log('Data received:', data); // Debug log
             if (data.success) {
                 displayVenues(data.venues);
+                displayPagination(data);
             } else {
                 throw new Error(data.message || 'Failed to fetch venues');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            // Fallback: Tampilkan semua venue jika AJAX gagal
             displayVenues([]);
-            alert('Terjadi kesalahan saat memuat data. Silakan refresh halaman.');
+            displayPagination({
+                has_next: false,
+                has_previous: false,
+                current_page: 1,
+                total_pages: 0,
+                total_count: 0
+            });
         })
         .finally(() => {
             document.getElementById('loadingSpinner').classList.remove('active');
         });
     }
 
+    function displayPagination(data) {
+        const grid = document.getElementById('venueGrid');
+        
+        // Hapus pagination lama jika ada
+        const oldPagination = document.getElementById('pagination-container');
+        if (oldPagination) {
+            oldPagination.remove();
+        }
+        
+        // Jika hanya 1 halaman atau tidak ada data, tidak perlu pagination
+        if (data.total_pages <= 1 || data.total_count === 0) {
+            return;
+        }
+        
+        // Buat pagination container
+        const paginationContainer = document.createElement('div');
+        paginationContainer.id = 'pagination-container';
+        paginationContainer.className = 'mt-12 flex justify-center';
+        paginationContainer.style.gridColumn = '1 / -1';
+        paginationContainer.setAttribute('role', 'navigation');
+        paginationContainer.setAttribute('aria-label', 'Pagination');
+        
+        paginationContainer.innerHTML = `
+            <div class="inline-flex items-center gap-3 bg-white px-6 py-4 rounded-xl shadow-xl border border-gray-200">
+                ${data.has_previous ? `
+                    <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" onclick="filterVenues(${data.current_page - 1})" aria-label="Previous page">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Sebelumnya
+                    </button>
+                ` : `
+                    <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Sebelumnya
+                    </span>
+                `}
+
+                <span class="px-5 py-2.5 bg-teal-50 text-teal-800 rounded-lg font-bold border border-teal-200 text-sm">
+                    Halaman ${data.current_page} dari ${data.total_pages}
+                </span>
+
+                ${data.has_next ? `
+                    <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" onclick="filterVenues(${data.current_page + 1})" aria-label="Next page">
+                        Berikutnya
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                ` : `
+                    <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+                        Berikutnya
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </span>
+                `}
+            </div>
+        `;
+        
+        grid.appendChild(paginationContainer);
+    }
+
     function displayVenues(venues) {
         const grid = document.getElementById('venueGrid');
         
+        // Hapus semua elemen kecuali loading spinner
         Array.from(grid.children).forEach(child => {
             if (!child.classList.contains('loading-spinner')) {
                 child.remove();
@@ -628,7 +833,6 @@
         });
 
         if (!venues || venues.length === 0) {
-            // ... (Kode empty-state Anda tidak berubah)
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-state';
             emptyState.style.gridColumn = '1 / -1';
@@ -644,7 +848,6 @@
         }
 
         // Render venues
-        // [MODIFIKASI] Tambahkan 'index' untuk delay animasi
         venues.forEach((venue, index) => { 
             const venueCard = document.createElement('div');
             venueCard.className = 'venue-card';
@@ -652,14 +855,15 @@
                 window.location.href = `{% url 'create_booking' 0 %}`.replace('/0/', `/${venue.id}/`);
             };
 
-            venueCard.style.opacity = 0; // Mulai dari transparan
+            venueCard.style.opacity = '0';
             venueCard.style.animation = `fadeInUp 0.5s ease-out forwards`;
-            // Terapkan delay bertingkat (0ms, 100ms, 200ms, dst.)
-            venueCard.style.animationDelay = `${index * 100}ms`; 
+            venueCard.style.animationDelay = `${index * 100}ms`;
 
             venueCard.addEventListener('animationend', () => {
-                venueCard.style.animation = 'none'; // Hapus properti animasi
-                venueCard.style.opacity = 1; // Pastikan opacity tetap 1
+                // Hapus style animasi agar tidak lagi mengontrol 'transform'
+                venueCard.style.animation = 'none'; 
+                // Pastikan opacity tetap 1
+                venueCard.style.opacity = '1'; 
             }, { once: true });
 
             venueCard.innerHTML = `
@@ -714,10 +918,11 @@
         document.getElementById('searchInput').value = '';
         document.getElementById('locationFilter').value = '';
         document.getElementById('sportFilter').value = '';
-        filterVenues();
+        currentPage = 1;  
+        filterVenues(1);  
     }
 
-    // Event listeners dengan error handling
+    // Event listeners
     function initializeEventListeners() {
         const searchInput = document.getElementById('searchInput');
         const locationFilter = document.getElementById('locationFilter');
@@ -726,53 +931,38 @@
         if (searchInput) {
             searchInput.addEventListener('input', function() {
                 clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(filterVenues, 500);
+                debounceTimer = setTimeout(() => filterVenues(1), 500);
             });
         }
 
         if (locationFilter) {
-            locationFilter.addEventListener('change', filterVenues);
+            locationFilter.addEventListener('change', () => filterVenues(1));
         }
 
         if (sportFilter) {
-            sportFilter.addEventListener('change', filterVenues);
+            sportFilter.addEventListener('change', () => filterVenues(1));
         }
-
-        console.log('Event listeners initialized'); // Debug log
     }
 
     // Initialize ketika DOM siap
-document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
-        console.log('DOM loaded, filters ready');
-
-        // ... (Animasikan Hero Section) ...
+        
+        // Animasikan Hero Section
         const heroSection = document.querySelector('.hero-section');
         if (heroSection) {
-            heroSection.style.opacity = 0;
+            heroSection.style.opacity = '0';
             heroSection.style.animation = `fadeInUp 0.6s ease-out forwards`;
         }
 
-        // 2. Animasikan kartu statis (dari Django) satu per satu
-        const staticCards = document.querySelectorAll('#venueGrid .venue-card');
-        staticCards.forEach((card, index) => {
-            card.style.opacity = 0; 
-            card.style.animation = `fadeInUp 0.5s ease-out forwards`;
-            card.style.animationDelay = `${200 + (index * 100)}ms`;
-
-            card.addEventListener('animationend', () => {
-                card.style.animation = 'none'; // Hapus properti animasi
-                card.style.opacity = 1; // Pastikan opacity tetap 1
-            }, { once: true }); // { once: true } agar listener hanya berjalan sekali
-        });
+        // Load initial data
+        filterVenues(1);
     });
 
     // Fallback initialization
     if (document.readyState === 'loading') {
-        // ... (Tidak berubah)
         document.addEventListener('DOMContentLoaded', initializeEventListeners);
     } else {
-        // ... (Tidak berubah)
         initializeEventListeners();
     }
 
