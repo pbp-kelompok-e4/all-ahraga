@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Booking — {{ venue.name }}{% endblock title %}
+{% load humanize %}{% block title %}Booking — {{ venue.name }}{% endblock title %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 my-10">
@@ -11,13 +11,13 @@
     Kembali
   </a>
 
-  <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+  <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden fade-in">
     
     {% if venue.main_image %}
-    <img src="{{ venue.main_image.url }}" alt="Foto {{ venue.name }}" class="w-full h-64 object-cover object-center">
+    <img src="{{ venue.main_image.url }}" alt="Foto {{ venue.name }}" class="w-full h-64 object-cover object-center fade-in-scale">
     {% endif %}
 
-    <div class="p-6 md:p-8">
+    <div class="p-6 md:p-8 fade-in animate-delay-100">
       <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4">
         <div>
           <h1 class="text-4xl font-extrabold text-gray-900">{{ venue.name }}</h1>
@@ -25,7 +25,7 @@
         </div>
         <div class="text-left sm:text-right mt-3 sm:mt-0 flex-shrink-0">
           <div class="text-3xl font-bold text-teal-600" id="base-price">
-            Rp {{ venue.price_per_hour|default:0|floatformat:0 }}
+            Rp {{ venue.price_per_hour|default:0|floatformat:0|intcomma }}
             <span class="text-base font-normal text-gray-500">/ jam</span>
           </div>
         </div>
@@ -46,17 +46,17 @@
 
       <div class="p-6 md:p-8">
         
-        <div>
+        <div class="fade-in animate-delay-100">
           <h3 class="text-2xl font-bold mb-4 text-gray-800">Pilih Jadwal</h3>
           <div id="date-scroller-wrapper" class="relative">
-            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 left-[-0.75rem]" data-direction="-1">
+            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 left-[-0.75rem]" data-direction="-1">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
             <div id="date-scroller" class="overflow-x-hidden whitespace-nowrap scroll-smooth">
               <div id="date-scroller-content" class="inline-flex gap-3 py-2 px-1">
               </div>
             </div>
-            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 right-[-0.75rem]" data-direction="1">
+            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 right-[-0.75rem]" data-direction="1">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
@@ -64,20 +64,24 @@
 
         <hr class="border-gray-200 my-8">
 
-        <div>
-          <div id="schedule-placeholder" class="text-gray-500 p-4 text-center bg-gray-50 rounded-lg">
-            Memuat jadwal...
+        <div class="fade-in animate-delay-200">
+          <div id="schedule-placeholder" class="text-gray-500 p-8 text-center bg-gray-50 rounded-lg">
+            <div class="space-y-3">
+              <div class="skeleton h-24 w-full"></div>
+              <div class="skeleton h-24 w-full"></div>
+              <div class="skeleton h-24 w-full"></div>
+            </div>
           </div>
           <div id="schedule-section" class="hidden">
             <div id="schedule-scroller-wrapper" class="relative">
-              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 left-[-0.75rem]" data-direction="-1">
+              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 left-[-0.75rem]" data-direction="-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
               </button>
               <div id="schedule-scroller" class="overflow-x-hidden whitespace-nowrap scroll-smooth">
                 <div id="schedule-scroller-content" class="inline-flex gap-4 py-2 px-1">
                   {% for s in schedules %}
-                  <label class="slot-card relative block p-4 rounded-xl border transition-all cursor-pointer hover:-translate-y-1 w-64 flex-shrink-0 
-                        {% if s.is_booked %}bg-red-50 border-red-100 opacity-70 cursor-not-allowed hover:shadow-none hover:-translate-y-0{% else %}bg-gradient-to-b from-white to-gray-50 border-gray-200 hover:border-teal-400 hover:shadow-md{% endif %}" 
+                  <label class="slot-card relative block p-4 rounded-xl border transition-all cursor-pointer w-64 flex-shrink-0 
+                        {% if s.is_booked %}bg-red-50 border-red-100 opacity-70 cursor-not-allowed hover:shadow-none{% else %}bg-gradient-to-b from-white to-gray-50 border-gray-200{% endif %}" 
                         data-id="{{ s.id }}" 
                         data-date="{{ s.date|date:'Y-m-d' }}"
                         style="display: none;">
@@ -97,11 +101,11 @@
                   {% endfor %}
                 </div>
               </div>
-              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 right-[-0.75rem]" data-direction="1">
+              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 right-[-0.75rem]" data-direction="1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </button>
             </div>
-            <div id="no-schedule-message" class="text-gray-500 p-4 text-center mt-4 hidden">
+            <div id="no-schedule-message" class="text-gray-500 p-4 text-center mt-4 hidden bg-gray-50 rounded-lg">
               Tidak ada jadwal tersedia untuk tanggal yang dipilih.
             </div>
           </div>
@@ -109,29 +113,37 @@
 
         <hr class="border-gray-200 my-8">
 
-        <div>
-          <button type="button" id="show-coach-btn" class="w-full text-center py-3 px-4 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors font-semibold text-lg shadow-sm">
+        <div class="fade-in animate-delay-300">
+          <button type="button" id="show-coach-btn" class="w-full text-center py-3 px-4 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl font-semibold text-lg shadow-sm transition-all duration-300">
             Butuh Coach? <span class="text-xl">🧑‍🏫</span>
           </button>
           
-          <div id="coach-section" class="hidden">
+          <div id="coach-section" class="hidden mt-6">
             <h3 class="text-2xl font-bold mb-4 text-gray-800">Pilih Coach Tambahan</h3>
             
-            <div id="coach-list-wrapper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2">
+            <div id="coach-list-wrapper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2">
               
-              <label id="no-coach-card" class="slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer hover:border-teal-400 hover:shadow-md overflow-hidden hover:-translate-y-1">
+              <label id="no-coach-card" class="coach-card slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer overflow-hidden">
                 <input id="no-coach-radio" type="radio" name="coach" value="" checked class="absolute opacity-0">
-                <div class="w-full h-32 bg-gray-100 flex items-center justify-center">
+                <div class="coach-avatar w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                     <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
                 </div>
-                <div class="p-4">
-                    <h4 class="text-lg font-bold text-gray-900">Tanpa Coach</h4>
-                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">Pilih opsi ini jika Anda tidak memerlukan pelatih.</p>
+                <div class="coach-info p-4">
+                  <div>
+                    <h4 class="text-lg font-bold text-gray-900 mb-2">Tanpa Coach</h4>
+                    <p class="text-sm text-gray-600 line-clamp-3">Pilih opsi ini jika Anda tidak memerlukan pelatih tambahan untuk sesi latihan Anda.</p>
+                  </div>
+                  <div class="coach-price mt-4 pt-3 border-t border-gray-200 text-teal-600 font-semibold">
+                    Rp 0/jam
+                  </div>
                 </div>
               </label>
 
-              <div id="coach-placeholder" class="text-gray-500 p-4 text-center col-span-1 sm:col-span-2 lg:col-span-4 hidden">
-                Memuat coach...
+              <div id="coach-placeholder" class="text-gray-500 p-4 text-center col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 hidden">
+                <div class="space-y-3">
+                  <div class="skeleton h-48 w-full"></div>
+                  <div class="skeleton h-48 w-full"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -140,11 +152,11 @@
         <hr class="border-gray-200 my-8">
 
         {% if equipment_list %}
-          <div id="equipment-section">
+          <div id="equipment-section" class="fade-in animate-delay-400">
             <h3 class="text-2xl font-bold mb-4 text-gray-800">Tambahkan Peralatan</h3>
             <div class="space-y-3 max-h-60 overflow-y-auto pr-2">
               {% for eq in equipment_list %}
-              <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 shadow-sm has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 transition-all cursor-pointer">
+              <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 shadow-sm has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 transition-all cursor-pointer hover:shadow-md">
                 <div class="flex items-center gap-3">
                   <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
                         id="eq-cb-{{ eq.id }}"
@@ -155,7 +167,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-4">
-                  <span class="text-base font-semibold text-teal-700">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
+                  <span class="text-base font-semibold text-teal-700">Rp {{ eq.rental_price|default:0|intcomma }}</span>
                   <input type="number" name="quantity_{{ eq.id }}" value="1" min="1" max="{{ eq.stock_quantity|default:1 }}" 
                         id="eq-qty-{{ eq.id }}"
                         data-eq-id="{{ eq.id }}"
@@ -166,20 +178,20 @@
               {% endfor %}
             </div>
           </div>
-          {% endif %}
+        {% endif %}
         
         <input type="hidden" name="payment_method" id="payment-method-input" value="CASH">
       </div>
 
       <hr class="border-gray-200">
 
-      <div class="p-6 md:p-8 bg-gray-50 rounded-b-2xl">
+      <div class="p-6 md:p-8 bg-gradient-to-b from-gray-50 to-white rounded-b-2xl">
         <h3 class="text-2xl font-bold mb-6 text-gray-800">Ringkasan & Pembayaran</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div class="space-y-4">
             <div class="flex justify-between py-3 border-b border-gray-200">
               <span class="text-gray-600 font-medium">Harga lapangan (1 jam)</span>
-              <span class="font-bold text-gray-800" id="summary-base">Rp {{ venue.price_per_hour|default:0|floatformat:0 }}</span>
+              <span class="font-bold text-gray-800" id="summary-base">Rp {{ venue.price_per_hour|default:0|intcomma }}</span>
             </div>
             <div class="flex justify-between py-3 border-b border-gray-200">
               <span class="text-gray-600 font-medium">Equipment</span>
@@ -192,19 +204,19 @@
             <div class="flex justify-between items-center py-3">
               <span class="text-xl font-extrabold text-gray-900">Total Pembayaran</span>
               <span class="text-3xl font-extrabold text-teal-600" id="summary-total">
-                Rp {{ venue.price_per_hour|default:0|floatformat:0 }}
+                Rp {{ venue.price_per_hour|default:0|intcomma }}
               </span>
             </div>
           </div>
           <div>
             <div class="mb-5">
               <label for="payment-method" class="block mb-2 text-base font-semibold text-gray-700">Metode Pembayaran</label>
-              <select id="payment-method" class="w-full p-3 bg-white border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-teal-500 focus:border-teal-500 shadow-sm">
+              <select id="payment-method" class="w-full p-3 bg-white border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-teal-500 focus:border-teal-500 shadow-sm transition-all">
                 <option value="CASH">Cash (Bayar di tempat)</option>
                 <option value="TRANSFER">Transfer Bank (Virtual Account)</option>
               </select>
             </div>
-            <button id="confirm-btn" class="w-full mb-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-xl shadow-lg">
+            <button id="confirm-btn" class="w-full mb-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all text-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
               Konfirmasi & Buat Booking
             </button>
             <a href="{% url 'home' %}" class="block text-center py-3 px-4 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors font-semibold">
@@ -226,32 +238,175 @@
 </div>
 
 <style>
-  /* Base button styles are handled by Tailwind classes in HTML */
-  
-  /* Scroll Button Position (Need specific overrides for correct centering) */
-  .date-scroll-btn, .schedule-scroll-btn {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  /* Fade-in animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   
-  /* [BARU] Utility untuk line-clamp (Tailwind CSS) */
+  @keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  .fade-in-scale {
+    animation: fadeInScale 0.4s ease-out forwards;
+  }
+  
+  .animate-delay-100 { animation-delay: 0.1s; opacity: 0; }
+  .animate-delay-200 { animation-delay: 0.2s; opacity: 0; }
+  .animate-delay-300 { animation-delay: 0.3s; opacity: 0; }
+  .animate-delay-400 { animation-delay: 0.4s; opacity: 0; }
+  
+  /* Skeleton loader with shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
+    border-radius: 0.75rem;
+  }
+  
+  /* Scroll Button Enhancements */
+  .date-scroll-btn, .schedule-scroll-btn {
+    transition: all 0.3s ease;
+  }
+  
+  .date-scroll-btn:hover, .schedule-scroll-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Line clamp utility */
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
   
-  /* Date Button Hover/Selected States (For JavaScript manipulation) */
+  /* Date Button States */
+  .date-button {
+    transition: all 0.3s ease;
+  }
+  
   .date-button.bg-blue-600 {
-      background-color: #0d9488; /* Tailwind teal-600 */
-      border-color: #0d9488; /* Tailwind teal-600 */
+    background-color: #0d9488;
+    border-color: #0d9488;
+  }
+  
+  /* Slot card hover effect */
+  .slot-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .slot-card:not(.bg-red-50):hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: #0d9488;
+  }
+  
+  .slot-card.border-teal-400 {
+    border-color: #0d9488;
+    box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.2);
+  }
+  
+  /* Coach card improvements */
+  .coach-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .coach-card .coach-avatar {
+    height: 140px;
+    flex-shrink: 0;
+  }
+
+  .coach-card .coach-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .coach-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0d9488;
+    margin-top: auto;
+  }
+  
+  /* Coach card special effect */
+  .coach-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  .coach-card:hover::before {
+    left: 100%;
+  }
+
+  /* Responsive improvements */
+  @media (max-width: 640px) {
+    #coach-list-wrapper {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .coach-card {
+        min-height: 280px;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    #coach-list-wrapper {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1025px) and (max-width: 1280px) {
+    #coach-list-wrapper {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1281px) {
+    #coach-list-wrapper {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
   }
 </style>
 
 <script>
 (function () {
   // --- Initialization and Element Selection ---
-  const basePrice = Number("{{ venue.price_per_hour|default:0|floatformat:0 }}") || 0;
+  const basePrice = Number("{{ venue.price_per_hour|default:0|cut:'.' }}") || 0;
   const form = document.getElementById('booking-form');
   if (!form) return;
 
@@ -280,7 +435,11 @@
   const paymentInput = document.getElementById('payment-method-input');
   const confirmBtn = document.getElementById('confirm-btn');
 
-  function formatRp(n) { return 'Rp ' + Intl.NumberFormat('id-ID').format(Math.round(n)); }
+  // Improved price formatting
+  function formatRp(n) { 
+    const number = typeof n === 'string' ? parseFloat(n) : n;
+    return 'Rp ' + Intl.NumberFormat('id-ID').format(Math.round(number || 0)); 
+  }
 
   // --- Calculation Logic ---
   function calc() {
@@ -318,14 +477,14 @@
     if (!scheduleId) {
       clearDynamicCoaches();
       coachPlaceholder.style.display = 'block';
-      coachPlaceholder.textContent = 'Pilih jadwal untuk melihat coach.';
+      coachPlaceholder.innerHTML = '<div class="space-y-3"><div class="skeleton h-48 w-full"></div><div class="skeleton h-48 w-full"></div></div>';
       if (noCoachRadio) noCoachRadio.checked = true;
       if (noCoachCard) noCoachCard.classList.add('border-teal-400', 'shadow-md');
       calc();
       return;
     }
     coachPlaceholder.style.display = 'block';
-    coachPlaceholder.textContent = 'Memuat coach...';
+    coachPlaceholder.innerHTML = '<div class="space-y-3"><div class="skeleton h-48 w-full"></div><div class="skeleton h-48 w-full"></div><div class="skeleton h-48 w-full"></div></div>';
     
     fetch(`/api/schedule/${scheduleId}/coaches/`)
       .then(response => response.json())
@@ -334,35 +493,44 @@
         coachPlaceholder.style.display = 'none';
         
         if (data.error) {
-          coachPlaceholder.textContent = data.error;
+          coachPlaceholder.innerHTML = `<p class="text-gray-500 p-4">${data.error}</p>`;
           coachPlaceholder.style.display = 'block';
         } else if (data.coaches && data.coaches.length > 0) {
-          data.coaches.forEach(coach => {
+          data.coaches.forEach((coach, index) => {
             const coachCard = document.createElement('label');
-            coachCard.className = 'coach-card dynamic-coach-card slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer hover:-translate-y-1 hover:border-teal-400 hover:shadow-md overflow-hidden';
+            coachCard.className = 'coach-card dynamic-coach-card slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer overflow-hidden fade-in';
+            coachCard.style.animationDelay = `${index * 0.1}s`;
+            coachCard.style.opacity = '0';
+            
             let avatarHtml = '';
             if (coach.profile_picture_url) {
-                avatarHtml = `<img src="${coach.profile_picture_url}" alt="${coach.name}" class="w-full h-32 object-cover object-top">`;
+                avatarHtml = `<img src="${coach.profile_picture_url}" alt="${coach.name}" class="w-full h-full object-cover object-top">`;
             } else {
                 const initial = coach.name ? coach.name.charAt(0).toUpperCase() : '?';
-                avatarHtml = `<div class="w-full h-32 bg-gray-200 flex items-center justify-center"><span class="text-4xl font-bold text-gray-500">${initial}</span></div>`;
+                avatarHtml = `<div class="w-full h-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center"><span class="text-4xl font-bold text-teal-600">${initial}</span></div>`;
             }
             const areas = coach.areas && coach.areas.length > 0 ? coach.areas.join(', ') : 'N/A';
             coachCard.innerHTML = `
               <input type="radio" name="coach" value="${coach.id}" data-rate="${coach.rate_per_hour || 0}" class="absolute opacity-0">
-              ${avatarHtml}
-              <div class="p-4">
-                  <div class="flex justify-between items-start mb-1">
-                      <h4 class="text-lg font-bold text-gray-900">${coach.name || 'Coach'}</h4>
-                      <span class="text-sm font-medium text-teal-600 flex-shrink-0 ml-2">${formatRp(coach.rate_per_hour || 0)}/jam</span>
+              <div class="coach-avatar w-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center overflow-hidden">
+                  ${avatarHtml}
+              </div>
+              <div class="coach-info p-4">
+                  <div>
+                      <div class="flex justify-between items-start mb-2">
+                          <h4 class="text-lg font-bold text-gray-900">${coach.name || 'Coach'}</h4>
+                      </div>
+                      <div class="text-sm text-gray-500 mb-2">
+                          <span>${coach.age || '?'} thn</span> • <span>${coach.sport || 'N/A'}</span>
+                      </div>
+                      <div class="text-sm text-gray-500 mb-3">
+                          <strong class="font-medium text-gray-700">Area:</strong> ${areas}
+                      </div>
+                      <p class="text-sm text-gray-600 line-clamp-2" title="${coach.experience_desc || ''}">${coach.experience_desc || 'Tidak ada deskripsi.'}</p>
                   </div>
-                  <div class="text-sm text-gray-500">
-                      <span>${coach.age || '?'} thn</span> • <span>${coach.sport || 'N/A'}</span>
+                  <div class="coach-price mt-4 pt-3 border-t border-gray-200">
+                      ${formatRp(coach.rate_per_hour || 0)}/jam
                   </div>
-                  <div class="text-sm text-gray-500 mt-2">
-                      <strong class="font-medium text-gray-700">Area:</strong> ${areas}
-                  </div>
-                  <p class="text-sm text-gray-600 mt-2 line-clamp-2" title="${coach.experience_desc || ''}">${coach.experience_desc || 'Tidak ada deskripsi.'}</p>
               </div>`;
             const newRadio = coachCard.querySelector('input[type="radio"]');
             if (newRadio) {
@@ -377,7 +545,7 @@
             coachListWrapper.appendChild(coachCard);
           });
         } else {
-          coachPlaceholder.textContent = 'Tidak ada coach tersedia untuk jadwal ini.';
+          coachPlaceholder.innerHTML = '<p class="text-gray-500 p-4">Tidak ada coach tersedia untuk jadwal ini.</p>';
           coachPlaceholder.style.display = 'block';
         }
         if (noCoachRadio) noCoachRadio.checked = true;
@@ -387,7 +555,7 @@
       .catch(error => {
         clearDynamicCoaches(); 
         console.error('Error loading coaches:', error);
-        coachPlaceholder.textContent = 'Gagal memuat daftar coach.';
+        coachPlaceholder.innerHTML = '<p class="text-red-500 p-4">Gagal memuat daftar coach.</p>';
         coachPlaceholder.style.display = 'block';
         if (noCoachRadio) noCoachRadio.checked = true;
         if (noCoachCard) noCoachCard.classList.add('border-teal-400', 'shadow-md');
@@ -409,23 +577,39 @@
   function filterSchedulesByDate(selectedDate) {
     if (!selectedDate) return;
     resetSelections();
-    let found = false;
-    allSlotLabels.forEach(label => {
-      if (label.dataset.date === selectedDate) {
-        if (!label.classList.contains('bg-red-50')) {
-          label.style.display = 'block';
-          found = true;
+    
+    // Add fade out effect
+    scheduleSection.style.opacity = '0';
+    scheduleSection.style.transform = 'translateY(10px)';
+    
+    setTimeout(() => {
+      let found = false;
+      allSlotLabels.forEach(label => {
+        if (label.dataset.date === selectedDate) {
+          if (!label.classList.contains('bg-red-50')) {
+            label.style.display = 'block';
+            found = true;
+          } else {
+            label.style.display = 'block';
+          }
         } else {
-          label.style.display = 'block';
+          label.style.display = 'none';
         }
-      } else {
-        label.style.display = 'none';
-      }
-    });
-    if (found) { noScheduleMessage.style.display = 'none'; } 
-    else { noScheduleMessage.style.display = 'block'; }
-    scheduleSection.style.display = 'block';
-    schedulePlaceholder.style.display = 'none';
+      });
+      
+      if (found) { noScheduleMessage.style.display = 'none'; } 
+      else { noScheduleMessage.style.display = 'block'; }
+      
+      scheduleSection.style.display = 'block';
+      schedulePlaceholder.style.display = 'none';
+      
+      // Add fade in effect
+      setTimeout(() => {
+        scheduleSection.style.transition = 'all 0.4s ease';
+        scheduleSection.style.opacity = '1';
+        scheduleSection.style.transform = 'translateY(0)';
+      }, 50);
+    }, 200);
   }
 
   // --- UI Setup ---
@@ -441,7 +625,9 @@
       const dateString = date.toISOString().split('T')[0];
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'date-button flex-shrink-0 w-16 h-20 rounded-lg border border-gray-300 bg-white flex flex-col items-center justify-center transition-all hover:border-teal-400 hover:shadow-sm';
+      button.className = 'date-button flex-shrink-0 w-16 h-20 rounded-lg border border-gray-300 bg-white flex flex-col items-center justify-center transition-all hover:border-teal-400 hover:shadow-md fade-in';
+      button.style.animationDelay = `${i * 0.02}s`;
+      button.style.opacity = '0';
       button.dataset.date = dateString;
       button.innerHTML = `
         <span class="text-xs font-medium text-gray-500 uppercase">${dayName}</span>
@@ -485,7 +671,7 @@
 
   const firstDateButton = document.querySelector('.date-button');
   if (firstDateButton) { firstDateButton.click(); } 
-  else { schedulePlaceholder.textContent = 'Gagal memuat tanggal.'; }
+  else { schedulePlaceholder.innerHTML = '<p class="text-red-500">Gagal memuat tanggal.</p>'; }
 
   allSlotLabels.forEach(lbl => {
     lbl.addEventListener('click', function (e) {
@@ -513,11 +699,18 @@
   if (showCoachBtn && coachSection) {
     showCoachBtn.addEventListener('click', () => {
       isCoachSectionVisible = true;
-      coachSection.classList.remove('hidden');
-      showCoachBtn.classList.add('hidden'); 
-      const checkedSchedule = form.querySelector('input[name="schedule_id"]:checked');
-      if (checkedSchedule) { loadCoaches(checkedSchedule.value); } 
-      else { loadCoaches(null); }
+      showCoachBtn.style.opacity = '0';
+      showCoachBtn.style.transform = 'translateY(-10px)';
+      
+      setTimeout(() => {
+        showCoachBtn.classList.add('hidden');
+        coachSection.classList.remove('hidden');
+        coachSection.classList.add('fade-in');
+        
+        const checkedSchedule = form.querySelector('input[name="schedule_id"]:checked');
+        if (checkedSchedule) { loadCoaches(checkedSchedule.value); } 
+        else { loadCoaches(null); }
+      }, 300);
     });
   }
   
