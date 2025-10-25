@@ -4,40 +4,40 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 my-10">
-  <a href="{% url 'home' %}" class="inline-flex items-center mb-4 text-slate-600 hover:text-slate-800">
+  <a href="{% url 'home' %}" class="inline-flex items-center mb-6 text-gray-600 hover:text-teal-700 transition-colors">
     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
     </svg>
     Kembali
   </a>
 
-  <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+  <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
     
     {% if venue.main_image %}
-    <img src="{{ venue.main_image.url }}" alt="Foto {{ venue.name }}" class="w-full h-64 object-cover">
+    <img src="{{ venue.main_image.url }}" alt="Foto {{ venue.name }}" class="w-full h-64 object-cover object-center">
     {% endif %}
 
     <div class="p-6 md:p-8">
       <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-4">
         <div>
-          <h1 class="text-3xl font-bold text-slate-900">{{ venue.name }}</h1>
-          <p class="text-lg text-slate-600 mt-1">{{ venue.sport_category.name }} • {{ venue.location.name }}</p>
+          <h1 class="text-4xl font-extrabold text-gray-900">{{ venue.name }}</h1>
+          <p class="text-lg text-gray-600 mt-1">{{ venue.sport_category.name }} • {{ venue.location.name }}</p>
         </div>
         <div class="text-left sm:text-right mt-3 sm:mt-0 flex-shrink-0">
-          <div class="text-2xl font-bold text-blue-600" id="base-price">
+          <div class="text-3xl font-bold text-teal-600" id="base-price">
             Rp {{ venue.price_per_hour|default:0|floatformat:0 }}
-            <span class="text-sm font-normal text-slate-500">/ jam</span>
+            <span class="text-base font-normal text-gray-500">/ jam</span>
           </div>
         </div>
       </div>
       
       {% if venue.description %}
-      <h3 class="text-lg font-semibold mt-6 mb-2">Deskripsi</h3>
-      <p class="text-slate-700 prose max-w-none">{{ venue.description|linebreaksbr }}</p>
+      <h3 class="text-xl font-bold mt-6 mb-3 text-gray-800">Deskripsi</h3>
+      <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ venue.description|linebreaksbr }}</p>
       {% endif %}
     </div>
 
-    <hr class="border-slate-200">
+    <hr class="border-gray-200">
 
     {% if schedules %}
     <form id="booking-form" method="post">
@@ -47,48 +47,49 @@
       <div class="p-6 md:p-8">
         
         <div>
-          <h3 class="text-xl font-semibold mb-4">Pilih Jadwal</h3>
+          <h3 class="text-2xl font-bold mb-4 text-gray-800">Pilih Jadwal</h3>
           <div id="date-scroller-wrapper" class="relative">
-            <button type="button" class="date-scroll-btn left-0" data-direction="-1">
+            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 left-[-0.75rem]" data-direction="-1">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
             <div id="date-scroller" class="overflow-x-hidden whitespace-nowrap scroll-smooth">
               <div id="date-scroller-content" class="inline-flex gap-3 py-2 px-1">
               </div>
             </div>
-            <button type="button" class="date-scroll-btn right-0" data-direction="1">
+            <button type="button" class="date-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 right-[-0.75rem]" data-direction="1">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             </button>
           </div>
         </div>
 
-        <hr class="border-slate-200 my-8">
+        <hr class="border-gray-200 my-8">
 
         <div>
-          <div id="schedule-placeholder" class="text-slate-500 p-4 text-center bg-slate-50 rounded-lg">
+          <div id="schedule-placeholder" class="text-gray-500 p-4 text-center bg-gray-50 rounded-lg">
             Memuat jadwal...
           </div>
-          <div id="schedule-section" style="display: none;">
+          <div id="schedule-section" class="hidden">
             <div id="schedule-scroller-wrapper" class="relative">
-              <button type="button" class="schedule-scroll-btn left-0" data-direction="-1">
+              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 left-[-0.75rem]" data-direction="-1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
               </button>
               <div id="schedule-scroller" class="overflow-x-hidden whitespace-nowrap scroll-smooth">
                 <div id="schedule-scroller-content" class="inline-flex gap-4 py-2 px-1">
                   {% for s in schedules %}
-                  <label class="slot-card relative block p-4 rounded-lg border transition-all cursor-pointer hover:-translate-y-1 w-64 flex-shrink-0 {% if s.is_booked %}bg-red-50 border-red-100{% else %}bg-gradient-to-b from-white to-slate-50 border-slate-200 hover:border-blue-400 hover:shadow-md{% endif %}" 
+                  <label class="slot-card relative block p-4 rounded-xl border transition-all cursor-pointer hover:-translate-y-1 w-64 flex-shrink-0 
+                        {% if s.is_booked %}bg-red-50 border-red-100 opacity-70 cursor-not-allowed hover:shadow-none hover:-translate-y-0{% else %}bg-gradient-to-b from-white to-gray-50 border-gray-200 hover:border-teal-400 hover:shadow-md{% endif %}" 
                         data-id="{{ s.id }}" 
                         data-date="{{ s.date|date:'Y-m-d' }}"
                         style="display: none;">
                     <div class="flex justify-between items-start">
                       <div>
-                        <div class="font-semibold">{{ s.date|date:"D, d M Y" }}</div>
-                        <div class="text-lg font-medium text-slate-800 mt-1">{{ s.start_time|time:"H:i" }} — {{ s.end_time|time:"H:i" }}</div>
+                        <div class="font-semibold text-gray-700">{{ s.date|date:"D, d M Y" }}</div>
+                        <div class="text-xl font-bold text-gray-900 mt-1">{{ s.start_time|time:"H:i" }} — {{ s.end_time|time:"H:i" }}</div>
                       </div>
                       {% if s.is_booked %}
-                        <span class="text-sm font-medium text-red-600 line-through">Booked</span>
+                        <span class="text-sm font-medium text-red-600 line-through flex-shrink-0 ml-2">Booked</span>
                       {% else %}
-                        <span class="text-sm font-medium text-emerald-600">Available</span>
+                        <span class="text-sm font-medium text-teal-600 flex-shrink-0 ml-2">Available</span>
                       {% endif %}
                     </div>
                     <input type="radio" name="schedule_id" value="{{ s.id }}" class="absolute opacity-0">
@@ -96,69 +97,69 @@
                   {% endfor %}
                 </div>
               </div>
-              <button type="button" class="schedule-scroll-btn right-0" data-direction="1">
+              <button type="button" class="schedule-scroll-btn absolute top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-700 border border-gray-200 transition-all hover:bg-gray-50 right-[-0.75rem]" data-direction="1">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </button>
             </div>
-            <div id="no-schedule-message" class="text-slate-500 p-4 text-center mt-4" style="display: none;">
+            <div id="no-schedule-message" class="text-gray-500 p-4 text-center mt-4 hidden">
               Tidak ada jadwal tersedia untuk tanggal yang dipilih.
             </div>
           </div>
         </div>
 
-        <hr class="border-slate-200 my-8">
+        <hr class="border-gray-200 my-8">
 
         <div>
-          <button type="button" id="show-coach-btn" class="w-full text-center py-3 px-4 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium">
-            Butuh Coach?
+          <button type="button" id="show-coach-btn" class="w-full text-center py-3 px-4 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors font-semibold text-lg shadow-sm">
+            Butuh Coach? <span class="text-xl">🧑‍🏫</span>
           </button>
           
-          <div id="coach-section" style="display: none;">
-            <h3 class="text-xl font-semibold mb-4">Butuh Coach?</h3>
+          <div id="coach-section" class="hidden">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Pilih Coach Tambahan</h3>
             
             <div id="coach-list-wrapper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2">
               
-              <label id="no-coach-card" class="slot-card relative block rounded-lg border border-slate-200 bg-white transition-all cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md overflow-hidden">
+              <label id="no-coach-card" class="slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer hover:border-teal-400 hover:shadow-md overflow-hidden hover:-translate-y-1">
                 <input id="no-coach-radio" type="radio" name="coach" value="" checked class="absolute opacity-0">
-                <div class="w-full h-32 bg-slate-100 flex items-center justify-center">
-                    <svg class="w-16 h-16 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                <div class="w-full h-32 bg-gray-100 flex items-center justify-center">
+                    <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
                 </div>
                 <div class="p-4">
-                    <h4 class="font-semibold text-slate-800">Tanpa Coach</h4>
-                    <p class="text-sm text-slate-600 mt-2 line-clamp-2">Pilih opsi ini jika Anda tidak memerlukan pelatih.</p>
+                    <h4 class="text-lg font-bold text-gray-900">Tanpa Coach</h4>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">Pilih opsi ini jika Anda tidak memerlukan pelatih.</p>
                 </div>
               </label>
 
-              <div id="coach-placeholder" class="text-slate-500 p-4 text-center col-span-1 sm:col-span-2 lg:col-span-4" style="display: none;">
+              <div id="coach-placeholder" class="text-gray-500 p-4 text-center col-span-1 sm:col-span-2 lg:col-span-4 hidden">
                 Memuat coach...
               </div>
             </div>
           </div>
         </div>
 
-        <hr class="border-slate-200 my-8">
+        <hr class="border-gray-200 my-8">
 
         {% if equipment_list %}
           <div id="equipment-section">
-            <h3 class="text-xl font-semibold mb-4">Add Equipment</h3>
-            <div class="space-y-3 max-h-[240px] overflow-y-auto pr-2">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">Tambahkan Peralatan</h3>
+            <div class="space-y-3 max-h-60 overflow-y-auto pr-2">
               {% for eq in equipment_list %}
-              <label class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50 transition-all">
+              <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 shadow-sm has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 transition-all cursor-pointer">
                 <div class="flex items-center gap-3">
                   <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
                         id="eq-cb-{{ eq.id }}"
-                        class="eq-checkbox w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        class="eq-checkbox w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                   <div>
-                    <div class="font-medium">{{ eq.name }}</div>
-                    <div class="text-sm text-slate-600">Stock: {{ eq.stock_quantity|default:0 }}</div>
+                    <div class="font-bold text-gray-800">{{ eq.name }}</div>
+                    <div class="text-sm text-gray-600">Stok: {{ eq.stock_quantity|default:0 }}</div>
                   </div>
                 </div>
                 <div class="flex items-center gap-4">
-                  <span class="text-sm">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
+                  <span class="text-base font-semibold text-teal-700">Rp {{ eq.rental_price|default:0|floatformat:0 }}</span>
                   <input type="number" name="quantity_{{ eq.id }}" value="1" min="1" max="{{ eq.stock_quantity|default:1 }}" 
                         id="eq-qty-{{ eq.id }}"
                         data-eq-id="{{ eq.id }}"
-                        class="eq-quantity w-16 p-1 text-center border border-slate-300 rounded-md disabled:bg-slate-200 disabled:opacity-50" 
+                        class="eq-quantity w-16 p-1.5 text-center border border-gray-300 rounded-lg disabled:bg-gray-200 disabled:opacity-70 focus:ring-teal-500 focus:border-teal-500" 
                         disabled>
                 </div>
               </label>
@@ -170,43 +171,43 @@
         <input type="hidden" name="payment_method" id="payment-method-input" value="CASH">
       </div>
 
-      <hr class="border-slate-200">
+      <hr class="border-gray-200">
 
-      <div class="p-6 md:p-8 bg-slate-50">
-        <h3 class="text-xl font-semibold mb-6">Ringkasan & Pembayaran</h3>
+      <div class="p-6 md:p-8 bg-gray-50 rounded-b-2xl">
+        <h3 class="text-2xl font-bold mb-6 text-gray-800">Ringkasan & Pembayaran</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div class="space-y-4">
-            <div class="flex justify-between py-3 border-b border-slate-200">
-              <span class="text-slate-600">Harga lapangan (1 jam)</span>
-              <span class="font-semibold" id="summary-base">Rp {{ venue.price_per_hour|default:0|floatformat:0 }}</span>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+              <span class="text-gray-600 font-medium">Harga lapangan (1 jam)</span>
+              <span class="font-bold text-gray-800" id="summary-base">Rp {{ venue.price_per_hour|default:0|floatformat:0 }}</span>
             </div>
-            <div class="flex justify-between py-3 border-b border-slate-200">
-              <span class="text-slate-600">Equipment</span>
-              <span class="font-semibold" id="summary-eq">Rp 0</span>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+              <span class="text-gray-600 font-medium">Equipment</span>
+              <span class="font-bold text-gray-800" id="summary-eq">Rp 0</span>
             </div>
-            <div class="flex justify-between py-3 border-b border-slate-200">
-              <span class="text-slate-600">Coach</span>
-              <span class="font-semibold" id="summary-coach">Rp 0</span>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+              <span class="text-gray-600 font-medium">Coach</span>
+              <span class="font-bold text-gray-800" id="summary-coach">Rp 0</span>
             </div>
             <div class="flex justify-between items-center py-3">
-              <span class="text-lg font-medium">Total</span>
-              <span class="text-2xl font-bold text-blue-600" id="summary-total">
+              <span class="text-xl font-extrabold text-gray-900">Total Pembayaran</span>
+              <span class="text-3xl font-extrabold text-teal-600" id="summary-total">
                 Rp {{ venue.price_per_hour|default:0|floatformat:0 }}
               </span>
             </div>
           </div>
           <div>
-            <div class="mb-4">
-              <label for="payment-method" class="block mb-2 text-sm font-medium">Metode Pembayaran</label>
-              <select id="payment-method" class="w-full p-2.5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                <option value="CASH">Cash</option>
-                <option value="TRANSFER">Transfer Bank</option>
+            <div class="mb-5">
+              <label for="payment-method" class="block mb-2 text-base font-semibold text-gray-700">Metode Pembayaran</label>
+              <select id="payment-method" class="w-full p-3 bg-white border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-teal-500 focus:border-teal-500 shadow-sm">
+                <option value="CASH">Cash (Bayar di tempat)</option>
+                <option value="TRANSFER">Transfer Bank (Virtual Account)</option>
               </select>
             </div>
-            <button id="confirm-btn" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors text-lg">
+            <button id="confirm-btn" class="w-full mb-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-xl shadow-lg">
               Konfirmasi & Buat Booking
             </button>
-            <a href="{% url 'home' %}" class="block text-center py-3 px-4 text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">
+            <a href="{% url 'home' %}" class="block text-center py-3 px-4 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors font-semibold">
               Batal
             </a>
           </div>
@@ -215,8 +216,9 @@
     </form>
     {% else %}
     <div class="p-6 md:p-8">
-      <div class="text-slate-600 p-4 text-center bg-yellow-50 border border-yellow-200 rounded-lg">
-        Tidak ada jadwal tersedia untuk venue ini saat ini.
+      <div class="text-gray-700 p-4 text-center bg-yellow-100 border border-yellow-300 rounded-xl">
+        <h3 class="font-bold text-lg mb-1">Jadwal Tidak Tersedia</h3>
+        <p>Tidak ada jadwal tersedia untuk venue ini saat ini.</p>
       </div>
     </div>
     {% endif %}
@@ -224,16 +226,12 @@
 </div>
 
 <style>
+  /* Base button styles are handled by Tailwind classes in HTML */
+  
+  /* Scroll Button Position (Need specific overrides for correct centering) */
   .date-scroll-btn, .schedule-scroll-btn {
-    position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
-    width: 2.25rem; height: 2.25rem; border-radius: 9999px; background-color: white;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    display: flex; align-items: center; justify-content: center;
-    color: #475569; border: 1px solid #e2e8f0; transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
   }
-  .date-scroll-btn:hover, .schedule-scroll-btn:hover { background-color: #f8fafc; color: #000; }
-  .date-scroll-btn.left-0, .schedule-scroll-btn.left-0 { left: -0.75rem; }
-  .date-scroll-btn.right-0, .schedule-scroll-btn.right-0 { right: -0.75rem; }
   
   /* [BARU] Utility untuk line-clamp (Tailwind CSS) */
   .line-clamp-2 {
@@ -242,10 +240,17 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
+  
+  /* Date Button Hover/Selected States (For JavaScript manipulation) */
+  .date-button.bg-blue-600 {
+      background-color: #0d9488; /* Tailwind teal-600 */
+      border-color: #0d9488; /* Tailwind teal-600 */
+  }
 </style>
 
 <script>
 (function () {
+  // --- Initialization and Element Selection ---
   const basePrice = Number("{{ venue.price_per_hour|default:0|floatformat:0 }}") || 0;
   const form = document.getElementById('booking-form');
   if (!form) return;
@@ -277,6 +282,7 @@
 
   function formatRp(n) { return 'Rp ' + Intl.NumberFormat('id-ID').format(Math.round(n)); }
 
+  // --- Calculation Logic ---
   function calc() {
     let eqTotal = 0;
     eqCheckboxes.forEach(cb => {
@@ -303,6 +309,7 @@
     if (summaryTotal) summaryTotal.textContent = formatRp(total);
   }
 
+  // --- Coach Loading Logic ---
   function loadCoaches(scheduleId) {
     if (!isCoachSectionVisible) return;
     function clearDynamicCoaches() {
@@ -313,7 +320,7 @@
       coachPlaceholder.style.display = 'block';
       coachPlaceholder.textContent = 'Pilih jadwal untuk melihat coach.';
       if (noCoachRadio) noCoachRadio.checked = true;
-      if (noCoachCard) noCoachCard.classList.add('border-blue-400', 'shadow-md');
+      if (noCoachCard) noCoachCard.classList.add('border-teal-400', 'shadow-md');
       calc();
       return;
     }
@@ -332,13 +339,13 @@
         } else if (data.coaches && data.coaches.length > 0) {
           data.coaches.forEach(coach => {
             const coachCard = document.createElement('label');
-            coachCard.className = 'coach-card dynamic-coach-card slot-card relative block rounded-lg border border-slate-200 bg-white transition-all cursor-pointer hover:-translate-y-1 hover:border-blue-400 hover:shadow-md overflow-hidden';
+            coachCard.className = 'coach-card dynamic-coach-card slot-card relative block rounded-xl border border-gray-200 bg-white transition-all cursor-pointer hover:-translate-y-1 hover:border-teal-400 hover:shadow-md overflow-hidden';
             let avatarHtml = '';
             if (coach.profile_picture_url) {
-                avatarHtml = `<img src="${coach.profile_picture_url}" alt="${coach.name}" class="w-full h-32 object-cover">`;
+                avatarHtml = `<img src="${coach.profile_picture_url}" alt="${coach.name}" class="w-full h-32 object-cover object-top">`;
             } else {
                 const initial = coach.name ? coach.name.charAt(0).toUpperCase() : '?';
-                avatarHtml = `<div class="w-full h-32 bg-slate-200 flex items-center justify-center"><span class="text-4xl font-bold text-slate-500">${initial}</span></div>`;
+                avatarHtml = `<div class="w-full h-32 bg-gray-200 flex items-center justify-center"><span class="text-4xl font-bold text-gray-500">${initial}</span></div>`;
             }
             const areas = coach.areas && coach.areas.length > 0 ? coach.areas.join(', ') : 'N/A';
             coachCard.innerHTML = `
@@ -346,23 +353,23 @@
               ${avatarHtml}
               <div class="p-4">
                   <div class="flex justify-between items-start mb-1">
-                      <h4 class="font-semibold text-slate-800">${coach.name || 'Coach'}</h4>
-                      <span class="text-sm font-medium text-emerald-600 flex-shrink-0 ml-2">${formatRp(coach.rate_per_hour || 0)}/jam</span>
+                      <h4 class="text-lg font-bold text-gray-900">${coach.name || 'Coach'}</h4>
+                      <span class="text-sm font-medium text-teal-600 flex-shrink-0 ml-2">${formatRp(coach.rate_per_hour || 0)}/jam</span>
                   </div>
-                  <div class="text-sm text-slate-500">
+                  <div class="text-sm text-gray-500">
                       <span>${coach.age || '?'} thn</span> • <span>${coach.sport || 'N/A'}</span>
                   </div>
-                  <div class="text-sm text-slate-500 mt-2">
-                      <strong class="font-medium text-slate-600">Area:</strong> ${areas}
+                  <div class="text-sm text-gray-500 mt-2">
+                      <strong class="font-medium text-gray-700">Area:</strong> ${areas}
                   </div>
-                  <p class="text-sm text-slate-600 mt-2 line-clamp-2" title="${coach.experience_desc || ''}">${coach.experience_desc || 'Tidak ada deskripsi.'}</p>
+                  <p class="text-sm text-gray-600 mt-2 line-clamp-2" title="${coach.experience_desc || ''}">${coach.experience_desc || 'Tidak ada deskripsi.'}</p>
               </div>`;
             const newRadio = coachCard.querySelector('input[type="radio"]');
             if (newRadio) {
                 newRadio.addEventListener('change', calc);
                 coachCard.addEventListener('click', () => {
-                    coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-blue-400', 'shadow-md'));
-                    coachCard.classList.add('border-blue-400', 'shadow-md');
+                    coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-teal-400', 'shadow-md'));
+                    coachCard.classList.add('border-teal-400', 'shadow-md');
                     newRadio.checked = true;
                     newRadio.dispatchEvent(new Event('change'));
                 });
@@ -374,7 +381,7 @@
           coachPlaceholder.style.display = 'block';
         }
         if (noCoachRadio) noCoachRadio.checked = true;
-        if (noCoachCard) noCoachCard.classList.add('border-blue-400', 'shadow-md');
+        if (noCoachCard) noCoachCard.classList.add('border-teal-400', 'shadow-md');
         calc();
       })
       .catch(error => {
@@ -383,14 +390,15 @@
         coachPlaceholder.textContent = 'Gagal memuat daftar coach.';
         coachPlaceholder.style.display = 'block';
         if (noCoachRadio) noCoachRadio.checked = true;
-        if (noCoachCard) noCoachCard.classList.add('border-blue-400', 'shadow-md');
+        if (noCoachCard) noCoachCard.classList.add('border-teal-400', 'shadow-md');
         calc();
       });
   }
 
+  // --- Schedule Filtering and Selection ---
   function resetSelections() {
     allSlotLabels.forEach(label => {
-      label.classList.remove('border-blue-400', 'shadow-md');
+      label.classList.remove('border-teal-400', 'shadow-md');
       const radio = label.querySelector('input[type="radio"]');
       if (radio) radio.checked = false;
     });
@@ -420,6 +428,7 @@
     schedulePlaceholder.style.display = 'none';
   }
 
+  // --- UI Setup ---
   function generateDateScroller(numDays) {
     if (!dateScrollerContent) return;
     const today = new Date();
@@ -432,23 +441,23 @@
       const dateString = date.toISOString().split('T')[0];
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'date-button flex-shrink-0 w-16 h-20 rounded-lg border border-slate-300 bg-white flex flex-col items-center justify-center transition-all hover:border-blue-400';
+      button.className = 'date-button flex-shrink-0 w-16 h-20 rounded-lg border border-gray-300 bg-white flex flex-col items-center justify-center transition-all hover:border-teal-400 hover:shadow-sm';
       button.dataset.date = dateString;
       button.innerHTML = `
-        <span class="text-xs font-medium text-slate-500 uppercase">${dayName}</span>
-        <span class="text-xl font-bold text-slate-800 mt-1">${dayNum}</span>
+        <span class="text-xs font-medium text-gray-500 uppercase">${dayName}</span>
+        <span class="text-xl font-bold text-gray-800 mt-1">${dayNum}</span>
       `;
       button.addEventListener('click', function() {
         document.querySelectorAll('.date-button').forEach(btn => {
-          btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+          btn.classList.remove('bg-teal-600', 'text-white', 'border-teal-600');
           btn.classList.add('bg-white');
-          btn.querySelector('span:first-child').classList.add('text-slate-500');
-          btn.querySelector('span:last-child').classList.add('text-slate-800');
+          btn.querySelector('span:first-child').classList.add('text-gray-500');
+          btn.querySelector('span:last-child').classList.add('text-gray-800');
         });
-        this.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+        this.classList.add('bg-teal-600', 'text-white', 'border-teal-600');
         this.classList.remove('bg-white');
-        this.querySelector('span:first-child').classList.remove('text-slate-500');
-        this.querySelector('span:last-child').classList.remove('text-slate-800');
+        this.querySelector('span:first-child').classList.remove('text-gray-500');
+        this.querySelector('span:last-child').classList.remove('text-gray-800');
         filterSchedulesByDate(this.dataset.date);
       });
       dateScrollerContent.appendChild(button);
@@ -469,6 +478,7 @@
     });
   }
 
+  // --- Event Listeners & Initial Calls ---
   generateDateScroller(30);
   setupScroller('date-scroller-wrapper', 'date-scroller', '.date-scroll-btn');
   setupScroller('schedule-scroller-wrapper', 'schedule-scroller', '.schedule-scroll-btn');
@@ -482,8 +492,8 @@
       const radio = this.querySelector('input[type="radio"][name="schedule_id"]');
       if (radio && !radio.closest('.slot-card').classList.contains('bg-red-50')) {
         radio.checked = true;
-        allSlotLabels.forEach(l => l.classList.remove('border-blue-400', 'shadow-md'));
-        this.classList.add('border-blue-400', 'shadow-md');
+        allSlotLabels.forEach(l => l.classList.remove('border-teal-400', 'shadow-md'));
+        this.classList.add('border-teal-400', 'shadow-md');
         loadCoaches(radio.value);
         calc(); 
       }
@@ -493,8 +503,8 @@
   if (noCoachCard && noCoachRadio) {
       noCoachRadio.addEventListener('change', calc);
       noCoachCard.addEventListener('click', () => {
-          coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-blue-400', 'shadow-md'));
-          noCoachCard.classList.add('border-blue-400', 'shadow-md');
+          coachListWrapper.querySelectorAll('.slot-card').forEach(c => c.classList.remove('border-teal-400', 'shadow-md'));
+          noCoachCard.classList.add('border-teal-400', 'shadow-md');
           noCoachRadio.checked = true;
           noCoachRadio.dispatchEvent(new Event('change'));
       });
@@ -503,8 +513,8 @@
   if (showCoachBtn && coachSection) {
     showCoachBtn.addEventListener('click', () => {
       isCoachSectionVisible = true;
-      coachSection.style.display = 'block';
-      showCoachBtn.style.display = 'none'; 
+      coachSection.classList.remove('hidden');
+      showCoachBtn.classList.add('hidden'); 
       const checkedSchedule = form.querySelector('input[name="schedule_id"]:checked');
       if (checkedSchedule) { loadCoaches(checkedSchedule.value); } 
       else { loadCoaches(null); }

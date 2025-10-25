@@ -1,242 +1,165 @@
-<form id="coachProfileForm" enctype="multipart/form-data" class="space-y-6">
+<form id="coachProfileForm" enctype="multipart/form-data" class="space-y-6"> {# Ubah space-y-8 jadi 6 #}
     {% csrf_token %}
 
-
-    <!-- Error Summary -->
-    <div id="formErrors" style="display: none;"
-         class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-        <div class="text-red-800 text-sm font-semibold mb-2">Terjadi kesalahan:</div>
-        <ul id="errorList" class="text-red-700 text-sm space-y-1 list-disc list-inside"></ul>
+    <div id="formErrors" class="hidden bg-red-50 border border-red-300 rounded-xl p-5 mb-6">
+        <div class="text-red-800 text-lg font-bold mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation"></i> Terjadi kesalahan:
+        </div>
+        <ul id="errorList" class="text-red-700 text-sm space-y-1 list-disc list-inside pl-5"></ul> {# Tambah pl-5 #}
     </div>
 
-
-    <!-- Current Profile Picture Preview -->
     {% if coach_profile and coach_profile.profile_picture %}
-    <div class="flex justify-center mb-6">
-        <div class="relative">
-            <img src="{{ coach_profile.profile_picture.url }}"
-                 alt="Foto Profil Saat Ini"
-                 id="currentProfilePic"
-                 class="w-24 h-24 rounded-full object-cover border-4 border-teal-100 shadow-lg">
-            <div class="absolute bottom-0 right-0 bg-teal-500 rounded-full p-1.5 shadow-md">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
+    <div class="flex justify-center mb-4"> {# Kurangi mb #}
+        <div class="relative group">
+            <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil Saat Ini" id="currentProfilePic"
+                 class="w-28 h-28 rounded-full object-cover border-4 border-teal-300 shadow-lg">
+            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity duration-200">
+                <span class="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200">Ganti Foto</span>
             </div>
         </div>
     </div>
     {% endif %}
 
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <!-- Age Field -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5"> {# Kurangi gap-y #}
+        
         <div class="form-group">
-            <label for="id_age" class="block text-sm font-semibold text-gray-700 mb-2">
-                Umur <span class="text-red-500">*</span>
-            </label>
-            {{ form.age }}
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
+            <label for="id_age" class="block text-sm font-medium text-gray-700 mb-1">Umur <span class="text-red-500">*</span></label>
+            {{ form.age }} {# Hapus |attr #}
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_age"></div> {# Tambah ID untuk JS #}
         </div>
 
-
-        <!-- Rate Per Hour Field -->
         <div class="form-group">
-            <label for="id_rate_per_hour" class="block text-sm font-semibold text-gray-700 mb-2">
-                Tarif per Jam (Rp) <span class="text-red-500">*</span>
-            </label>
-            {{ form.rate_per_hour }}
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
+            <label for="id_rate_per_hour" class="block text-sm font-medium text-gray-700 mb-1">Tarif per Jam (Rp) <span class="text-red-500">*</span></label>
+            {{ form.rate_per_hour }} {# Hapus |attr #}
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_rate_per_hour"></div> {# Tambah ID #}
         </div>
 
-
-        <!-- Main Sport Trained Field -->
         <div class="form-group md:col-span-2">
-            <label for="id_main_sport_trained" class="block text-sm font-semibold text-gray-700 mb-2">
-                Olahraga Utama <span class="text-red-500">*</span>
-            </label>
-            {{ form.main_sport_trained }}
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
+            <label for="id_main_sport_trained" class="block text-sm font-medium text-gray-700 mb-1">Olahraga Utama <span class="text-red-500">*</span></label>
+            {{ form.main_sport_trained }} {# Hapus |attr #}
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_main_sport_trained"></div> {# Tambah ID #}
         </div>
 
-
-        <!-- Experience Description Field -->
         <div class="form-group md:col-span-2">
-            <label for="id_experience_desc" class="block text-sm font-semibold text-gray-700 mb-2">
-                Deskripsi Pengalaman
-            </label>
-            {{ form.experience_desc }}
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
-            <p class="text-xs text-gray-500 mt-1">Ceritakan pengalaman dan keahlian Anda</p>
+            <label for="id_experience_desc" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Pengalaman</label>
+            {{ form.experience_desc }} {# Hapus |attr #}
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_experience_desc"></div> {# Tambah ID #}
+            <p class="text-xs text-gray-500 mt-1">Ceritakan pengalaman dan keahlian Anda sebagai pelatih.</p>
         </div>
 
-
-        <!-- Service Areas Field -->
         <div class="form-group md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                Area Layanan <span class="text-red-500">*</span>
-            </label>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Area Layanan <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-inner"> {# Kurangi max-h, p #}
                 {% for checkbox in form.service_areas %}
-                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
-                    {{ checkbox.tag }}
+                <label class="flex items-center space-x-2 cursor-pointer p-2 rounded-md transition-colors hover:bg-teal-50">
+                    {{ checkbox.tag }} {# Checkbox default #}
                     <span class="text-sm text-gray-700">{{ checkbox.choice_label }}</span>
                 </label>
                 {% endfor %}
             </div>
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_service_areas"></div> {# Tambah ID #}
         </div>
 
-
-        <!-- Profile Picture Field -->
         <div class="form-group md:col-span-2">
-            <label for="id_profile_picture" class="block text-sm font-semibold text-gray-700 mb-2">
-                Foto Profil
-            </label>
-            {{ form.profile_picture }}
-            <span class="field-error text-red-600 text-xs mt-1 hidden"></span>
-            <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG (Max 5MB)</p>
+            <label for="id_profile_picture" class="block text-sm font-medium text-gray-700 mb-1">Foto Profil</label>
+            {{ form.profile_picture }} {# Hapus |attr #}
+            <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_profile_picture"></div> {# Tambah ID #}
+            <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG (Max 5MB). Akan ditampilkan rasio 1:1.</p>
            
-            <!-- Image Preview -->
-            <div id="imagePreviewContainer" class="mt-3 hidden">
-                <img id="imagePreview" src="" alt="Preview"
-                     class="w-32 h-32 rounded-lg object-cover border-2 border-gray-300 shadow">
+            <div id="imagePreviewContainer" class="mt-3 hidden"> {# Kurangi mt #}
+                 <p class="text-xs text-gray-500 mb-1">Preview:</p>
+                <img id="imagePreview" src="" alt="Preview Foto Profil"
+                     class="w-24 h-24 rounded-lg object-cover border-2 border-gray-300 shadow-sm"> {# Kecilkan preview #}
             </div>
         </div>
     </div>
 
-
-    <div class="flex gap-3 pt-4 border-t border-gray-200">
+    <div class="flex flex-col sm:flex-row gap-3 pt-5 border-t border-gray-100"> {# Kurangi gap, pt, border lebih subtle #}
         <button type="button" onclick="hideManageModal()"
-                class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                class="w-full sm:w-auto flex-1 order-2 sm:order-1 py-2.5 px-5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold text-base rounded-lg transition-colors duration-200 shadow-sm">
             Batal
         </button>
         <button type="submit" id="submitBtn"
-                class="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
+                class="w-full sm:w-auto flex-1 order-1 sm:order-2 py-2.5 px-5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-base rounded-lg transition-colors duration-200 shadow-md flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-save"></i>
             Simpan Profil
         </button>
     </div>
 </form>
 
-
 <style>
-    #coachProfileForm input[type="text"],
     #coachProfileForm input[type="number"],
+    #coachProfileForm input[type="text"],
     #coachProfileForm select,
     #coachProfileForm textarea {
-        display: block;
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #E5E7EB;
-        border-radius: 0.5rem;
-        background-color: #F9FAFB;
-        font-size: 0.938rem;
-        color: #374151;
+        display: block; width: 100%;
+        padding: 0.65rem 0.9rem; /* Sedikit lebih kecil */
+        border: 1px solid #E5E7EB; /* border-gray-200 */
+        border-radius: 0.5rem; /* rounded-lg */
+        background-color: #F9FAFB; /* bg-gray-50 */
+        font-size: 0.875rem; /* text-sm */
+        color: #374151; /* text-gray-700 */
         transition: all 0.2s ease;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); /* shadow-inner subtle */
     }
-
-
+    #coachProfileForm textarea { min-height: 100px; }
     #coachProfileForm input:focus,
     #coachProfileForm select:focus,
     #coachProfileForm textarea:focus {
-        border-color: #14b8a6;
+        border-color: #0d9488; /* teal-600 */
         background-color: #ffffff;
         outline: none;
-        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2); /* ring teal */
     }
-
-
-    #coachProfileForm textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-
-
+    /* Styling file input */
     #coachProfileForm input[type="file"] {
-        display: block;
-        width: 100%;
-        padding: 0.5rem;
-        font-size: 0.875rem;
-        color: #4B5563;
-        border: 1px solid #E5E7EB;
-        border-radius: 0.5rem;
-        background-color: #F9FAFB;
+        display: block; width: 100%;
+        padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #4B5563;
+        border: 1px solid #E5E7EB; border-radius: 0.5rem; background-color: #F9FAFB;
         cursor: pointer;
+        /* Styling khusus file input */
+        file:mr-4 file:py-2 file:px-4
+        file:rounded-full file:border-0
+        file:text-sm file:font-semibold
+        file:bg-teal-50 file:text-teal-700
+        hover:file:bg-teal-100
     }
-        .hidden {
-        display: none !important;
-    }
-
-
-    #coachProfileForm input[type="text"],
-    #coachProfileForm input[type="number"],
-    #coachProfileForm select,
-    #coachProfileForm textarea {
-        display: block;
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #E5E7EB;
-        border-radius: 0.5rem;
-        background-color: #F9FAFB;
-        font-size: 0.938rem;
-        color: #374151;
+     /* Styling checkbox (jika default browser kurang bagus) */
+    #coachProfileForm input[type="checkbox"] {
+        border-radius: 0.25rem; /* rounded */
+        border-color: #D1D5DB; /* gray-300 */
+        color: #0d9488; /* teal-600 */
         transition: all 0.2s ease;
-    }
-
-
-    #coachProfileForm input:focus,
-    #coachProfileForm select:focus,
-    #coachProfileForm textarea:focus {
-        border-color: #14b8a6;
-        background-color: #ffffff;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
-    }
-
-
-    #coachProfileForm textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-
-
-    #coachProfileForm input[type="file"] {
-        display: block;
-        width: 100%;
-        padding: 0.5rem;
-        font-size: 0.875rem;
-        color: #4B5563;
-        border: 1px solid #E5E7EB;
-        border-radius: 0.5rem;
-        background-color: #F9FAFB;
         cursor: pointer;
     }
-
-
-    .field-error {
-        display: block;
-        margin-top: 0.25rem;
+    #coachProfileForm input[type="checkbox"]:focus {
+         box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2); /* ring teal */
+         outline: none;
     }
+    .hidden { display: none !important; }
 </style>
 
-
 <script>
-// Image preview functionality
-document.getElementById('id_profile_picture').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('imagePreview').src = e.target.result;
-            document.getElementById('imagePreviewContainer').classList.remove('hidden');
-        }
-        reader.readAsDataURL(file);
+document.addEventListener('DOMContentLoaded', function() { // Pastikan DOM siap
+    const fileInput = document.getElementById('id_profile_picture');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    
+    if (fileInput && previewContainer && imagePreview) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) { // Pastikan itu gambar
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    previewContainer.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.src = ""; // Kosongkan jika bukan gambar atau tidak ada file
+                previewContainer.classList.add('hidden');
+            }
+        });
     }
 });
 </script>
-
-
-

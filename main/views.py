@@ -847,7 +847,6 @@ def coach_schedule(request):
             return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil Anda terlebih dahulu."}, status=400)
         else:
             # Untuk GET, beri pesan warning tapi biarkan halaman render
-            messages.warning(request, "Anda belum melengkapi profil pelatih. Silakan lengkapi profil untuk mengelola jadwal.")
             pass # Lanjutkan ke rendering template dengan coach_profile=None
 
     # --- Inisialisasi Form ---
@@ -1307,7 +1306,6 @@ def create_booking(request, venue_id):
              messages.error(request, f"Terjadi kesalahan tidak terduga: {e}. Silakan coba lagi.")
              return redirect('create_booking', venue_id=venue.id)
 
-        messages.success(request, "Booking berhasil dibuat! Segera lakukan pembayaran untuk mengonfirmasi jadwal Anda.")
         return redirect('my_bookings') 
     
     context = {
@@ -1414,7 +1412,6 @@ def customer_payment(request, booking_id):
                 'redirect_url': reverse('my_bookings')
             })
 
-        messages.success(request, success_msg)
         return redirect('my_bookings')
 
     context = {
@@ -1520,7 +1517,6 @@ def delete_booking(request, booking_id):
             if is_ajax:
                 return JsonResponse({'success': True, 'message': 'Booking berhasil dibatalkan dan jadwal telah dikembalikan.'})
             
-            messages.success(request, 'Booking berhasil dibatalkan dan jadwal telah dikembalikan.')
             return redirect('my_bookings')
         else:
             error_msg = 'Booking ini tidak dapat dibatalkan (status bukan PENDING).'

@@ -3,55 +3,72 @@
 {% block title %}Konfirmasi Pembayaran - Booking #{{ booking.id }}{% endblock title %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto my-8 bg-white p-6 rounded-lg shadow">
-  <h2 class="text-2xl font-semibold mb-6">Konfirmasi Pembayaran</h2>
+<div class="max-w-3xl mx-auto my-12 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
+  
+  <div class="text-center mb-6">
+    <div class="text-4xl text-teal-600 mb-2">💳</div>
+    <h2 class="text-3xl font-bold text-gray-900">Konfirmasi Pembayaran</h2>
+    <p class="text-lg text-gray-600">Booking #{{ booking.id }}</p>
+  </div>
+  
   <hr class="my-6 border-gray-200">
 
   {% if transaction.payment_method|default:""|upper == "TRANSFER" %}
-    <p class="text-gray-600 mb-4">
+    <p class="text-gray-700 text-base mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
       Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.
     </p>
     
+    <div class="bg-gray-100 p-6 rounded-xl mb-6 shadow-inner">
+      <h3 class="text-xl font-bold text-gray-800 mb-3">Rincian Pembayaran</h3>
+      <div class="space-y-2">
+        <p class="flex justify-between font-medium"><span>Total Tagihan:</span> <span class="text-teal-600 font-extrabold">Rp {{ booking.total_price|floatformat:0 }}</span></p>
+        <p class="flex justify-between text-sm text-gray-600"><span>Metode:</span> <span>Transfer Bank</span></p>
+        </div>
+    </div>
+
     <form method="post" class="mt-4" id="payment-form">
       {% csrf_token %}
-      <div class="flex gap-3">
+      <div class="flex flex-col sm:flex-row gap-4">
         <button type="submit" 
                 id="submit-button"
-                class="px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition-colors">
+                class="flex-1 px-6 py-3 bg-teal-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-teal-700 transition-colors">
           Sudah bayar
         </button>
         <a href="{% url 'my_bookings' %}" 
-           class="px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700 transition-colors">
-          Kembali
+           class="flex-1 text-center px-6 py-3 bg-gray-500 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-gray-600 transition-colors">
+          Kembali ke Daftar Booking
         </a>
       </div>
     </form>
   {% else %}
+    <div class="p-6 text-center bg-green-50 border-l-4 border-green-400 rounded-lg">
+      <p class="text-lg font-semibold text-green-700">
+        Booking berhasil dibuat! Pembayaran akan dilakukan secara Cash (Bayar di Tempat) saat Anda tiba di venue.
+      </p>
+      <a href="{% url 'my_bookings' %}" class="mt-4 inline-block text-teal-600 font-semibold hover:underline">
+        Lihat Detail Booking Anda →
+      </a>
+    </div>
   {% endif %}
 </div>
-<div id="user-toast-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
+<div id="user-toast-container" class="fixed top-4 right-4 z-[100] space-y-3"></div>
 
 <style>
+  /* Toast styles converted to use Tailwind utilities where possible */
   .user-toast {
-    min-width: 320px;
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    animation: user-slide-in 0.3s ease-out;
+    @apply min-w-[320px] text-white p-4 sm:p-6 rounded-xl shadow-xl border border-white border-opacity-20 animate-user-slide-in;
   }
-  .user-toast.success { background: linear-gradient(to right, #10B981, #059669); }
-  .user-toast.error { background: linear-gradient(to right, #EF4444, #DC2626); }
-  .user-toast.info { background: linear-gradient(to right, #3B82F6, #2563EB); }
-  .user-toast.warning { background: linear-gradient(to right, #F59E0B, #D97706); }
+  .user-toast.success { @apply bg-gradient-to-r from-green-500 to-green-700; }
+  .user-toast.error { @apply bg-gradient-to-r from-red-500 to-red-700; }
+  .user-toast.info { @apply bg-gradient-to-r from-blue-500 to-blue-700; }
+  .user-toast.warning { @apply bg-gradient-to-r from-yellow-500 to-yellow-700; }
   
-  .user-toast-content { display: flex; align-items: center; gap: 0.75rem; }
-  .user-toast-content .icon { flex-shrink: 0; }
-  .user-toast-content .message { flex: 1; font-weight: 500; }
+  .user-toast-content { @apply flex items-center gap-3; }
+  .user-toast-content .icon { @apply flex-shrink-0 w-6 h-6; }
+  .user-toast-content .message { @apply flex-1 font-semibold text-base; }
   .user-toast-content .close-btn { 
-    background: none; border: none; color: rgba(255, 255, 255, 0.8); 
-    cursor: pointer; padding: 0; 
+    @apply bg-transparent border-none text-white text-opacity-80 cursor-pointer p-0 hover:text-white transition-colors;
   }
   
   @keyframes user-slide-in {
@@ -61,6 +78,12 @@
   @keyframes user-slide-out {
     from { opacity: 1; transform: translateX(0); }
     to { opacity: 0; transform: translateX(100%); }
+  }
+  .animate-user-slide-out {
+    animation: user-slide-out 0.3s ease-out forwards;
+  }
+  .animate-user-slide-in {
+    animation: user-slide-in 0.3s ease-out forwards;
   }
 </style>
 <script>
@@ -72,10 +95,10 @@ function showUserToast(message, type = 'info') {
   toast.className = `user-toast ${type}`; 
 
   const icons = {
-    success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
-    error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
-    info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-    warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>'
+    success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+    error: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+    info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+    warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>'
   };
 
   toast.innerHTML = `
@@ -90,7 +113,7 @@ function showUserToast(message, type = 'info') {
   container.appendChild(toast);
 
   const closeToast = () => {
-    toast.style.animation = 'user-slide-out 0.3s ease-out forwards';
+    toast.classList.add('animate-user-slide-out');
     setTimeout(() => toast.remove(), 300);
   };
   const timer = setTimeout(closeToast, 4000); 

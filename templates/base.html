@@ -6,183 +6,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>All-Ahraga | {% block title %}{% endblock title %}</title> 
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Poppins', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+    .logo-gradient {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+  </style>
+
   {% block extra_head %}{% endblock extra_head %}
 </head>
 
-<body class="min-h-screen flex flex-col bg-gray-50 text-gray-800">
+<body class="min-h-screen flex flex-col bg-gray-50 text-gray-800 font-sans">
 
-<!-- ✅ NAVBAR FIXED -->
-<header class="bg-slate-800 text-white shadow-lg" x-data="{ openMenu: false, openUser: false }">
-  <div class="max-w-7xl mx-auto px-4 sm:px-8">
-    <div class="flex justify-between items-center h-16">
+<header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40" x-data="{ openMenu: false }">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    {# ✅ MENGGUNAKAN GRID 3 KOLOM UNTUK ALIGNMENT #}
+    <div class="grid grid-cols-3 items-center h-16">
 
-      <!-- LOGO -->
-      <a href="{% url 'index' %}" class="text-2xl font-bold hover:text-blue-400 transition">
-        All-Ahraga
-      </a>
+      <div class="justify-self-start">
+        <a href="{% url 'index' %}" class="flex items-center space-x-3 flex-shrink-0">
+           <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center shadow-md">
+              <i class="fa-solid fa-futbol text-white"></i>
+            </div>
+            <span class="text-2xl font-bold logo-gradient hidden sm:inline">All-Ahraga</span>
+        </a>
+      </div>
 
-      <!-- DESKTOP NAV -->
-      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+      <nav class="hidden md:flex justify-self-center space-x-6 text-sm font-medium text-gray-600">
         {% if user.is_authenticated and user.profile %}
-          {% if user.is_superuser or user.is_staff %}
-            <a href="{% url 'admin_dashboard' %}" class="hover:text-blue-400 transition">Admin Dashboard</a>
-            <a href="/admin/" target="_blank" class="hover:text-blue-400 transition">Django Admin</a>
-
-          {% elif user.profile.is_venue_owner %}
-            <a href="{% url 'venue_dashboard' %}" class="hover:text-blue-400 transition">Manage Venue</a>
-            <a href="{% url 'venue_revenue' %}" class="hover:text-blue-400 transition">Revenue Report</a>
-
-          {% elif user.profile.is_coach %}
-            <a href="{% url 'coach_list' %}" class="hover:text-blue-400 transition">Daftar Pelatih</a>
-            <a href="{% url 'coach_revenue_report' %}" class="hover:text-blue-400 transition">Laporan Pendapatan</a>
-            <a href="{% url 'coach_schedule' %}" class="hover:text-blue-400 transition">Jadwal Kamu</a>
-            <a href="{% url 'coach_profile' %}" class="hover:text-blue-400 transition">Profil Kamu</a>
-
-          {% elif user.profile.is_customer %}
-            <a href="{% url 'my_bookings' %}" class="hover:text-blue-400 transition">Bookingan Saya</a>
-            <a href="{% url 'booking_history' %}" class="hover:text-blue-400 transition">Riwayat Booking</a>
+          {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
+             <a href="{% url 'dashboard_redirect' %}" class="hover:text-teal-600 transition whitespace-nowrap">Ke Dashboard</a> {# Tambah whitespace-nowrap #}
           {% endif %}
-        {% else %}
-          <a href="{% url 'register' %}" class="hover:text-blue-400 transition">Daftar</a>
-          <a href="{% url 'login' %}" class="hover:text-blue-400 transition">Masuk</a>
+          {% if user.profile.is_customer %}
+            <a href="{% url 'my_bookings' %}" class="hover:text-teal-600 transition whitespace-nowrap">Bookingan Saya</a>
+            <a href="{% url 'booking_history' %}" class="hover:text-teal-600 transition whitespace-nowrap">Riwayat Booking</a>
+          {% endif %}
         {% endif %}
+        {# Link Visitor dipindah ke kolom 3 #}
       </nav>
+      {# Placeholder untuk kolom tengah di mobile agar grid tetap 3 kolom #}
+      <div class="md:hidden justify-self-center"></div> 
 
-      <!-- USER + BURGER -->
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-3 justify-self-end">
 
         {% if user.is_authenticated %}
-          <!-- USER DROPDOWN -->
           <div class="relative" x-data="{ openUser: false }">
-            <button @click="openUser = !openUser"
-              class="p-2 rounded-full hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+            <button @click="openUser = !openUser" class="flex items-center space-x-2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+               <span class="w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-500 rounded-full flex items-center justify-center"><span class="text-white font-semibold text-xs">{{ user.username|slice:":2"|upper }}</span></span>
+               <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ user.username }}</span>
+               <i class="fa-solid fa-chevron-down w-3 h-3 text-gray-400 hidden sm:inline"></i>
             </button>
-
-            <div x-show="openUser" @click.away="openUser = false" x-transition
-              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5"
-              style="display: none;">
-              <div class="px-4 py-2 text-sm text-gray-500 border-b">
-                <strong class="text-gray-900">{{ user.username }}</strong>
-              </div>
-              <a href="{% url 'logout' %}" 
-                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition">
-                 Keluar
-              </a>
+            <div x-show="openUser" @click.away="openUser = false" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5" style="display: none;">
+              <div class="px-4 py-2 text-sm text-gray-500 border-b">Masuk sebagai <strong class="text-gray-900">{{ user.username }}</strong></div>
+              <a href="{% url 'logout' %}" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition"><i class="fa-solid fa-right-from-bracket w-4 mr-2"></i> Keluar</a>
             </div>
+          </div>
+        {% else %}
+          <div class="hidden md:flex items-center space-x-4">
+             <a href="{% url 'register' %}" class="text-sm font-medium text-gray-600 hover:text-teal-600 transition whitespace-nowrap">Daftar</a>
+             <a href="{% url 'login' %}" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 transition shadow-sm whitespace-nowrap">Masuk</a>
           </div>
         {% endif %}
 
-        <!-- BURGER BUTTON (mobile) -->
-        <button @click="openMenu = !openMenu"
-          class="md:hidden p-2 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <template x-if="!openMenu">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </template>
-          <template x-if="openMenu">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </template>
+        <button @click="openMenu = !openMenu" class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <span class="sr-only">Buka menu</span>
+          <i class="fa-solid fa-bars w-6 h-6" x-show="!openMenu"></i>
+          <i class="fa-solid fa-xmark w-6 h-6" x-show="openMenu" x-cloak></i>
         </button>
       </div>
     </div>
 
-    <!-- ✅ MOBILE NAV (Dropdown) -->
-    <div x-show="openMenu" x-transition @click.away="openMenu = false"
-         class="md:hidden mt-2 bg-slate-700 rounded-lg p-4 space-y-3 text-sm">
-      {% if user.is_authenticated and user.profile %}
-        {% if user.is_superuser or user.is_staff %}
-          <a href="{% url 'admin_dashboard' %}" class="block hover:text-blue-400 transition">Admin Dashboard</a>
-          <a href="/admin/" target="_blank" class="block hover:text-blue-400 transition">Django Admin</a>
-        {% elif user.profile.is_venue_owner %}
-          <a href="{% url 'venue_dashboard' %}" class="block hover:text-blue-400 transition">Manage Venue</a>
-          <a href="{% url 'venue_revenue' %}" class="block hover:text-blue-400 transition">Revenue Report</a>
-        {% elif user.profile.is_coach %}
-          <a href="{% url 'coach_list' %}" class="block hover:text-blue-400 transition">Daftar Pelatih</a>
-          <a href="{% url 'coach_revenue_report' %}" class="block hover:text-blue-400 transition">Laporan Pendapatan</a>
-          <a href="{% url 'coach_schedule' %}" class="block hover:text-blue-400 transition">Jadwal Kamu</a>
-          <a href="{% url 'coach_profile' %}" class="block hover:text-blue-400 transition">Profil Kamu</a>
-        {% elif user.profile.is_customer %}
-          <a href="{% url 'my_bookings' %}" class="block hover:text-blue-400 transition">Bookingan Saya</a>
-          <a href="{% url 'booking_history' %}" class="block hover:text-blue-400 transition">Riwayat Booking</a>
+    <div x-show="openMenu" x-transition @click.away="openMenu = false" class="md:hidden absolute top-16 left-0 right-0 z-30 bg-white shadow-lg rounded-b-lg border-t border-gray-100 p-4" x-cloak>
+      <nav class="flex flex-col space-y-3 text-base text-gray-700 font-medium">
+        {% if user.is_authenticated and user.profile %}
+          {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
+             <a href="{% url 'dashboard_redirect' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Ke Dashboard</a>
+          {% endif %}
+          {% if user.profile.is_customer %}
+            <a href="{% url 'my_bookings' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Bookingan Saya</a>
+            <a href="{% url 'booking_history' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Riwayat Booking</a>
+          {% endif %}
+        {% else %}
+          {# Link visitor di mobile #}
+          <a href="{% url 'register' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Daftar</a>
+          <a href="{% url 'login' %}" class="block px-3 py-2 rounded bg-teal-50 text-teal-700 font-semibold hover:bg-teal-100 transition">Masuk</a>
         {% endif %}
-      {% else %}
-        <a href="{% url 'register' %}" class="block hover:text-blue-400 transition">Daftar</a>
-        <a href="{% url 'login' %}" class="block hover:text-blue-400 transition">Masuk</a>
-      {% endif %}
+      </nav>
     </div>
   </div>
 </header>
 
-<!-- MAIN CONTENT -->
-<main class="flex-grow container mx-auto px-4 py-8">
-  {% if messages %}
-    <div class="mb-8">
-      {% for message in messages %}
-        <div class="p-4 mb-4 rounded-lg 
-          {% if message.tags == 'success' %}bg-green-100 text-green-700 border border-green-200
-          {% elif message.tags == 'error' %}bg-red-100 text-red-700 border border-red-200
-          {% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+<main class="flex-grow container mx-auto px-4 py-8 sm:px-6 lg:px-8"> 
+  {% if messages %} <div class="mb-6 space-y-3"> {% for message in messages %} <div class="p-4 rounded-lg shadow-sm border text-sm {% if message.tags == 'success' %}bg-green-100 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border-red-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">{{ message }}</div> {% endfor %} </div> {% endif %}
   {% block content %}{% endblock content %}
 </main>
 
-<!-- FOOTER -->
-<footer class="bg-slate-800 text-white py-6 mt-8">
-  <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center sm:text-left">
-    <div>
-      <h3 class="text-md font-semibold mb-2">Tentang All-Ahraga</h3>
-      <p class="text-gray-300 text-xs leading-relaxed">
-        All-Ahraga adalah platform pemesanan lapangan dan pelatih olahraga modern yang
-        menghubungkan pelanggan dengan penyedia jasa terbaik di Indonesia.
-      </p>
-    </div>
-    <div>
-      <h3 class="text-md font-semibold mb-2">Navigasi</h3>
-      <ul class="space-y-1 text-xs text-gray-300">
-        <li><a href="{% url 'index' %}" class="hover:text-blue-400 transition">Beranda</a></li>
-        <li><a href="#" class="hover:text-blue-400 transition">Tentang Kami</a></li>
-        <li><a href="#" class="hover:text-blue-400 transition">Kontak</a></li>
-        <li><a href="#" class="hover:text-blue-400 transition">Kebijakan Privasi</a></li>
-      </ul>
-    </div>
-    <div>
-      <h3 class="text-md font-semibold mb-2">Ikuti Kami</h3>
-      <div class="flex justify-center sm:justify-start space-x-3">
-        <a href="#" class="hover:text-blue-400 transition">
-          <i class="fa-brands fa-facebook text-sm"></i>
-        </a>
-        <a href="#" class="hover:text-blue-400 transition">
-          <i class="fa-brands fa-twitter text-sm"></i>
-        </a>
-        <a href="#" class="hover:text-blue-400 transition">
-          <i class="fa-brands fa-instagram text-sm"></i>
-        </a>
-      </div>
-    </div>
+<footer class="bg-white text-gray-600 py-8 mt-12 border-t border-gray-100"> 
+  <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
+    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Tentang All-Ahraga</h3> <p class="text-gray-500 text-sm leading-relaxed"> Platform pemesanan lapangan dan pelatih olahraga modern, menghubungkan Anda dengan penyedia jasa terbaik. </p> </div>
+    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Navigasi</h3> <ul class="space-y-1.5 text-sm text-gray-500"> <li><a href="{% url 'index' %}" class="hover:text-teal-600 transition">Beranda</a></li> <li><a href="#" class="hover:text-teal-600 transition">Tentang Kami</a></li> <li><a href="#" class="hover:text-teal-600 transition">Kontak</a></li> <li><a href="#" class="hover:text-teal-600 transition">Kebijakan Privasi</a></li> </ul> </div>
+    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Ikuti Kami</h3> <div class="flex justify-center sm:justify-start space-x-4 text-gray-500"> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-facebook text-lg"></i></a> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-twitter text-lg"></i></a> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-instagram text-lg"></i></a> </div> </div>
   </div>
-  <div class="mt-6 border-t border-slate-700 pt-3 text-center text-xs text-gray-400">
-    &copy; 2025 All-Ahraga — Kelompok 4 PBP E. All rights reserved.
-  </div>
+  <div class="mt-8 border-t border-gray-200 pt-5 text-center text-sm text-gray-500"> &copy; {% now "Y" %} All-Ahraga. All rights reserved. </div>
 </footer>
 
 {% block extra_js %}{% endblock extra_js %}

@@ -1,496 +1,301 @@
-{% extends "base.html" %}
+{% extends "base_dashboard.html" %}
+
 {% block title %}Daftar Pelatih{% endblock title %}
+
+{% block page_title %}
+  Daftar Pelatih
+{% endblock page_title %}
+
+{% block extra_head %}
+<style>
+  /* Hanya untuk memastikan JS classes seperti 'loading' dan 'hidden' bekerja, 
+     dan untuk kustomisasi yang tidak mudah di Tailwind */
+  
+  /* Class for loading state from JS */
+  #coach-list-container.loading {
+    opacity: 0.5;
+    transition: opacity 0.3s;
+  }
+  
+  /* Modal Animation Helpers (Tailwind doesn't handle dynamic display:flex) */
+  .modal:not(.hidden) {
+    display: flex; /* Tailwind uses 'hidden', JS removes it */
+    animation: fadeIn 0.3s ease forwards; /* Add fade-in animation */
+  }
+  .modal-content {
+      /* Initial state for slide-up animation */
+      opacity: 0;
+      transform: translateY(30px);
+      animation: slideUp 0.3s ease forwards;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* Responsive Design - Handled mostly by Tailwind */
+  @media (max-width: 768px) {
+    /* If specific non-Tailwind overrides are needed for mobile */
+  }
+</style>
+{% endblock extra_head %}
 
 
 {% block content %}
-<div class="coach-list-container">
-  <!-- Header dengan tombol kembali -->
-  <div class="page-header">
-    <h2 class="page-title">Daftar Pelatih</h2>
-    <p class="page-subtitle">Temukan pelatih profesional sesuai kebutuhan Anda</p>
-  </div>
+{# Container luar (coach-list-container, max-w-7xl, etc.) dihapus #}
+{# Header Halaman (page-header) dihapus karena sudah ada di page_title #}
 
+<div class="filter-box bg-white p-6 rounded-xl mb-8 shadow-lg border border-gray-100">
+  <form id="filter-form" class="filter-form w-full">
+    <div class="filter-controls grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center"> {# Menggunakan grid untuk layout filter #}
+      
+      <input type="text" name="q" placeholder="Cari nama pelatih..."
+             value="{{ request.GET.q }}" 
+             class="search-input w-full p-3 border border-gray-300 rounded-lg text-sm transition-all duration-300 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 bg-gray-50 focus:bg-white">
+     
+      <select name="sport" class="filter-select w-full p-3 border border-gray-300 rounded-lg text-sm transition-all duration-300 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 bg-gray-50 focus:bg-white">
+        <option value="">-- Semua Olahraga --</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if request.GET.sport == cat.id|stringformat:"s" %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
 
-  <!-- Filter Section -->
-  <div class="filter-box">
-    <form id="filter-form" class="filter-form">
-      <div class="filter-controls">
-        <input type="text" name="q" placeholder="Cari nama pelatih..."
-               value="{{ request.GET.q }}" class="search-input">
-       
-        <select name="sport" class="filter-select">
-          <option value="">-- Semua Olahraga --</option>
-          {% for cat in categories %}
-            <option value="{{ cat.id }}" {% if request.GET.sport == cat.id|stringformat:"s" %}selected{% endif %}>
-              {{ cat.name }}
-            </option>
-          {% endfor %}
-        </select>
-
-
-        <select name="area" class="filter-select">
-          <option value="">-- Semua Area --</option>
-          {% for area in areas %}
-            <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:"s" %}selected{% endif %}>
-              {{ area.name }}
-            </option>
-          {% endfor %}
-        </select>
-       
-        <a href="{% url 'coach_list' %}" class="reset-button">
-          Reset
-        </a>
-      </div>
-    </form>
-  </div>
-
-
-  <!-- Coach List Container -->
-  <div id="coach-list-container">
-    {% include "main/coach_list_partial.html" %}
-  </div>
+      <select name="area" class="filter-select w-full p-3 border border-gray-300 rounded-lg text-sm transition-all duration-300 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 bg-gray-50 focus:bg-white">
+        <option value="">-- Semua Area --</option>
+        {% for area in areas %}
+          <option value="{{ area.id }}" {% if request.GET.area == area.id|stringformat:"s" %}selected{% endif %}>
+            {{ area.name }}
+          </option>
+        {% endfor %}
+      </select>
+     
+      <a href="{% url 'coach_list' %}" class="reset-button w-full sm:w-auto text-center px-5 py-3 bg-gray-500 text-white rounded-lg text-sm font-semibold transition-all duration-300 hover:bg-gray-600">
+        Reset Filter
+      </a>
+    </div>
+  </form>
 </div>
 
+<div id="coach-list-container">
+  {% include "main/coach_list_partial.html" %} {# Memuat konten awal #}
+</div>
 
-<!-- Detail Modal -->
-<div id="detailModal" class="modal">
-  <div id="detailModalContent" class="modal-content">
-    <button id="closeDetailModal" class="close-modal-btn">
-      &times;
+<div id="detailModal" class="modal hidden fixed inset-0 bg-black bg-opacity-60 z-[9998] items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+  <div id="detailModalContent" class="modal-content bg-white rounded-2xl max-w-xl w-full shadow-2xl relative max-h-[90vh] flex flex-col opacity-0 transform -translate-y-8 transition-all duration-300 ease-out"> {# Class awal untuk animasi #}
+    <button id="closeDetailModal" class="close-modal-btn absolute top-3 right-3 z-10 p-2 rounded-full text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors"> {# Tombol close lebih subtle #}
+      <i class="fa-solid fa-xmark text-xl"></i>
     </button>
    
-    <div id="modal-body" class="modal-body">
-      <div id="modal-spinner" class="modal-spinner">
-        <div class="spinner-icon">⏳</div>
+    <div id="modal-body" class="modal-body overflow-y-auto flex-1">
+      <div id="modal-spinner" class="modal-spinner p-10 text-center text-gray-600 flex flex-col items-center justify-center min-h-[200px]"> {# Min height agar spinner terlihat #}
+        <div class="text-4xl mb-4 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>
         Memuat detail pelatih...
       </div>
     </div>
   </div>
 </div>
+{% endblock content %}
 
 
-<style>
-  /* Global Styles */
-  .coach-list-container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: auto;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
-  }
-
-
-  /* Header Styles */
-  .page-header {
-    margin-bottom: 30px;
-    text-align: left;
-  }
-
-
-  .back-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: #003F3F;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0,63,63,0.2);
-    margin-bottom: 20px;
-  }
-
-
-  .back-button:hover {
-    background: #005757;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,63,63,0.3);
-  }
-
-
-  .back-icon {
-    font-size: 18px;
-  }
-
-
-  .page-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: #003F3F;
-    margin: 10px 0 5px;
-  }
-
-
-  .page-subtitle {
-    font-size: 16px;
-    color: #666;
-    margin: 0;
-  }
-
-
-  /* Filter Box Styles */
-  .filter-box {
-    background: #fff;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 28px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    border: 1px solid #eaeaea;
-  }
-
-
-  .filter-form {
-    width: 100%;
-  }
-
-
-  .filter-controls {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-
-  .search-input, .filter-select {
-    flex: 1;
-    min-width: 200px;
-    padding: 12px 16px;
-    border: 1px solid #e6e6e6;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    background-color: #fafafa;
-  }
-
-
-  .search-input:focus, .filter-select:focus {
-    outline: none;
-    border-color: #003F3F;
-    box-shadow: 0 0 0 3px rgba(0,63,63,0.1);
-    background-color: #fff;
-  }
-
-
-  .filter-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: #003F3F;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-
-  .filter-button:hover {
-    background: #005757;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,63,63,0.3);
-  }
-
-
-  .reset-button {
-    padding: 12px 20px;
-    background: #6c757d;
-    color: #fff;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-  }
-
-
-  .reset-button:hover {
-    background: #5a6268;
-    transform: translateY(-2px);
-  }
-
-
-  /* Modal Styles */
-  .modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    z-index: 9998;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.3s ease;
-    overflow-y: auto;
-    padding: 20px;
-  }
-
-
-  .modal-content {
-    background: #fff;
-    border-radius: 20px;
-    max-width: 700px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    animation: slideUp 0.3s ease;
-    overflow: hidden;
-    position: relative;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-
-  .close-modal-btn {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    z-index: 10;
-    background: rgba(0,0,0,0.1);
-    border: none;
-    color: #333;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    line-height: 1;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-  }
-
-
-  .close-modal-btn:hover {
-    background: rgba(0,0,0,0.2);
-    transform: rotate(90deg);
-  }
-
-
-  .modal-body {
-    overflow-y: auto;
-    flex: 1;
-  }
-
-
-  .modal-spinner {
-    padding: 80px;
-    text-align: center;
-    color: #666;
-  }
-
-
-  .spinner-icon {
-    font-size: 40px;
-    margin-bottom: 16px;
-  }
-
-
-  /* Animations */
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-
-  /* Loading State */
-  #coach-list-container.loading {
-    opacity: 0.5;
-    transition: opacity 0.3s;
-  }
-
-
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .filter-controls {
-      flex-direction: column;
-      align-items: stretch;
-    }
-   
-    .search-input, .filter-select {
-      min-width: 100%;
-    }
-   
-    .filter-button, .reset-button {
-      width: 100%;
-      justify-content: center;
-    }
-   
-    .page-title {
-      font-size: 24px;
-    }
-   
-    .modal-content {
-      margin: 10px;
-      max-height: 95vh;
-    }
-  }
-</style>
-
-
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const filterForm = document.getElementById('filter-form');
   const coachListContainer = document.getElementById('coach-list-container');
   const modal = document.getElementById('detailModal');
+  const modalContent = document.getElementById('detailModalContent'); 
   const modalBody = document.getElementById('modal-body');
-  const modalSpinner = document.getElementById('modal-spinner');
+  const modalSpinner = document.getElementById('modal-spinner'); // Spinner tetap ada
   const closeModalBtn = document.getElementById('closeDetailModal');
  
   const filterUrl = "{% url 'filter_coaches_ajax' %}";
 
-
   // --- 1. FUNGSI UNTUK FETCH FILTER/PAGINATION ---
   function fetchCoaches(url) {
-    coachListContainer.classList.add('loading');
+    coachListContainer.classList.add('loading'); // Tampilkan state loading
    
     fetch(url, {
       headers: {
-        'X-Requested-With': 'XMLHttpRequest'
+        'X-Requested-With': 'XMLHttpRequest' // Header penting untuk request AJAX
       }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.json(); // Ambil data JSON
+     })
     .then(data => {
-      coachListContainer.innerHTML = data.html;
-     
-      // Update URL di browser tanpa reload
-      const pageUrl = new URL(url, window.location.origin);
-      // Ganti URL AJAX dengan URL halaman list
-      const browserUrl = new URL("{% url 'coach_list' %}", window.location.origin);
-      browserUrl.search = pageUrl.search;
-      window.history.pushState({}, '', browserUrl);
+      if (data.html !== undefined) { // Cek jika ada HTML di response
+          coachListContainer.innerHTML = data.html; // Ganti konten
+         
+          // Update URL browser (optional, tapi bagus untuk UX)
+          const currentUrl = new URL(window.location);
+          const newParams = new URLSearchParams(url.split('?')[1] || ''); // Ambil params dari URL fetch
+          
+          // Hapus parameter filter kosong dari URL browser
+          newParams.forEach((value, key) => {
+              if (!value) newParams.delete(key);
+          });
+
+          currentUrl.search = newParams.toString(); // Update query string
+          window.history.pushState({ path: currentUrl.toString() }, '', currentUrl.toString());
+      } else {
+           throw new Error('Invalid response format');
+      }
     })
     .catch(error => {
       console.error('Error fetching coaches:', error);
-      coachListContainer.innerHTML = "<p style='text-align:center; color:red; padding: 20px;'>Gagal memuat data. Silakan coba lagi.</p>";
+      // Tampilkan pesan error yang lebih user-friendly
+      coachListContainer.innerHTML = `<div class="col-span-full text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200"><p class="font-semibold">Oops! Gagal memuat data.</p><p class="text-sm">Silakan coba refresh halaman atau periksa koneksi Anda.</p></div>`;
     })
     .finally(() => {
-      coachListContainer.classList.remove('loading');
+      coachListContainer.classList.remove('loading'); // Hapus state loading
     });
   }
 
-
   // --- 2. EVENT LISTENER UNTUK FILTER FORM ---
-  // Kita gunakan 'input' untuk real-time update saat mengetik,
-  // dan 'change' untuk <select>
-  filterForm.addEventListener('input', handleFilterChange);
-  filterForm.addEventListener('change', handleFilterChange);
-
+  // Gunakan event 'input' untuk search, 'change' untuk select
+  filterForm.querySelectorAll('input[name="q"]').forEach(input => {
+      input.addEventListener('input', handleFilterChange);
+  });
+  filterForm.querySelectorAll('select').forEach(select => {
+       select.addEventListener('change', handleFilterChange);
+  });
 
   let filterTimeout;
   function handleFilterChange(e) {
-    // Hapus 'page' dari parameter saat filter berubah
+    // Selalu hapus parameter 'page' saat filter diubah
     const formData = new FormData(filterForm);
-    formData.delete('page');
+    formData.delete('page'); 
    
-    const params = new URLSearchParams(formData);
+    // Buat URLSearchParams dari FormData
+    const params = new URLSearchParams();
+    formData.forEach((value, key) => {
+        if (value) { // Hanya tambahkan parameter jika ada nilainya
+            params.append(key, value);
+        }
+    });
+
     const url = `${filterUrl}?${params.toString()}`;
    
-    // Debounce: Tunda fetch agar tidak terjadi di setiap ketukan
+    // Debounce: Tunda fetch sedikit
     clearTimeout(filterTimeout);
     filterTimeout = setTimeout(() => {
       fetchCoaches(url);
-    }, 300); // Tunda 300ms
+    }, 350); // Tunda 350ms
   }
 
-
   // --- 3. EVENT LISTENER UNTUK PAGINATION & MODAL (Event Delegation) ---
+  // Pasang listener di container utama
   coachListContainer.addEventListener('click', function(e) {
    
-    // Cek apakah tombol PAGINATION diklik
+    // --- Handler untuk PAGINATION ---
     const paginationButton = e.target.closest('.pagination-btn');
-    if (paginationButton) {
+    if (paginationButton && !paginationButton.disabled) { // Cek jika tombol pagination diklik & tidak disabled
       e.preventDefault();
       const page = paginationButton.dataset.page;
      
+      // Ambil filter yang sedang aktif
       const formData = new FormData(filterForm);
-      formData.set('page', page); // Set halaman yang diklik
+      // SET halaman yang dituju
+      formData.set('page', page); 
      
-      const params = new URLSearchParams(formData);
+      const params = new URLSearchParams();
+       formData.forEach((value, key) => {
+           if (value) params.append(key, value);
+       });
+
       const url = `${filterUrl}?${params.toString()}`;
       fetchCoaches(url);
     }
    
-    // Cek apakah tombol DETAIL MODAL diklik
+    // --- Handler untuk DETAIL MODAL ---
     const detailButton = e.target.closest('.open-detail-modal-btn');
     if (detailButton) {
       e.preventDefault();
       const detailUrl = detailButton.dataset.ajaxUrl;
-      openDetailModal(detailUrl);
+      if (detailUrl) { // Pastikan URL ada
+          openDetailModal(detailUrl);
+      }
     }
   });
-
 
   // --- 4. FUNGSI UNTUK MODAL ---
   function openDetailModal(url) {
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    // Reset konten modal ke spinner
-    modalBody.innerHTML = '';
-    modalBody.appendChild(modalSpinner);
-   
-    fetch(url)
-      .then(response => response.json())
+    if (!modal || !modalContent || !modalBody || !modalSpinner) return;
+
+    modal.classList.remove('hidden'); // Tampilkan modal (termasuk backdrop)
+    document.body.style.overflow = 'hidden'; // Stop scroll background
+    
+    // Reset konten modal ke spinner & atur state animasi awal
+    modalBody.innerHTML = ''; 
+    modalBody.appendChild(modalSpinner); // Tampilkan spinner lagi
+    modalSpinner.classList.remove('hidden'); // Pastikan spinner terlihat
+    modalContent.style.opacity = '0'; // Mulai transparan
+    modalContent.style.transform = 'translateY(30px)'; // Mulai sedikit ke bawah
+
+    // Mulai animasi masuk setelah sedikit delay
+    requestAnimationFrame(() => {
+        modalContent.style.opacity = '1';
+        modalContent.style.transform = 'translateY(0)';
+    });
+
+    // Fetch detail coach
+    fetch(url, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+      .then(response => {
+           if (!response.ok) { throw new Error('Network response was not ok'); }
+           return response.json();
+        })
       .then(data => {
-        modalBody.innerHTML = data.html;
+        if (data.html !== undefined) {
+             modalBody.innerHTML = data.html; // Ganti spinner dengan konten detail
+         } else {
+             throw new Error('Invalid detail response format');
+         }
       })
       .catch(error => {
         console.error('Error fetching detail:', error);
-        modalBody.innerHTML = "<p style='text-align:center; color:red; padding:40px;'>Gagal memuat detail pelatih. Silakan coba lagi.</p>";
+        modalBody.innerHTML = `<div class="p-10 text-center text-red-600"><p class="font-semibold">Gagal memuat detail.</p><p class="text-sm">Silakan coba lagi nanti.</p></div>`;
       });
   }
 
-
   function hideDetailModal() {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    modalBody.innerHTML = ''; // Kosongkan konten
+    if (!modal || !modalContent) return;
+
+    // Mulai animasi keluar
+    modalContent.style.opacity = '0';
+    modalContent.style.transform = 'translateY(30px)';
+    
+    // Sembunyikan modal setelah animasi selesai
+    setTimeout(() => {
+        modal.classList.add('hidden'); 
+        document.body.style.overflow = 'auto'; // Kembalikan scroll background
+        modalBody.innerHTML = ''; // Kosongkan konten untuk load berikutnya
+        // Reset style animasi (jika diperlukan untuk animasi masuk berikutnya)
+        modalContent.style.opacity = ''; 
+        modalContent.style.transform = '';
+    }, 300); // Durasi HARUS sama dengan transisi CSS/Style
   }
 
-
-  // Event listener untuk tombol tutup modal
-  closeModalBtn.addEventListener('click', hideDetailModal);
+  // Event listener tombol close
+  if(closeModalBtn) closeModalBtn.addEventListener('click', hideDetailModal);
  
-  // Event listener untuk klik di luar modal (area gelap)
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      hideDetailModal();
-    }
-  });
+  // Event listener klik backdrop
+  if(modal) {
+    modal.addEventListener('click', function(e) {
+      // Hanya tutup jika klik pada backdrop (modal), bukan konten di dalamnya
+      if (e.target === modal) {
+        hideDetailModal();
+      }
+    });
+  }
 
-
-  // Event listener untuk tombol escape
+  // Event listener tombol Escape
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) { // Cek jika modal sedang terbuka
       hideDetailModal();
     }
   });
 });
 </script>
-{% endblock content %}
-
-
-
+{% endblock extra_js %}

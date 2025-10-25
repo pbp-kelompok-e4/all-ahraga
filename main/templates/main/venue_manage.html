@@ -1,724 +1,12 @@
-{% extends "base.html" %}
+{% extends "base_dashboard.html" %}
 
 {% block title %}Kelola: {{ venue.name }}{% endblock title %}
 
-{% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8">
-  <!-- Toast Container -->
-  <div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px;
-                          color: #fff; padding: 18px 24px; border-radius: 12px;
-                          box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10000;
-                          min-width: 300px; animation: slideInRight 0.4s ease;">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <span id="toastIcon" style="font-size: 24px;"></span>
-      <div>
-        <div id="toastTitle" style="font-weight: 600; font-size: 15px; margin-bottom: 4px;"></div>
-        <div id="toastMessage" style="font-size: 13px; opacity: 0.9;"></div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- Header Section -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-            </div>
-            <div>
-              <h1 class="text-3xl font-bold text-slate-900">{{ venue.name }}</h1>
-              <p class="text-sm text-slate-600 mt-1">Dashboard Manajemen Venue</p>
-            </div>
-          </div>
-        </div>
-        <a href="{% url 'venue_dashboard' %}" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-          Kembali ke Dashboard
-        </a>
-      </div>
-    </div>
+{% block page_title %}
+  Kelola Lapangan: {{ venue.name }}
+{% endblock page_title %}
 
-    <!-- Message Container (keep for compatibility) -->
-    <div id="message-container" class="mb-6"></div>
-
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Column - Venue Edit & Schedule -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Venue Edit Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-          <div class="bg-gradient-to-r from-sky-500 to-sky-600 px-6 py-4">
-            <div class="flex items-center gap-3">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-              </svg>
-              <h3 class="text-xl font-semibold text-white">Edit Detail Venue</h3>
-            </div>
-          </div>
-          <div class="p-6">
-            <form id="venue-edit-form" method="post" enctype="multipart/form-data" class="space-y-6">
-              {% csrf_token %}
-              
-              <!-- Venue Name -->
-              <div>
-                <label for="id_name" class="block text-sm font-semibold text-slate-700 mb-2">
-                  <span class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                    </svg>
-                    Nama Venue
-                  </span>
-                </label>
-                <input type="text" name="name" value="{{ venue.name }}" id="id_name" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" placeholder="Masukkan nama venue" required>
-                {% if venue_edit_form.name.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.name.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <!-- Description -->
-              <div>
-                <label for="id_description" class="block text-sm font-semibold text-slate-700 mb-2">
-                  <span class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
-                    </svg>
-                    Deskripsi
-                  </span>
-                </label>
-                <textarea name="description" id="id_description" rows="4" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" placeholder="Jelaskan venue Anda...">{{ venue.description }}</textarea>
-                {% if venue_edit_form.description.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.description.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <!-- Location & Sport Category -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="id_location" class="block text-sm font-semibold text-slate-700 mb-2">
-                    <span class="flex items-center gap-2">
-                      <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      </svg>
-                      Area Lokasi
-                    </span>
-                  </label>
-                  <select name="location" id="id_location" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" required>
-                    {% for loc in venue_edit_form.location.field.queryset %}
-                      <option value="{{ loc.id }}" {% if venue.location.id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
-                    {% endfor %}
-                  </select>
-                  {% if venue_edit_form.location.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.location.errors.0 }}</p>
-                  {% endif %}
-                </div>
-
-                <div>
-                  <label for="id_sport_category" class="block text-sm font-semibold text-slate-700 mb-2">
-                    <span class="flex items-center gap-2">
-                      <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                      </svg>
-                      Kategori Olahraga
-                    </span>
-                  </label>
-                  <select name="sport_category" id="id_sport_category" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" required>
-                    {% for cat in venue_edit_form.sport_category.field.queryset %}
-                      <option value="{{ cat.id }}" {% if venue.sport_category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-                    {% endfor %}
-                  </select>
-                  {% if venue_edit_form.sport_category.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.sport_category.errors.0 }}</p>
-                  {% endif %}
-                </div>
-              </div>
-
-              <!-- Price & Payment -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label for="id_price_per_hour" class="block text-sm font-semibold text-slate-700 mb-2">
-                    <span class="flex items-center gap-2">
-                      <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                      </svg>
-                      Harga per Jam (Rp)
-                    </span>
-                  </label>
-                  <input type="number" name="price_per_hour" value="{{ venue.price_per_hour }}" id="id_price_per_hour" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" placeholder="0" min="0" required>
-                  {% if venue_edit_form.price_per_hour.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.price_per_hour.errors.0 }}</p>
-                  {% endif %}
-                </div>
-
-                <div>
-                  <label for="id_payment_options" class="block text-sm font-semibold text-slate-700 mb-2">
-                    <span class="flex items-center gap-2">
-                      <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                      </svg>
-                      Opsi Pembayaran
-                    </span>
-                  </label>
-                  <select name="payment_options" id="id_payment_options" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all" required>
-                    <option value="CASH" {% if venue.payment_options == 'CASH' %}selected{% endif %}>Tunai</option>
-                    <option value="TRANSFER" {% if venue.payment_options == 'TRANSFER' %}selected{% endif %}>Transfer</option>
-                  </select>
-                  {% if venue_edit_form.payment_options.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.payment_options.errors.0 }}</p>
-                  {% endif %}
-                </div>
-              </div>
-
-              <!-- Main Image -->
-              <div>
-                <label for="id_main_image" class="block text-sm font-semibold text-slate-700 mb-2">
-                  <span class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Gambar Utama
-                  </span>
-                </label>
-
-                <div class="rounded-md border-2 border-dashed border-slate-200 p-6 text-center">
-                  <div class="space-y-1 text-center">
-                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <div class="flex justify-center text-sm text-slate-600">
-                      <label class="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-500 mx-auto">
-                        <span>Unggah file</span>
-                        <input id="id_main_image" type="file" name="main_image" accept="image/*" class="sr-only">
-                      </label>
-                    </div>
-                    <p class="text-xs text-slate-500">PNG, JPG, GIF hingga 10MB</p>
-                  </div>
-                </div>
-
-                {% if venue.main_image %}
-                  <div class="mt-3">
-                    <p class="text-sm text-slate-600 mb-2">Gambar saat ini:</p>
-                    <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="w-32 h-32 object-cover rounded-lg border-2 border-slate-200">
-                  </div>
-                {% endif %}
-                {% if venue_edit_form.main_image.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.main_image.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <div class="pt-4 border-t border-slate-200">
-                <button type="submit" name="submit_venue_edit" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-sky-500 to-sky-600 text-white font-medium rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                  <span class="flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Simpan Perubahan
-                  </span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Schedule Management Card -->
-        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-          <div class="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4">
-            <div class="flex items-center gap-3">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-              <h3 class="text-xl font-semibold text-white">Manajemen Jadwal</h3>
-            </div>
-          </div>
-          <div class="p-6">
-            <p class="text-slate-600 mb-4">Konfigurasi slot waktu, ketersediaan, dan pengaturan pemesanan untuk venue Anda.</p>
-            <a href="{% url 'venue_manage_schedule' venue_id=venue.id %}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              Kelola Jadwal
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column - Equipment Management -->
-      <div class="lg:col-span-1">
-        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-          <div class="bg-gradient-to-r from-teal-700 to-teal-800 px-6 py-4">
-            <div class="flex items-center gap-3">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-              </svg>
-              <h3 class="text-xl font-semibold text-white">Peralatan</h3>
-            </div>
-          </div>
-          <div class="p-6">
-            <p class="text-sm text-slate-600 mb-4">Tambahkan dan kelola peralatan yang tersedia untuk disewa di venue ini.</p>
-
-            <!-- Add Equipment Form -->
-            <form id="equipment-form" method="post" class="space-y-4 mb-6">
-              {% csrf_token %}
-              <input type="hidden" name="submit_equipment" value="1">
-              
-              <!-- Equipment Name -->
-              <div>
-                <label for="{{ equipment_form.name.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
-                  Nama Peralatan
-                </label>
-                <div class="relative">
-                  {{ equipment_form.name }}
-                </div>
-                {% if equipment_form.name.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ equipment_form.name.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <!-- Rental Price -->
-              <div>
-                <label for="{{ equipment_form.rental_price.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
-                  Harga Sewa (Rp)
-                </label>
-                <div class="relative">
-                  {{ equipment_form.rental_price }}
-                </div>
-                {% if equipment_form.rental_price.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ equipment_form.rental_price.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <!-- Stock Quantity -->
-              <div>
-                <label for="{{ equipment_form.stock_quantity.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
-                  Jumlah Stok
-                </label>
-                <div class="relative">
-                  {{ equipment_form.stock_quantity }}
-                </div>
-                {% if equipment_form.stock_quantity.errors %}
-                  <p class="mt-1 text-sm text-red-600">{{ equipment_form.stock_quantity.errors.0 }}</p>
-                {% endif %}
-              </div>
-
-              <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-teal-700 to-teal-800 text-white font-medium rounded-lg hover:from-teal-800 hover:to-teal-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                <span class="flex items-center justify-center gap-2">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                  </svg>
-                  Tambah Peralatan
-                </span>
-              </button>
-            </form>
-
-            <!-- Equipment List -->
-            <div class="border-t border-slate-200 pt-4">
-              <h4 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                </svg>
-                Daftar Peralatan
-              </h4>
-              <ul id="equipment-list" class="space-y-2 max-h-96 overflow-y-auto">
-                {% for item in equipments %}
-                  <li class="p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors" data-equipment-id="{{ item.id }}">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex-1 min-w-0">
-                        <p class="font-medium text-slate-900 truncate">{{ item.name }}</p>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-slate-600">
-                          <span class="flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                            </svg>
-                            <span class="equipment-stock">Stok: {{ item.stock_quantity }}</span>
-                          </span>
-                          <span class="flex items-center gap-1 text-teal-700 font-semibold">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Rp {{ item.rental_price|floatformat:0 }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-1">
-                        <button data-id="{{ item.id }}" data-name="{{ item.name|escapejs }}" data-price="{{ item.rental_price }}" data-stock="{{ item.stock_quantity }}" onclick="editEquipment(this.dataset.id, this.dataset.name, this.dataset.price, this.dataset.stock)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                          </svg>
-                        </button>
-                        <button data-delete-id="{{ item.id }}" data-delete-name="{{ item.name|escapejs }}" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors delete-equipment-btn" title="Hapus">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                {% empty %}
-                  <li id="no-equipment-message" class="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                    <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                    </svg>
-                    <p class="text-sm">Belum ada peralatan yang ditambahkan</p>
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Edit Equipment Modal -->
-<div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-    <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-xl">
-      <h3 class="text-xl font-semibold text-white">Edit Peralatan</h3>
-    </div>
-    <form id="edit-equipment-form" class="p-6 space-y-4">
-      <input type="hidden" id="edit-equipment-id" name="equipment_id">
-      
-      <div>
-        <label for="edit-name" class="block text-sm font-semibold text-slate-700 mb-2">Nama Peralatan</label>
-        <input type="text" id="edit-name" name="name" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-      </div>
-      
-      <div>
-        <label for="edit-price" class="block text-sm font-semibold text-slate-700 mb-2">Harga Sewa (Rp)</label>
-        <input type="number" id="edit-price" name="rental_price" min="0" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-      </div>
-      
-      <div>
-        <label for="edit-stock" class="block text-sm font-semibold text-slate-700 mb-2">Jumlah Stok</label>
-        <input type="number" id="edit-stock" name="stock_quantity" min="0" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-      </div>
-      
-      <div class="flex gap-3 pt-4 border-t border-slate-200">
-        <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
-          Batal
-        </button>
-        <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium shadow-md">
-          Simpan Perubahan
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Delete Equipment Confirmation Modal -->
-<div id="delete-equipment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full animate-fade-in">
-    <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
-      <div class="flex items-center gap-3">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-        </svg>
-        <h3 class="text-xl font-semibold text-white">Konfirmasi Hapus</h3>
-      </div>
-    </div>
-    <div class="p-6">
-      <p class="text-slate-700 mb-2">Apakah Anda yakin ingin menghapus peralatan ini?</p>
-      <p class="text-sm text-slate-600 mb-4"><strong id="delete-equipment-name"></strong></p>
-      <p class="text-sm text-red-600">Tindakan ini tidak dapat dibatalkan.</p>
-    </div>
-    <div class="flex gap-3 px-6 pb-6">
-      <button id="cancel-delete-equipment-btn" class="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
-        Batal
-      </button>
-      <button id="confirm-delete-equipment-btn" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md">
-        Hapus
-      </button>
-    </div>
-  </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const venueEditForm = document.getElementById('venue-edit-form');
-    const equipmentForm = document.getElementById('equipment-form');
-    const editEquipmentForm = document.getElementById('edit-equipment-form');
-    
-    const deleteEquipmentModal = document.getElementById('delete-equipment-modal');
-    const cancelDeleteEquipmentBtn = document.getElementById('cancel-delete-equipment-btn');
-    const confirmDeleteEquipmentBtn = document.getElementById('confirm-delete-equipment-btn');
-    let equipmentToDelete = null;
-    
-    function showToast(title, message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const toastIcon = document.getElementById('toastIcon');
-        const toastTitle = document.getElementById('toastTitle');
-        const toastMessage = document.getElementById('toastMessage');
-        
-        toastTitle.textContent = title;
-        toastMessage.textContent = message;
-        
-        if (type === 'success') {
-            toast.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
-            toastIcon.textContent = '✅';
-        } else if (type === 'error') {
-            toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c1121f 100%)';
-            toastIcon.textContent = '❌';
-        }
-        
-        toast.style.display = 'block';
-        
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
-    }
-    
-    function showDeleteEquipmentModal(id, name) {
-        equipmentToDelete = id;
-        document.getElementById('delete-equipment-name').textContent = name;
-        deleteEquipmentModal.classList.remove('hidden');
-        deleteEquipmentModal.classList.add('flex');
-    }
-    
-    function hideDeleteEquipmentModal() {
-        deleteEquipmentModal.classList.add('hidden');
-        deleteEquipmentModal.classList.remove('flex');
-        equipmentToDelete = null;
-    }
-    
-    cancelDeleteEquipmentBtn.addEventListener('click', hideDeleteEquipmentModal);
-    
-    window.addEventListener('click', function(e){ 
-        if (e.target === deleteEquipmentModal) hideDeleteEquipmentModal();
-    });
-    
-    venueEditForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        formData.append('submit_venue_edit', '1');
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Server merespons dengan status: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                showToast('Berhasil', data.message, 'success');
-            } else {
-                let errorMsg = '';
-                for (let field in data.errors) {
-                    errorMsg += data.errors[field].join(', ') + ' ';
-                }
-                showToast('Kesalahan', errorMsg || 'Terjadi kesalahan', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Kesalahan:', error);
-            showToast('Kesalahan', 'Terjadi kesalahan saat menyimpan perubahan.', 'error');
-        });
-    });
-    
-    equipmentForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const csrfToken = '{{ csrf_token }}';
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Berhasil', data.message, 'success');
-                updateEquipmentList(data.equipments);
-                equipmentForm.reset();
-            } else {
-                let errorMsg = '';
-                for (let field in data.errors) {
-                    errorMsg += data.errors[field].join(', ') + ' ';
-                }
-                showToast('Kesalahan', errorMsg || 'Terjadi kesalahan', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Kesalahan:', error);
-            showToast('Kesalahan', 'Terjadi kesalahan saat menambah peralatan.', 'error');
-        });
-    });
-    
-    editEquipmentForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        formData.append('action', 'edit');
-        const csrfToken = '{{ csrf_token }}';
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Berhasil', data.message, 'success');
-                updateEquipmentList(data.equipments);
-                closeEditModal();
-            } else {
-                let errorMsg = '';
-                for (let field in data.errors) {
-                    errorMsg += data.errors[field].join(', ') + ' ';
-                }
-                showToast('Kesalahan', errorMsg || 'Terjadi kesalahan', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Kesalahan:', error);
-            showToast('Kesalahan', 'Terjadi kesalahan saat memperbarui peralatan.', 'error');
-        });
-    });
-    
-    confirmDeleteEquipmentBtn.addEventListener('click', function() {
-        if (!equipmentToDelete) return;
-        
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('equipment_id', equipmentToDelete);
-        
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Berhasil', data.message, 'success');
-                updateEquipmentList(data.equipments);
-                hideDeleteEquipmentModal();
-            } else {
-                showToast('Kesalahan', data.message || 'Terjadi kesalahan saat menghapus peralatan.', 'error');
-                hideDeleteEquipmentModal();
-            }
-        })
-        .catch(error => {
-            console.error('Kesalahan:', error);
-            showToast('Kesalahan', 'Terjadi kesalahan saat menghapus peralatan.', 'error');
-            hideDeleteEquipmentModal();
-        });
-    });
-    
-    function updateEquipmentList(equipments) {
-        const equipmentList = document.getElementById('equipment-list');
-        equipmentList.innerHTML = '';
-        
-        if (equipments.length > 0) {
-            equipments.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors';
-                li.setAttribute('data-equipment-id', item.id);
-                li.innerHTML = `
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex-1 min-w-0">
-                        <p class="font-medium text-slate-900 truncate">${item.name}</p>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-slate-600">
-                          <span class="flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                            </svg>
-                            <span class="equipment-stock">Stok: ${item.stock}</span>
-                          </span>
-                          <span class="flex items-center gap-1 text-teal-700 font-semibold">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Rp ${parseFloat(item.price).toFixed(0)}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-1">
-                        <button data-id="${item.id}" data-name="${encodeURIComponent(item.name)}" data-price="${item.price}" data-stock="${item.stock}" onclick="editEquipment(this.dataset.id, decodeURIComponent(this.dataset.name), this.dataset.price, this.dataset.stock)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                          </svg>
-                        </button>
-                        <button data-delete-id="${item.id}" data-delete-name="${encodeURIComponent(item.name)}" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors delete-equipment-btn" title="Hapus">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                `;
-                equipmentList.appendChild(li);
-            });
-        } else {
-            equipmentList.innerHTML = `
-                <li id="no-equipment-message" class="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                  <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                  </svg>
-                  <p class="text-sm">Belum ada peralatan yang ditambahkan</p>
-                </li>
-            `;
-        }
-    }
-
-    const _equipmentListEl = document.getElementById('equipment-list');
-    if (_equipmentListEl) {
-        _equipmentListEl.addEventListener('click', function(e) {
-            const btn = e.target.closest('.delete-equipment-btn');
-            if (btn) {
-                const id = btn.dataset.deleteId;
-                const name = decodeURIComponent(btn.dataset.deleteName);
-                if (id) {
-                    showDeleteEquipmentModal(id, name);
-                }
-            }
-        });
-    }
-
-    window.updateEquipmentList = updateEquipmentList;
-    window.showToast = showToast;
-    window.showDeleteEquipmentModal = showDeleteEquipmentModal;
-});
-
-function editEquipment(id, name, price, stock) {
-    document.getElementById('edit-equipment-id').value = id;
-    document.getElementById('edit-name').value = name;
-    document.getElementById('edit-price').value = price;
-    document.getElementById('edit-stock').value = stock;
-    document.getElementById('edit-modal').classList.remove('hidden');
-}
-
-function closeEditModal() {
-    document.getElementById('edit-modal').classList.add('hidden');
-}
-</script>
-
+{% block extra_head %}
 <style>
 @keyframes slideInRight {
     from {
@@ -772,4 +60,727 @@ function closeEditModal() {
     animation: fade-in 0.3s ease-out;
 }
 </style>
+{% endblock extra_head %}
+
+
+{% block content %}
+{# Container luar dengan background gradient dihapus #}
+
+<div id="toast" style="display: none; position: fixed; bottom: 30px; right: 30px;
+                        color: #fff; padding: 18px 24px; border-radius: 12px;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 10000;
+                        min-width: 300px; animation: slideInRight 0.4s ease;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <span id="toastIcon" style="font-size: 24px;"></span>
+    <div>
+      <div id="toastTitle" style="font-weight: 600; font-size: 15px; margin-bottom: 4px;"></div>
+      <div id="toastMessage" style="font-size: 13px; opacity: 0.9;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-8">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <a href="{% url 'venue_dashboard' %}" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm text-sm sm:text-base">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Kembali ke Dashboard
+    </a>
+  </div>
+</div>
+
+<div id="message-container" class="mb-6"></div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-teal-700 to-teal-800 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+          <h3 class="text-xl font-semibold text-white">Edit Detail Venue</h3>
+        </div>
+      </div>
+      <div class="p-6">
+        <form id="venue-edit-form" method="post" enctype="multipart/form-data" class="space-y-6">
+          {% csrf_token %}
+          
+          <div>
+            <label for="id_name" class="block text-sm font-semibold text-slate-700 mb-2">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+                Nama Venue
+              </span>
+            </label>
+            <input type="text" name="name" value="{{ venue.name }}" id="id_name" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" placeholder="Masukkan nama venue" required>
+            {% if venue_edit_form.name.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label for="id_description" class="block text-sm font-semibold text-slate-700 mb-2">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                </svg>
+                Deskripsi
+              </span>
+            </label>
+            <textarea name="description" id="id_description" rows="4" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" placeholder="Jelaskan venue Anda...">{{ venue.description }}</textarea>
+            {% if venue_edit_form.description.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.description.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="id_location" class="block text-sm font-semibold text-slate-700 mb-2">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  Area Lokasi
+                </span>
+              </label>
+              <select name="location" id="id_location" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" required>
+                {% for loc in venue_edit_form.location.field.queryset %}
+                  <option value="{{ loc.id }}" {% if venue.location.id == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+                {% endfor %}
+              </select>
+              {% if venue_edit_form.location.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.location.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="id_sport_category" class="block text-sm font-semibold text-slate-700 mb-2">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                  </svg>
+                  Kategori Olahraga
+                </span>
+              </label>
+              <select name="sport_category" id="id_sport_category" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" required>
+                {% for cat in venue_edit_form.sport_category.field.queryset %}
+                  <option value="{{ cat.id }}" {% if venue.sport_category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+              {% if venue_edit_form.sport_category.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.sport_category.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="id_price_per_hour" class="block text-sm font-semibold text-slate-700 mb-2">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Harga per Jam (Rp)
+                </span>
+              </label>
+              <input type="number" name="price_per_hour" value="{{ venue.price_per_hour }}" id="id_price_per_hour" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" placeholder="0" min="0" required>
+              {% if venue_edit_form.price_per_hour.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.price_per_hour.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="id_payment_options" class="block text-sm font-semibold text-slate-700 mb-2">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                  </svg>
+                  Opsi Pembayaran
+                </span>
+              </label>
+              <select name="payment_options" id="id_payment_options" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" required>
+                <option value="CASH" {% if venue.payment_options == 'CASH' %}selected{% endif %}>Tunai</option>
+                <option value="TRANSFER" {% if venue.payment_options == 'TRANSFER' %}selected{% endif %}>Transfer</option>
+              </select>
+              {% if venue_edit_form.payment_options.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.payment_options.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <label for="id_main_image" class="block text-sm font-semibold text-slate-700 mb-2">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Gambar Utama
+              </span>
+            </label>
+
+            <div class="rounded-md border-2 border-dashed border-slate-200 p-6 text-center">
+              <div class="space-y-1 text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="flex justify-center text-sm text-slate-600">
+                  <label class="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-500 mx-auto">
+                    <span>Unggah file</span>
+                    <input id="id_main_image" type="file" name="main_image" accept="image/*" class="sr-only">
+                  </label>
+                </div>
+                <p class="text-xs text-slate-500">PNG, JPG, GIF hingga 10MB</p>
+              </div>
+            </div>
+
+            {% if venue.main_image %}
+              <div class="mt-3">
+                <p class="text-sm text-slate-600 mb-2">Gambar saat ini:</p>
+                <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="w-32 h-32 object-cover rounded-lg border-2 border-slate-200">
+              </div>
+            {% endif %}
+            {% if venue_edit_form.main_image.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.main_image.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <button type="submit" name="submit_venue_edit" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-700 to-teal-800 text-white font-medium rounded-lg hover:from-teal-800 hover:to-teal-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+              <span class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Simpan Perubahan
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="lg:col-span-1 space-y-6">
+    <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-teal-700 to-teal-800 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+          </svg>
+          <h3 class="text-xl font-semibold text-white">Peralatan</h3>
+        </div>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-slate-600 mb-4">Tambahkan dan kelola peralatan yang tersedia untuk disewa di venue ini.</p>
+
+        <form id="equipment-form" method="post" class="space-y-4 mb-6">
+          {% csrf_token %}
+          <input type="hidden" name="submit_equipment" value="1">
+          
+          <div>
+            <label for="{{ equipment_form.name.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
+              Nama Peralatan
+            </label>
+            {{ equipment_form.name }} {# Widget ditambahkan class via forms.py #}
+            {% if equipment_form.name.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ equipment_form.name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label for="{{ equipment_form.rental_price.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
+              Harga Sewa (Rp)
+            </label>
+            {{ equipment_form.rental_price }}
+            {% if equipment_form.rental_price.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ equipment_form.rental_price.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label for="{{ equipment_form.stock_quantity.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
+              Jumlah Stok
+            </label>
+            {{ equipment_form.stock_quantity }}
+            {% if equipment_form.stock_quantity.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ equipment_form.stock_quantity.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="w-full px-4 py-3 bg-gradient-to-r from-teal-700 to-teal-800 text-white font-medium rounded-lg hover:from-teal-800 hover:to-teal-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+            <span class="flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Tambah Peralatan
+            </span>
+          </button>
+        </form>
+
+        <div class="border-t border-slate-200 pt-4">
+          <h4 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Daftar Peralatan
+          </h4>
+          <ul id="equipment-list" class="space-y-2 max-h-96 overflow-y-auto">
+            {% for item in equipments %}
+              <li class="p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors" data-equipment-id="{{ item.id }}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-slate-900 truncate">{{ item.name }}</p>
+                    <div class="flex items-center gap-3 mt-1 text-xs text-slate-600">
+                      <span class="flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        <span class="equipment-stock">Stok: {{ item.stock_quantity }}</span>
+                      </span>
+                      <span class="flex items-center gap-1 text-teal-700 font-semibold">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Rp {{ item.rental_price|floatformat:0 }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button data-id="{{ item.id }}" data-name="{{ item.name|escapejs }}" data-price="{{ item.rental_price }}" data-stock="{{ item.stock_quantity }}" onclick="editEquipment(this.dataset.id, this.dataset.name, this.dataset.price, this.dataset.stock)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button data-delete-id="{{ item.id }}" data-delete-name="{{ item.name|escapejs }}" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors delete-equipment-btn" title="Hapus">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </li>
+            {% empty %}
+              <li id="no-equipment-message" class="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+                <p class="text-sm">Belum ada peralatan yang ditambahkan</p>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-teal-700 to-teal-800 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-xl font-semibold text-white">Manajemen Jadwal</h3>
+        </div>
+      </div>
+      <div class="p-6">
+        <p class="text-slate-600 mb-4">Konfigurasi slot waktu, ketersediaan, dan pengaturan pemesanan untuk venue Anda.</p>
+        <a href="{% url 'venue_manage_schedule' venue_id=venue.id %}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-700 to-teal-800 text-white font-medium rounded-lg hover:from-teal-800 hover:to-teal-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Kelola Jadwal
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-xl">
+      <h3 class="text-xl font-semibold text-white">Edit Peralatan</h3>
+    </div>
+    <form id="edit-equipment-form" class="p-6 space-y-4">
+      <input type="hidden" id="edit-equipment-id" name="equipment_id">
+      
+      <div>
+        <label for="edit-name" class="block text-sm font-semibold text-slate-700 mb-2">Nama Peralatan</label>
+        <input type="text" id="edit-name" name="name" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+      </div>
+      
+      <div>
+        <label for="edit-price" class="block text-sm font-semibold text-slate-700 mb-2">Harga Sewa (Rp)</label>
+        <input type="number" id="edit-price" name="rental_price" min="0" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+      </div>
+      
+      <div>
+        <label for="edit-stock" class="block text-sm font-semibold text-slate-700 mb-2">Jumlah Stok</label>
+        <input type="number" id="edit-stock" name="stock_quantity" min="0" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+      </div>
+      
+      <div class="flex gap-3 pt-4 border-t border-slate-200">
+        <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+          Batal
+        </button>
+        <button type="submit" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium shadow-md">
+          Simpan Perubahan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="delete-equipment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
+  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full animate-fade-in">
+    <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <h3 class="text-xl font-semibold text-white">Konfirmasi Hapus</h3>
+      </div>
+    </div>
+    <div class="p-6">
+      <p class="text-slate-700 mb-2">Apakah Anda yakin ingin menghapus peralatan ini?</p>
+      <p class="text-sm text-slate-600 mb-4"><strong id="delete-equipment-name"></strong></p>
+      <p class="text-sm text-red-600">Tindakan ini tidak dapat dibatalkan.</p>
+    </div>
+    <div class="flex gap-3 px-6 pb-6">
+      <button id="cancel-delete-equipment-btn" class="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+        Batal
+      </button>
+      <button id="confirm-delete-equipment-btn" class="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md">
+        Hapus
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const venueEditForm = document.getElementById('venue-edit-form');
+    const equipmentForm = document.getElementById('equipment-form');
+    const editEquipmentForm = document.getElementById('edit-equipment-form');
+    
+    const deleteEquipmentModal = document.getElementById('delete-equipment-modal');
+    const cancelDeleteEquipmentBtn = document.getElementById('cancel-delete-equipment-btn');
+    const confirmDeleteEquipmentBtn = document.getElementById('confirm-delete-equipment-btn');
+    let equipmentToDelete = null;
+    
+    // Fungsi Toast sama seperti sebelumnya
+    function showToast(title, message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+        
+        if (type === 'success') {
+            toast.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+            toastIcon.textContent = '✅';
+        } else if (type === 'error') {
+            toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c1121f 100%)';
+            toastIcon.textContent = '❌';
+        }
+        
+        toast.style.display = 'block';
+        toast.classList.remove('animate-slide-out'); // Reset jika ada animasi keluar sebelumnya
+        toast.classList.add('animate-slide-in'); // Ganti ke animasi masuk
+        
+        setTimeout(() => {
+            toast.classList.remove('animate-slide-in');
+            toast.classList.add('animate-slide-out'); // Animasi keluar
+             setTimeout(() => {
+                 toast.style.display = 'none'; // Sembunyikan setelah animasi keluar selesai
+             }, 300); // Durasi animasi keluar
+        }, 3000); // Total waktu toast terlihat
+    }
+    
+    function showDeleteEquipmentModal(id, name) {
+        equipmentToDelete = id;
+        document.getElementById('delete-equipment-name').textContent = name;
+        deleteEquipmentModal.classList.remove('hidden');
+        deleteEquipmentModal.classList.add('flex');
+    }
+    
+    function hideDeleteEquipmentModal() {
+        deleteEquipmentModal.classList.add('hidden');
+        deleteEquipmentModal.classList.remove('flex');
+        equipmentToDelete = null;
+    }
+    
+    cancelDeleteEquipmentBtn.addEventListener('click', hideDeleteEquipmentModal);
+    
+    window.addEventListener('click', function(e){ 
+        if (e.target === deleteEquipmentModal) hideDeleteEquipmentModal();
+        const editModal = document.getElementById('edit-modal'); // Cek juga untuk modal edit
+        if (e.target === editModal) closeEditModal();
+    });
+    
+    // Submit Edit Venue Form
+    venueEditForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        formData.append('submit_venue_edit', '1');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}' // Pastikan CSRF Token ada
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Coba parse error jika JSON
+                 return response.json().then(errData => {
+                     throw { status: response.status, data: errData };
+                 }).catch(() => {
+                     // Jika bukan JSON, throw status text
+                    throw new Error('Server merespons dengan status: ' + response.statusText);
+                 });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showToast('Berhasil', data.message, 'success');
+                // Optional: Update title jika nama venue berubah?
+                // document.querySelector('h1.text-slate-900').textContent = formData.get('name'); 
+            } else {
+                let errorMsg = 'Terjadi kesalahan: ';
+                 if (data.errors && typeof data.errors === 'object') {
+                    for (let field in data.errors) {
+                         errorMsg += `${field}: ${data.errors[field].join(', ')} `;
+                     }
+                 } else if (data.message) {
+                     errorMsg = data.message;
+                 }
+                showToast('Kesalahan', errorMsg, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Kesalahan Fetch:', error);
+            let detailError = 'Terjadi kesalahan saat menyimpan perubahan.';
+            if(error.status && error.data && error.data.errors) {
+                 detailError = Object.values(error.data.errors).flat().join(' ');
+            } else if (error.message) {
+                 detailError = error.message;
+            }
+            showToast('Kesalahan Server', detailError, 'error');
+        });
+    });
+    
+    // Submit Add Equipment Form
+    equipmentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const csrfToken = '{{ csrf_token }}';
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Berhasil', data.message, 'success');
+                updateEquipmentList(data.equipments);
+                equipmentForm.reset();
+            } else {
+                 let errorMsg = 'Terjadi kesalahan: ';
+                 if (data.errors && typeof data.errors === 'object') {
+                    for (let field in data.errors) {
+                         errorMsg += `${field}: ${data.errors[field].join(', ')} `;
+                     }
+                 } else if (data.message) {
+                     errorMsg = data.message;
+                 }
+                showToast('Kesalahan', errorMsg, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Kesalahan:', error);
+            showToast('Kesalahan', 'Terjadi kesalahan saat menambah peralatan.', 'error');
+        });
+    });
+    
+    // Submit Edit Equipment Form
+    editEquipmentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        formData.append('action', 'edit');
+        const csrfToken = '{{ csrf_token }}';
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Berhasil', data.message, 'success');
+                updateEquipmentList(data.equipments);
+                closeEditModal();
+            } else {
+                 let errorMsg = 'Terjadi kesalahan: ';
+                 if (data.errors && typeof data.errors === 'object') {
+                    for (let field in data.errors) {
+                         errorMsg += `${field}: ${data.errors[field].join(', ')} `;
+                     }
+                 } else if (data.message) {
+                     errorMsg = data.message;
+                 }
+                showToast('Kesalahan', errorMsg, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Kesalahan:', error);
+            showToast('Kesalahan', 'Terjadi kesalahan saat memperbarui peralatan.', 'error');
+        });
+    });
+    
+    // Confirm Delete Equipment
+    confirmDeleteEquipmentBtn.addEventListener('click', function() {
+        if (!equipmentToDelete) return;
+        
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('equipment_id', equipmentToDelete);
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Berhasil', data.message, 'success');
+                updateEquipmentList(data.equipments);
+                hideDeleteEquipmentModal();
+            } else {
+                showToast('Kesalahan', data.message || 'Gagal menghapus.', 'error');
+                hideDeleteEquipmentModal();
+            }
+        })
+        .catch(error => {
+            console.error('Kesalahan:', error);
+            showToast('Kesalahan', 'Terjadi kesalahan koneksi.', 'error');
+            hideDeleteEquipmentModal();
+        });
+    });
+    
+    // Update Equipment List Function
+    function updateEquipmentList(equipments) {
+        const equipmentList = document.getElementById('equipment-list');
+        equipmentList.innerHTML = ''; // Clear current list
+        
+        if (equipments && equipments.length > 0) {
+            equipments.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors';
+                li.setAttribute('data-equipment-id', item.id);
+                // Fungsi format mata uang sederhana
+                const formatCurrency = (amount) => {
+                    return parseFloat(amount).toLocaleString('id-ID'); 
+                };
+                 // Encode nama untuk atribut data (jika mengandung karakter khusus)
+                const encodedName = encodeURIComponent(item.name); 
+
+                li.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex-1 min-w-0">
+                        <p class="font-medium text-slate-900 truncate">${item.name}</p>
+                        <div class="flex items-center gap-3 mt-1 text-xs text-slate-600">
+                          <span class="flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                            <span class="equipment-stock">Stok: ${item.stock}</span>
+                          </span>
+                          <span class="flex items-center gap-1 text-teal-700 font-semibold">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Rp ${formatCurrency(item.price)}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <button data-id="${item.id}" data-name="${encodedName}" data-price="${item.price}" data-stock="${item.stock}" onclick="editEquipment(this.dataset.id, decodeURIComponent(this.dataset.name), this.dataset.price, this.dataset.stock)" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
+                        <button data-delete-id="${item.id}" data-delete-name="${encodedName}" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors delete-equipment-btn" title="Hapus">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                      </div>
+                    </div>
+                `;
+                equipmentList.appendChild(li);
+            });
+        } else {
+            // Tampilkan pesan jika tidak ada equipment
+            equipmentList.innerHTML = `
+                <li id="no-equipment-message" class="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                  <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                  <p class="text-sm">Belum ada peralatan yang ditambahkan</p>
+                </li>
+            `;
+        }
+    }
+
+    // Attach delete handler to initial list items and future ones
+    const _equipmentListEl = document.getElementById('equipment-list');
+    if (_equipmentListEl) {
+        _equipmentListEl.addEventListener('click', function(e) {
+            const btn = e.target.closest('.delete-equipment-btn');
+            if (btn) {
+                const id = btn.dataset.deleteId;
+                const name = decodeURIComponent(btn.dataset.deleteName); // Decode nama saat menampilkan konfirmasi
+                if (id) {
+                    showDeleteEquipmentModal(id, name);
+                }
+            }
+        });
+    }
+
+    // Make functions globally accessible (jika dipanggil dari HTML onclick)
+    window.editEquipment = function(id, name, price, stock) {
+        document.getElementById('edit-equipment-id').value = id;
+        document.getElementById('edit-name').value = name;
+        document.getElementById('edit-price').value = price;
+        document.getElementById('edit-stock').value = stock;
+        document.getElementById('edit-modal').classList.remove('hidden');
+        document.getElementById('edit-modal').classList.add('flex'); // Tampilkan modal
+    }
+
+    window.closeEditModal = function() {
+        document.getElementById('edit-modal').classList.add('hidden');
+        document.getElementById('edit-modal').classList.remove('flex'); // Sembunyikan modal
+    }
+    
+    // Assign global showToast (jika diperlukan dari luar)
+    window.showToast = showToast;
+});
+</script>
+{% endblock extra_js %}
