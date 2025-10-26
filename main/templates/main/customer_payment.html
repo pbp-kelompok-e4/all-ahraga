@@ -54,73 +54,81 @@
 <div id="user-toast-container" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
 
 <style>
-  /* Toast styles converted to use Tailwind utilities where possible */
-  .user-toast {
-    @apply min-w-[320px] text-white p-4 sm:p-6 rounded-xl shadow-xl border border-white border-opacity-20 animate-user-slide-in;
-  }
-  .user-toast.success { @apply bg-gradient-to-r from-green-500 to-green-700; }
-  .user-toast.error { @apply bg-gradient-to-r from-red-500 to-red-700; }
-  .user-toast.info { @apply bg-gradient-to-r from-blue-500 to-blue-700; }
-  .user-toast.warning { @apply bg-gradient-to-r from-yellow-500 to-yellow-700; }
-  
-  .user-toast-content { @apply flex items-center gap-3; }
-  .user-toast-content .icon { @apply flex-shrink-0 w-6 h-6; }
-  .user-toast-content .message { @apply flex-1 font-semibold text-base; }
-  .user-toast-content .close-btn { 
-    @apply bg-transparent border-none text-white text-opacity-80 cursor-pointer p-0 hover:text-white transition-colors;
-  }
-  
-  @keyframes user-slide-in {
-    from { opacity: 0; transform: translateY(100%); } 
-    to { opacity: 1; transform: translateY(0); }     
-  }
-  @keyframes user-slide-out {
-    from { opacity: 1; transform: translateY(0); }  
-    to { opacity: 0; transform: translateY(100%); } 
-  }
-  .animate-user-slide-out {
-    animation: user-slide-out 0.3s ease-out forwards;
-  }
-  .animate-user-slide-in {
-    animation: user-slide-in 0.3s ease-out forwards;
-  }
+     .user-toast { 
+        position: relative; 
+        min-width: 280px; max-width: 400px;
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.15);
+        opacity: 0; 
+        transform: translateY(100%);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        display: flex; align-items: center; gap: 0.75rem;
+        color: white;
+        font-weight: 600;
+     }
+     .user-toast.show { opacity: 1; transform: translateY(0); } 
+     .user-toast.success { 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+     }
+     .user-toast.error { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+     }
+     .user-toast.info { 
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+     }
+     .user-toast.warning { 
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+     }
+     .user-toast-content { display: flex; align-items: center; flex-grow: 1; gap: 0.5rem; }
+     .user-toast-content .icon { font-size: 1.5rem; } /* Asumsi Anda memuat FontAwesome */
+     .user-toast-content .message { font-size: 0.95rem; line-height: 1.4; }
+     .user-toast .close-btn { 
+        background: none; border: none; color: white; 
+        opacity: 0.9; cursor: pointer; padding: 0.25rem; 
+        margin-left: auto; font-size: 1.5rem; font-weight: bold;
+        transition: opacity 0.2s;
+     }
+     .user-toast .close-btn:hover { opacity: 1; transform: scale(1.1); }
 </style>
+
 <script>
 function showUserToast(message, type = 'info') {
-  const container = document.getElementById('user-toast-container');
-  if (!container) return;
+    const container = document.getElementById('user-toast-container');
+    if (!container) return;
 
-  const toast = document.createElement('div');
-  toast.className = `user-toast ${type}`; 
+    const toast = document.createElement('div');
+    toast.className = `user-toast ${type}`; 
 
-  const icons = {
-    success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
-    error: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
-    info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-    warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>'
-  };
+    let iconHtml = '';
+    if (type === 'success') iconHtml = '<i class="fas fa-check-circle icon"></i>';
+    else if (type === 'error') iconHtml = '<i class="fas fa-times-circle icon"></i>';
+    else if (type === 'warning') iconHtml = '<i class="fas fa-exclamation-triangle icon"></i>';
+    else iconHtml = '<i class="fas fa-info-circle icon"></i>';
 
-  toast.innerHTML = `
-    <div class="user-toast-content">
-      <span class="icon">${icons[type] || icons['info']}</span>
-      <p class="message">${message}</p>
-      <button type="button" class="close-btn">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-      </button>
-    </div>
-  `;
-  container.appendChild(toast);
+    toast.innerHTML = `
+        <div class="user-toast-content">
+            ${iconHtml}
+            <span class="message">${message}</span>
+        </div>
+        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    `;
 
-  const closeToast = () => {
-    toast.classList.add('animate-user-slide-out');
-    setTimeout(() => toast.remove(), 300);
-  };
-  const timer = setTimeout(closeToast, 4000); 
-  
-  toast.querySelector('.close-btn').addEventListener('click', () => {
-    clearTimeout(timer);
-    closeToast();
-  });
+    container.appendChild(toast);
+    toast.classList.add('show'); // Tambahkan class 'show' untuk memicu animasi
+
+    const closeBtn = toast.querySelector('.close-btn');
+    const closeToast = () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    };
+    
+    const timer = setTimeout(closeToast, 4000);
+    
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(timer);
+        closeToast();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -130,14 +138,30 @@ document.addEventListener('DOMContentLoaded', function() {
   if (paymentForm) {
     paymentForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+        const startTime = Date.now();
+        const minProcessingTime = 2000; 
+ 
         if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Memproses...';
+          submitButton.disabled = true;
+          submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...'; 
         }
 
         const csrfToken = this.querySelector('input[name="csrfmiddlewaretoken"]').value;
 
+        const handleSuccess = (data) => {
+            showUserToast(data.message || 'Pembayaran berhasil dikonfirmasi!', 'success'); 
+            setTimeout(() => {
+                window.location.href = data.redirect_url || "{% url 'my_bookings' %}"; 
+            }, 3000); 
+        };
+
+        const handleError = (errorMessage) => {
+            showUserToast(errorMessage || 'Terjadi kesalahan. Silakan coba lagi.', 'error');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Sudah bayar';
+            }
+        };
         fetch(this.action, {
             method: 'POST',
             body: new FormData(this),
@@ -150,24 +174,23 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json().then(data => ({ ok: response.ok, data }));
         })
         .then(({ ok, data }) => {
-            if (ok) {
-                showUserToast(data.message, 'success'); 
-                
-                setTimeout(() => {
-                    window.location.href = data.redirect_url;
-                }, 1500);
-            } else {
-                throw new Error(data.message);
-            }
+            const duration = Date.now() - startTime;
+            const delay = Math.max(0, minProcessingTime - duration);
+            
+            if (ok && data.success) {
+                // Panggil 'handleSuccess' SETELAH sisa waktu tunggu
+                setTimeout(() => handleSuccess(data), delay);
+               } else {
+                // Panggil 'handleError' SETELAH sisa waktu tunggu
+                 const errorMsg = data.message || 'Terjadi kesalahan saat memproses pembayaran.';
+                setTimeout(() => handleError(errorMsg), delay);
+              }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showUserToast(error.message, 'error');
-            
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Sudah bayar';
-            }
+          console.error('Error:', error);
+            const duration = Date.now() - startTime;
+            const delay = Math.max(0, minProcessingTime - duration);
+            setTimeout(() => handleError(error.message), delay);
         });
     });
   }

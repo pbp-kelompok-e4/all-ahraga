@@ -13,27 +13,40 @@
 
      .user-toast { 
         position: relative; 
-        min-width: 250px; max-width: 400px;
-        background-color: #333; color: white;
-        border-radius: 0.5rem; /* rounded-lg */
-        padding: 0.75rem 1rem; /* p-3 p-4 */
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); /* shadow-md */
+        min-width: 280px; max-width: 400px;
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.15);
         opacity: 0; 
-        transform: translateY(100%); /* ✅ Animasi dari bawah */
+        transform: translateY(100%);
         transition: opacity 0.3s ease, transform 0.3s ease;
-        display: flex; align-items: center; gap: 0.75rem; /* gap-3 */
+        display: flex; align-items: center; gap: 0.75rem;
+        color: white;
+        font-weight: 600;
      }
      .user-toast.show { opacity: 1; transform: translateY(0); } 
-     .user-toast.success { background-color: #10B981; } /* emerald-500 */
-     .user-toast.error { background-color: #EF4444; } /* red-500 */
-     .user-toast.info { background-color: #3B82F6; } /* blue-500 */
-     .user-toast.warning { background-color: #F59E0B; } /* amber-500 */
-     .user-toast-content { display: flex; align-items: center; flex-grow: 1; }
-     .user-toast-content .icon { font-size: 1.25rem; /* text-xl */ margin-right: 0.5rem; /* mr-2 */ }
-     .user-toast-content .message { font-size: 0.875rem; /* text-sm */ }
-     .user-toast .close-btn { background: none; border: none; color: white; opacity: 0.7; cursor: pointer; padding: 0.25rem; margin-left: auto; }
-     .user-toast .close-btn:hover { opacity: 1; }
-     /* Pastikan @keyframes didefinisikan jika Anda menggunakannya */
+     .user-toast.success { 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+     }
+     .user-toast.error { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+     }
+     .user-toast.info { 
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+     }
+     .user-toast.warning { 
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+     }
+     .user-toast-content { display: flex; align-items: center; flex-grow: 1; gap: 0.5rem; }
+     .user-toast-content .icon { font-size: 1.5rem; }
+     .user-toast-content .message { font-size: 0.95rem; line-height: 1.4; }
+     .user-toast .close-btn { 
+        background: none; border: none; color: white; 
+        opacity: 0.9; cursor: pointer; padding: 0.25rem; 
+        margin-left: auto; font-size: 1.5rem; font-weight: bold;
+        transition: opacity 0.2s;
+     }
+     .user-toast .close-btn:hover { opacity: 1; transform: scale(1.1); }
 
 
     /* Modal Animation */
@@ -41,6 +54,10 @@
     @keyframes modalSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     #editBookingModal:not(.hidden) { display: flex; animation: modalFadeIn 0.3s ease forwards; }
     #editBookingModal > div { animation: modalSlideUp 0.3s ease forwards; }
+    
+    /* Confirm Delete Modal Animation */
+    #confirmDeleteModal:not(.hidden) { display: flex; animation: modalFadeIn 0.3s ease forwards; }
+    #confirmDeleteModal > div { animation: modalSlideUp 0.3s ease forwards; }
 
 </style>
 {% endblock extra_head %}
@@ -88,6 +105,7 @@
     </div>
 </div>
 
+<!-- Edit Booking Modal -->
 <div id="editBookingModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50 overflow-y-auto p-4 backdrop-blur-sm">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-slideUp"> 
         <h3 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-3">Edit Booking</h3> 
@@ -135,6 +153,34 @@
         <button onclick="closeEditModal()" class="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 bg-gray-100 hover:bg-gray-200 hover:text-gray-600 transition-colors"> <i class="fa-solid fa-xmark text-lg"></i> </button>
     </div>
 </div>
+
+<!-- Confirm Delete Modal -->
+<div id="confirmDeleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-[60] backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Konfirmasi Pembatalan</h3>
+        <p class="text-gray-600 text-center mb-6">
+            Apakah Anda yakin ingin membatalkan booking untuk <span id="deleteVenueName" class="font-semibold text-gray-900"></span>?
+        </p>
+        <div class="flex gap-3">
+            <button type="button" 
+                    onclick="closeDeleteModal()" 
+                    class="flex-1 px-4 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                Tidak, Kembali
+            </button>
+            <button type="button" 
+                    id="confirmDeleteBtn"
+                    class="flex-1 px-4 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                Ya, Batalkan
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="user-toast-container" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
 {% endblock content %}
 
@@ -185,10 +231,15 @@ document.addEventListener('DOMContentLoaded', function() {
   {% endif %}
 });
 
+const urlParams = new URLSearchParams(window.location.search);
+  const toastMsg = urlParams.get('toast_msg');
+  const toastType = urlParams.get('toast_type');
+  
+  if (toastMsg && toastType) {
+      showUserToast(toastMsg, toastType);
+      window.history.replaceState(null, '', window.location.pathname);
+  }
 
-// ======================================================
-// ✅ AWAL DARI LOGIKA MODAL YANG HILANG
-// ======================================================
 const modal = document.getElementById('editBookingModal');
 const form = document.getElementById('editBookingForm');
 const bookingIdInput = document.getElementById('editBookingId');
@@ -196,9 +247,7 @@ const scheduleSelect = document.getElementById('editSchedule');
 const coachSelect = document.getElementById('editCoach');
 const equipmentListDiv = document.getElementById('editEquipmentList');
 
-// --- Fungsi untuk memuat coach yang tersedia ---
 async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = null) {
-    // Bangun URL dengan benar, pastikan 'schedule_id_placeholder' diganti
     let urlTemplate = "{% url 'get_available_coaches' schedule_id=99999 %}".replace('99999', scheduleId);
     const url = new URL(urlTemplate, window.location.origin);
     url.searchParams.append('editing_booking_id', bookingId);
@@ -212,7 +261,7 @@ async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = nu
         
         const data = await response.json();
         
-        coachSelect.innerHTML = '<option value="">Tanpa Coach</option>'; // Default
+        coachSelect.innerHTML = '<option value="">Tanpa Coach</option>'; 
         data.coaches.forEach(coach => {
             const isSelected = currentCoachId && coach.id == currentCoachId;
             coachSelect.innerHTML += `<option value="${coach.id}" ${isSelected ? 'selected' : ''}>
@@ -228,23 +277,18 @@ async function loadCoachesForSchedule(scheduleId, bookingId, currentCoachId = nu
     }
 }
 
-// --- Fungsi untuk membuka dan mengisi modal ---
 async function openEditModal(bookingId) {
     if (!modal || !form) return;
     
-    // Reset form & set booking ID
     form.reset();
     bookingIdInput.value = bookingId;
     scheduleSelect.innerHTML = '<option value="">Memuat jadwal...</option>';
     coachSelect.innerHTML = '<option value="">Pilih jadwal dulu</option>';
     equipmentListDiv.innerHTML = '<div class="text-gray-500 text-sm">Memuat peralatan...</div>';
     
-    // Tampilkan modal
     modal.classList.remove('hidden');
 
     try {
-        // 1. Ambil data booking
-        // Pastikan 'booking_id_placeholder' diganti
         let urlTemplate = "{% url 'update_booking_data' booking_id=99999 %}".replace('99999', bookingId);
         const response = await fetch(urlTemplate);
         
@@ -257,7 +301,6 @@ async function openEditModal(bookingId) {
             throw new Error(data.message || 'Gagal mengambil data booking.');
         }
 
-        // 2. Isi Jadwal (Schedules)
         const currentSchedule = data.current_schedule;
         let scheduleOptions = `<option value="${currentSchedule.id}" selected>
             (Saat ini) ${currentSchedule.date_str_display} | ${currentSchedule.start_time} - ${currentSchedule.end_time}
@@ -269,7 +312,6 @@ async function openEditModal(bookingId) {
         });
         scheduleSelect.innerHTML = scheduleOptions;
 
-        // 3. Isi Peralatan (Equipment)
         equipmentListDiv.innerHTML = '';
         if (data.available_equipments.length > 0) {
             data.available_equipments.forEach(eq => {
@@ -286,7 +328,6 @@ async function openEditModal(bookingId) {
                     </div>
                 `;
             });
-            // Tambah event listener untuk show/hide input quantity
             equipmentListDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                 cb.addEventListener('change', (e) => {
                     const qtyInput = equipmentListDiv.querySelector(`input[name="quantity_${e.target.value}"]`);
@@ -307,7 +348,6 @@ async function openEditModal(bookingId) {
             }
         }
         
-        // 4. Muat Coach (berdasarkan jadwal yang dipilih saat ini)
         await loadCoachesForSchedule(currentSchedule.id, bookingId, data.current_coach_id);
 
     } catch (error) {
@@ -317,18 +357,15 @@ async function openEditModal(bookingId) {
     }
 }
 
-// --- Fungsi untuk menutup modal ---
 function closeEditModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-// --- Event Listener untuk Perubahan Jadwal ---
 if (scheduleSelect) {
     scheduleSelect.addEventListener('change', async function() {
         const scheduleId = this.value;
         const bookingId = bookingIdInput.value;
         if (scheduleId && bookingId) {
-            // Muat ulang daftar coach, tapi jangan pilih coach lama (karena jadwal beda)
             await loadCoachesForSchedule(scheduleId, bookingId, null);
         } else {
             coachSelect.innerHTML = '<option value="">Pilih jadwal dulu</option>';
@@ -337,7 +374,6 @@ if (scheduleSelect) {
     });
 }
 
-// --- Event Listener untuk Submit Form Edit ---
 if (form) {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -349,7 +385,6 @@ if (form) {
         submitButton.innerHTML = 'Menyimpan...';
 
         const formData = new FormData(form);
-        // Pastikan equipment yang tidak dicheck tidak mengirim quantity
         equipmentListDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
             if (!cb.checked) {
                 formData.delete(`quantity_${cb.value}`);
@@ -357,14 +392,12 @@ if (form) {
         });
 
         try {
-            // Pastikan 'booking_id_placeholder' diganti
             let urlTemplate = "{% url 'update_booking' booking_id=99999 %}".replace('99999', bookingId);
             const response = await fetch(urlTemplate, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
-                    // CSRF token sudah di-handle oleh {% csrf_token %} dalam FormData
                 }
             });
 
@@ -372,7 +405,6 @@ if (form) {
 
             if (data.success) {
                 showUserToast(data.message || 'Booking berhasil diperbarui.', 'success');
-                // Beri waktu toast untuk tampil sebelum reload
                 setTimeout(() => {
                     window.location.href = data.redirect_url || "{% url 'my_bookings' %}";
                 }, 1000);
@@ -388,15 +420,10 @@ if (form) {
         }
     });
 }
-// ======================================================
-// ✅ AKHIR DARI LOGIKA MODAL
-// ======================================================
 
-
-// --- Event Listener Search ---
 const searchInput = document.getElementById('searchMyBooking');
 const bookingListWrapper = document.getElementById('bookingListWrapper');
-const dataUrl = "{% url 'my_bookings' %}"; // Ganti jika perlu view AJAX
+const dataUrl = "{% url 'my_bookings' %}"; 
 let debounceTimer;
 function debounce(func, delay) { return function(...args) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { func.apply(this, args); }, delay); }; }
 async function fetchMyBookings() {
@@ -417,6 +444,88 @@ async function fetchMyBookings() {
     }
 }
 if (searchInput) { searchInput.addEventListener('input', debounce(fetchMyBookings, 350)); }
+
+const deleteModal = document.getElementById('confirmDeleteModal');
+const deleteVenueNameSpan = document.getElementById('deleteVenueName');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+let currentDeleteForm = null;
+
+function closeDeleteModal() {
+    if (deleteModal) {
+        deleteModal.classList.add('hidden');
+        currentDeleteForm = null;
+    }
+}
+
+// --- Delete Booking Handler ---
+document.addEventListener('submit', async function(e) {
+    // Cek apakah yang disubmit adalah form delete booking
+    if (e.target.classList.contains('delete-booking-form')) {
+        e.preventDefault();
+        
+        currentDeleteForm = e.target;
+        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
+        const venueName = bookingItem.querySelector('.text-orange-600').textContent.trim();
+        
+        // Set nama venue di modal
+        deleteVenueNameSpan.textContent = venueName;
+        
+        // Tampilkan modal
+        deleteModal.classList.remove('hidden');
+    }
+});
+
+// Konfirmasi delete dari modal
+if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', async function() {
+        if (!currentDeleteForm) return;
+        
+        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
+        
+        // Disable button saat loading
+        const originalText = confirmDeleteBtn.innerHTML;
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.innerHTML = '<svg class="w-5 h-5 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+        
+        try {
+            const response = await fetch(currentDeleteForm.action, {
+                method: 'POST',
+                body: new FormData(currentDeleteForm),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+            
+            const data = await response.json();
+            
+            // Tutup modal terlebih dahulu
+            closeDeleteModal();
+            
+            if (data.success) {
+                showUserToast(data.message || 'Booking berhasil dibatalkan.', 'success');
+                
+                // Animasi fade out item yang dihapus
+                bookingItem.style.transition = 'opacity 0.3s, transform 0.3s';
+                bookingItem.style.opacity = '0';
+                bookingItem.style.transform = 'translateX(-20px)';
+                
+                // Refresh list setelah animasi
+                setTimeout(() => {
+                    fetchMyBookings();
+                }, 400);
+            } else {
+                throw new Error(data.message || 'Gagal membatalkan booking.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showUserToast(error.message || 'Terjadi kesalahan saat membatalkan booking.', 'error');
+        } finally {
+            // Restore button
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.innerHTML = originalText;
+        }
+    });
+}
 
 </script>
 {% endblock extra_js %}

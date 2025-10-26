@@ -1325,14 +1325,26 @@ def create_booking(request, venue_id):
     return render(request, 'main/create_booking.html', context)
 
 
+# Pastikan impor ini ada di bagian atas file views.py Anda
+from django.http import JsonResponse
+from django.urls import reverse
+from django.contrib import messages
+# ... (impor Anda lainnya)
+
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_payment(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
     transaction = booking.transaction
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
     if transaction.status == 'CONFIRMED':
-        messages.success(request, "Booking ini sudah dikonfirmasi.")
+        error_msg = "Booking ini sudah dikonfirmasi."
+        
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_msg}, status=400)
+        
+        messages.success(request, error_msg)
         return redirect('my_bookings')
 
     if transaction.status == 'CANCELLED':
@@ -1342,10 +1354,8 @@ def customer_payment(request, booking_id):
         messages.error(request, "Status booking tidak valid untuk pembayaran.")
         return redirect('my_bookings')
 
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-    
     if request.method == 'POST' or (transaction.payment_method and transaction.payment_method.upper() == 'CASH'):
-        is_cash_auto_confirm = False
+        is_cash_auto_confirm = transaction.payment_method and transaction.payment_method.upper() == 'CASH' and request.method != 'POST'
         
         try:
             with db_transaction.atomic():
@@ -1358,29 +1368,8 @@ def customer_payment(request, booking_id):
                 if already_booked_by_others:
                     transaction.status = 'CANCELLED'
                     transaction.save()
-                    error_msg = "Maaf, jadwal ini baru saja dikonfirmasi oleh pengguna lain."
-                    
-                    if is_ajax and not is_cash_auto_confirm:
-                        return JsonResponse({'success': False, 'message': error_msg}, status=400)
-                    
-                    messages.error(request, error_msg)
-                    return redirect('booking_history')
-
-                booked_items = BookingEquipment.objects.filter(booking=booking).select_related('equipment')
-                items_to_update = []
+                    raise IntegrityError("Maaf, jadwal ini baru saja dikonfirmasi oleh pengguna lain.")
                 
-                for item in booked_items:
-                    equipment = Equipment.objects.select_for_update().get(id=item.equipment.id)
-                    
-                    if equipment.stock_quantity < item.quantity:
-                        raise IntegrityError(f"Pembayaran gagal, stok untuk {equipment.name} tidak lagi mencukupi.")
-                    
-                    equipment.stock_quantity -= item.quantity
-                    items_to_update.append(equipment)
-                
-                if items_to_update:
-                    Equipment.objects.bulk_update(items_to_update, ['stock_quantity'])
-    
                 venue_schedule.is_booked = True
                 venue_schedule.is_available = False
                 venue_schedule.save()
@@ -1403,19 +1392,27 @@ def customer_payment(request, booking_id):
                     pending.transaction.status = 'CANCELLED'
                     pending.transaction.save()
 
-        except IntegrityError as e: 
-            error_msg = str(e) if "stok" in str(e) else "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
+        except IntegrityError as e:
+            error_msg = str(e) if ("stok" in str(e) or "jadwal" in str(e)) else "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
             
             if is_ajax and not is_cash_auto_confirm:
                 return JsonResponse({'success': False, 'message': error_msg}, status=400)
+            
             messages.error(request, error_msg)
             return redirect('my_bookings')
         
         if is_ajax and not is_cash_auto_confirm:
             return JsonResponse({
                 'success': True,
+                'message': 'Pembayaran berhasil dikonfirmasi!',
                 'redirect_url': reverse('my_bookings')
             })
+        
+        if is_cash_auto_confirm:
+            redirect_url = reverse('my_bookings')
+            toast_msg = 'Booking berhasil dikonfirmasi! Silakan bayar di tempat.'
+            toast_type = 'success'
+            return redirect(f"{redirect_url}?toast_msg={toast_msg}&toast_type={toast_type}")
                 
         return redirect('my_bookings')
 
@@ -1519,9 +1516,12 @@ def delete_booking(request, booking_id):
             booking.transaction.delete()
             booking.delete()
             
-            if is_ajax:
-                return JsonResponse({'success': True, 'message': 'Booking berhasil dibatalkan dan jadwal telah dikembalikan.'})
+            success_msg = 'Booking berhasil dibatalkan'
             
+            if is_ajax:
+                return JsonResponse({'success': True, 'message': success_msg})
+            
+            messages.success(request, success_msg)
             return redirect('my_bookings')
         else:
             error_msg = 'Booking ini tidak dapat dibatalkan (status bukan PENDING).'
@@ -1810,6 +1810,7 @@ def filter_venues_ajax(request):
         venues = venues.filter(sport_category_id=sport_id)
     
     # Pagination dengan 9 item per halaman
+    venues = venues.order_by('pk')
     paginator = Paginator(venues, 6)
     try:
         venues_page = paginator.page(page)
