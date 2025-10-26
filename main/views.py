@@ -1658,8 +1658,14 @@ def update_booking(request, booking_id):
                 new_schedule = VenueSchedule.objects.select_for_update().get(id=target_schedule.id)
 
                 # 4. Cek ulang status setelah dikunci (mencegah race condition)
-                if new_schedule.is_booked and new_schedule.booking_set.first() != booking:
-                    raise IntegrityError("Jadwal ini baru saja dibooking oleh orang lain.")
+                if new_schedule.is_booked:
+                    try:
+                        existing_booking = new_schedule.booking  # OneToOne reverse access
+                        if existing_booking != booking:
+                            raise IntegrityError("Jadwal ini baru saja dibooking oleh orang lain.")
+                    except Booking.DoesNotExist:
+                        # Jadwal marked as booked tapi belum ada booking object
+                        pass
 
             except VenueSchedule.DoesNotExist:
                 return JsonResponse({ 'success': False, 'message': 'Jadwal tidak tersedia atau sudah dibooking.'}, status=400)
@@ -1693,8 +1699,14 @@ def update_booking(request, booking_id):
 
                     new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(id=target_coach_schedule.id)
                     
-                    if new_coach_schedule_obj.is_booked and new_coach_schedule_obj.booking_set.first() != booking:
-                        raise IntegrityError("Jadwal coach ini baru saja dibooking oleh orang lain.")
+                    if new_coach_schedule_obj.is_booked:
+                        try:
+                            existing_booking = new_coach_schedule_obj.booking  # OneToOne reverse access
+                            if existing_booking != booking:
+                                raise IntegrityError("Jadwal coach ini baru saja dibooking oleh orang lain.")
+                        except Booking.DoesNotExist:
+                            # Coach schedule marked as booked tapi belum ada booking object
+                            pass
 
                     coach_revenue = coach_obj.rate_per_hour or 0 
                     
