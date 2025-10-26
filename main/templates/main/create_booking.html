@@ -236,7 +236,7 @@
     {% endif %}
   </div>
 </div>
-
+<div id="user-toast-container" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
 <style>
   /* Fade-in animations */
   @keyframes fadeIn {
@@ -401,11 +401,109 @@
         gap: 1.5rem;
     }
   }
+
+  .user-toast {
+    position: relative;
+    min-width: 280px;
+    max-width: 360px;
+    background-color: #333; /* Default: black */
+    color: white;
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 1rem 1.25rem; /* p-4 p-5 */
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); /* shadow-lg */
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.4s cubic-bezier(0.21, 1.02, 0.73, 1); /* Transisi ease-out-back */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* gap-3 */
+  }
+  .user-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .user-toast.hide {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  
+  /* Varian Warna */
+  .user-toast.success { background-color: #10B981; } /* emerald-500 */
+  .user-toast.error { background-color: #EF4444; } /* red-500 */
+  .user-toast.info { background-color: #3B82F6; } /* blue-500 */
+  .user-toast.warning { background-color: #F59E0B; } /* amber-500 */
+
+  .user-toast-content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+  }
+  .user-toast-content .icon {
+    font-size: 1.25rem; /* text-xl */
+    margin-right: 0.75rem; /* mr-3 */
+    flex-shrink: 0;
+  }
+  .user-toast-content .message {
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* medium */
+  }
+  .user-toast .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 0.25rem;
+    margin-left: auto;
+    transition: opacity 0.2s;
+  }
+  .user-toast .close-btn:hover {
+    opacity: 1;
+  }
 </style>
 
 <script>
 (function () {
   // --- Initialization and Element Selection ---
+  function showUserToast(message, type = 'info') {
+    // Gunakan font-awesome (jika tersedia) atau fallback text
+    const icons = {
+      success: '<i class="fa-solid fa-check-circle icon"></i>',
+      error: '<i class="fa-solid fa-times-circle icon"></i>',
+      warning: '<i class="fa-solid fa-exclamation-triangle icon"></i>',
+      info: '<i class="fa-solid fa-info-circle icon"></i>'
+    };
+    
+    const container = document.getElementById('user-toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `user-toast ${type}`;
+    const iconHtml = icons[type] || icons['info'];
+
+    toast.innerHTML = `
+        <div class="user-toast-content">
+            ${iconHtml}
+            <span class="message">${message}</span>
+        </div>
+        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    `;
+
+    container.appendChild(toast);
+    
+    // Memicu transisi
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 10); 
+
+    // Auto-remove setelah 4 detik
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.classList.add('hide');
+        // Hapus elemen setelah animasi hide selesai
+        setTimeout(() => toast.remove(), 400); 
+    }, 4000);
+  }
   const basePrice = Number("{{ venue.price_per_hour|default:0|cut:'.' }}") || 0;
   const form = document.getElementById('booking-form');
   if (!form) return;
@@ -771,12 +869,19 @@
     confirmBtn.addEventListener('click', function (e) {
       e.preventDefault();
       const chosen = form.querySelector('input[name="schedule_id"]:checked');
+      
       if (!chosen) { 
-        alert('Anda harus memilih tanggal dan jadwal terlebih dahulu.'); 
+        showUserToast('Anda harus memilih tanggal dan jadwal terlebih dahulu.', 'warning'); 
         return; 
       }
+      
       if (paymentInput && paymentSelect) paymentInput.value = paymentSelect.value;
-      form.submit();
+      
+      showUserToast('Memproses booking Anda...', 'info');
+      
+      setTimeout(() => {
+        form.submit();
+      }, 500); 
     });
   }
 })();

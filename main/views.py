@@ -1264,10 +1264,8 @@ def create_booking(request, venue_id):
                         )
                         coach_revenue = coach_obj.rate_per_hour or 0 
                     except CoachProfile.DoesNotExist:
-                        messages.error(request, "Coach yang Anda pilih tidak valid.")
                         raise IntegrityError("Coach profile does not exist.")
                     except CoachSchedule.DoesNotExist:
-                        messages.error(request, f"Coach {coach_obj.user.username} tidak lagi tersedia pada jadwal yang dipilih.")
                         raise IntegrityError("Coach schedule not available.")
 
                 total_price += equipment_revenue + coach_revenue 
@@ -1311,10 +1309,12 @@ def create_booking(request, venue_id):
         except IntegrityError as e:
              return redirect('create_booking', venue_id=venue.id)
         except Exception as e: 
-             messages.error(request, f"Terjadi kesalahan tidak terduga: {e}. Silakan coba lagi.")
              return redirect('create_booking', venue_id=venue.id)
-
-        return redirect('my_bookings') 
+        
+        if payment_method.upper() == 'CASH':
+            return redirect('my_bookings')
+        else:
+            return redirect('my_bookings')
     
     context = {
         'venue': venue,
@@ -1336,7 +1336,6 @@ def customer_payment(request, booking_id):
         return redirect('my_bookings')
 
     if transaction.status == 'CANCELLED':
-        messages.error(request, "Booking ini sudah dibatalkan atau kedaluwarsa.")
         return redirect('booking_history')
 
     if transaction.status != 'PENDING':
@@ -1346,7 +1345,7 @@ def customer_payment(request, booking_id):
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     
     if request.method == 'POST' or (transaction.payment_method and transaction.payment_method.upper() == 'CASH'):
-        is_cash_auto_confirm = not request.method == 'POST'
+        is_cash_auto_confirm = False
         
         try:
             with db_transaction.atomic():
@@ -1412,14 +1411,12 @@ def customer_payment(request, booking_id):
             messages.error(request, error_msg)
             return redirect('my_bookings')
         
-        success_msg = "Pembayaran berhasil. Booking Anda telah dikonfirmasi."
         if is_ajax and not is_cash_auto_confirm:
             return JsonResponse({
                 'success': True,
-                'message': success_msg,
                 'redirect_url': reverse('my_bookings')
             })
-
+                
         return redirect('my_bookings')
 
     context = {

@@ -11,21 +11,19 @@
     .input-wrapper { @apply relative; } 
     .input-icon { @apply absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none; } 
 
-    /* Toast styles */
-    /* Pastikan style toast Anda (user-toast, user-slide-in, etc.) didefinisikan di sini */
-    /* Contoh Minimal */
      .user-toast { 
-        position: fixed; top: 1rem; right: 1rem; z-index: 100;
+        position: relative; 
         min-width: 250px; max-width: 400px;
         background-color: #333; color: white;
         border-radius: 0.5rem; /* rounded-lg */
         padding: 0.75rem 1rem; /* p-3 p-4 */
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); /* shadow-md */
-        opacity: 0; transform: translateX(100%);
+        opacity: 0; 
+        transform: translateY(100%); /* ✅ Animasi dari bawah */
         transition: opacity 0.3s ease, transform 0.3s ease;
         display: flex; align-items: center; gap: 0.75rem; /* gap-3 */
      }
-     .user-toast.show { opacity: 1; transform: translateX(0); }
+     .user-toast.show { opacity: 1; transform: translateY(0); } 
      .user-toast.success { background-color: #10B981; } /* emerald-500 */
      .user-toast.error { background-color: #EF4444; } /* red-500 */
      .user-toast.info { background-color: #3B82F6; } /* blue-500 */
@@ -48,7 +46,6 @@
 {% endblock extra_head %}
 
 {% block content %}
-{# ✅ Class background gradient DIHAPUS dari div ini #}
 <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8"> 
     <div class="max-w-5xl mx-auto"> 
         
@@ -113,34 +110,42 @@
                     <label for="editPaymentMethod" class="block mb-1 text-sm font-medium text-gray-700">Metode Pembayaran:</label>
                     <select id="editPaymentMethod" name="payment_method" class="w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:ring-teal-500 focus:border-teal-500 text-sm">
                         <option value="CASH">Cash (Bayar di Tempat)</option>
-                        <option value="CARD">Transfer Bank (Virtual Account)</option>
+                        <option value="TRANSFER">Transfer Bank (Virtual Account)</option>
                         </select>
                 </div>
                 
                 <div>
                     <label class="block mb-1 text-sm font-medium text-gray-700">Pilih Peralatan:</label>
                     <div id="editEquipmentList" class="space-y-2 max-h-48 overflow-y-auto pr-2 border p-3 rounded-lg bg-gray-50">
-                        {# Konten diisi JS #}
                     </div>
                 </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                <button type="button" 
+                        onclick="closeEditModal()" 
+                        class="px-5 py-2.5 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                    Batal
+                </button>
+                <button type="submit" 
+                        class="px-5 py-2.5 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors shadow-sm">
+                    Simpan Perubahan
+                </button>
             </div>
             </form>
         <button onclick="closeEditModal()" class="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 bg-gray-100 hover:bg-gray-200 hover:text-gray-600 transition-colors"> <i class="fa-solid fa-xmark text-lg"></i> </button>
     </div>
 </div>
-
-<div id="user-toast-container" class="fixed top-4 right-4 z-[100] space-y-3"></div>
+<div id="user-toast-container" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
 {% endblock content %}
 
 {% block extra_js %}
 <script>
-// --- Fungsi showUserToast (Pastikan didefinisikan dengan benar) ---
 function showUserToast(message, type = 'info') {
     const container = document.getElementById('user-toast-container');
     if (!container) return;
 
     const toast = document.createElement('div');
-    toast.className = `user-toast ${type}`; // Apply type class for styling
+    toast.className = `user-toast ${type}`; 
 
     let iconHtml = '';
     if (type === 'success') iconHtml = '<i class="fas fa-check-circle icon"></i>';
@@ -157,13 +162,12 @@ function showUserToast(message, type = 'info') {
     `;
 
     container.appendChild(toast);
-    toast.classList.add('show'); // Trigger animation
+    toast.classList.add('show');
 
-    // Auto-remove after some time
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300); // Remove after fade out
-    }, 4000); // Show for 4 seconds
+        setTimeout(() => toast.remove(), 300); 
+    }, 4000);
 }
 
 
