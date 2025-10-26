@@ -157,10 +157,10 @@
             <div class="space-y-3 max-h-60 overflow-y-auto pr-2">
               {% for eq in equipment_list %}
               <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 shadow-sm has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 transition-all cursor-pointer hover:shadow-md">
-                <div class="flex items-center gap-3">
-                  <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0 }}" 
-                        id="eq-cb-{{ eq.id }}"
-                        class="eq-checkbox w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                <div class="flex items-center gap-3"> 
+                  <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0|cut:'.' }}" 
+                    id="eq-cb-{{ eq.id }}"
+                    class="eq-checkbox w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                   <div>
                     <div class="font-bold text-gray-800">{{ eq.name }}</div>
                     <div class="text-sm text-gray-600">Stok: {{ eq.stock_quantity|default:0 }}</div>
