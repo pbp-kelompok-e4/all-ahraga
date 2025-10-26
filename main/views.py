@@ -1644,13 +1644,27 @@ def update_booking(request, booking_id):
             current_time = now.time()
             
             try:
+            # 1. Temukan jadwalnya dulu tanpa lock
                 schedule_query = Q(id=new_schedule_id, venue=venue, date__gte=today)
                 schedule_query &= (Q(is_booked=False) | Q(booking=booking))
-                new_schedule = VenueSchedule.objects.select_for_update().get(schedule_query)
-                if new_schedule.date == today and new_schedule.start_time < current_time:
+                
+                target_schedule = VenueSchedule.objects.get(schedule_query)
+                
+                # 2. Cek apakah sudah lewat
+                if target_schedule.date == today and target_schedule.start_time < current_time:
                     raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
+
+                # 3. Kunci jadwal berdasarkan ID (query sederhana, aman untuk FOR UPDATE)
+                new_schedule = VenueSchedule.objects.select_for_update().get(id=target_schedule.id)
+
+                # 4. Cek ulang status setelah dikunci (mencegah race condition)
+                if new_schedule.is_booked and new_schedule.booking_set.first() != booking:
+                    raise IntegrityError("Jadwal ini baru saja dibooking oleh orang lain.")
+
             except VenueSchedule.DoesNotExist:
                 return JsonResponse({ 'success': False, 'message': 'Jadwal tidak tersedia atau sudah dibooking.'}, status=400)
+            except IntegrityError as e:
+                return JsonResponse({ 'success': False, 'message': str(e)}, status=400)
             
             old_schedule = booking.venue_schedule
             if old_schedule.id != new_schedule.id:
@@ -1674,14 +1688,23 @@ def update_booking(request, booking_id):
                     coach_obj = CoachProfile.objects.get(id=new_coach_id)
                     coach_schedule_query = Q(coach=coach_obj, date=new_schedule.date, start_time=new_schedule.start_time)
                     coach_schedule_query &= (Q(is_booked=False) | Q(booking=booking))
-                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(coach_schedule_query)
+                    
+                    target_coach_schedule = CoachSchedule.objects.get(coach_schedule_query)
+
+                    new_coach_schedule_obj = CoachSchedule.objects.select_for_update().get(id=target_coach_schedule.id)
+                    
+                    if new_coach_schedule_obj.is_booked and new_coach_schedule_obj.booking_set.first() != booking:
+                        raise IntegrityError("Jadwal coach ini baru saja dibooking oleh orang lain.")
 
                     coach_revenue = coach_obj.rate_per_hour or 0 
                     
                     new_coach_schedule_obj.is_booked = True
                     new_coach_schedule_obj.save()
+                    
                 except (CoachProfile.DoesNotExist, CoachSchedule.DoesNotExist):
                     return JsonResponse({'success': False, 'message': 'Coach tidak tersedia pada jadwal yang dipilih.'}, status=400)
+                except IntegrityError as e:
+                    return JsonResponse({'success': False, 'message': str(e)}, status=400)
             
             BookingEquipment.objects.filter(booking=booking).delete() 
             
