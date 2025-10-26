@@ -88,7 +88,7 @@ https://docs.google.com/spreadsheets/d/1t_XP8-ce49bFA8lb_G9DQBf5znkMyC4y4aohg_ZZ
 
 ## Tautan Deployment PWS dan Link Design
 - **Link PWS:**  
-  https://pbp.cs.ui.ac.id/muhammad.razka41/allahraga
+  [https://pbp.cs.ui.ac.id/muhammad.razka41/allahraga](https://muhammad-razka41-allahraga.pbp.cs.ui.ac.id/)
 
 - **Link Design (Figma):**  
   https://www.figma.com/design/5QlFEjv6Icwo8CMqN7bh0C/Design-All-ahraga?node-id=0-1&t=kbMu2oTsx7oVALKj-1
