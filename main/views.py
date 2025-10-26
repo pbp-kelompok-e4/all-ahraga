@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q, Sum
 from datetime import date, datetime, timedelta
-from .forms import CustomUserCreationForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm, CoachScheduleForm
+from .forms import CustomUserCreationForm, ReviewForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm, CoachScheduleForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment, CoachSchedule
 from django.core.files.base import ContentFile
 from urllib.request import urlopen, Request
@@ -15,7 +15,7 @@ from urllib.error import URLError, HTTPError
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.db.models import Q, Avg
@@ -120,8 +120,7 @@ def login_view(request):
 @login_required(login_url='login')
 def logout_view(request):
     logout(request)
-    messages.info(request, "You have been logged out.")
-    return redirect('index') 
+    return redirect(f"{reverse('landing')}?logout=1")
 
 @login_required(login_url='login') # Ganti 'login' ke 'index' jika mau
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='index') # Arahkan non-customer ke index
@@ -1436,13 +1435,16 @@ def customer_payment(request, booking_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
-    bookings = Booking.objects.filter(customer=request.user).select_related(
-        'venue_schedule__venue', 
-        'transaction', 
-        'coach_schedule__coach__user'  
-    ).prefetch_related(
-        'equipment_details__equipment' 
-    ).order_by('-venue_schedule__date')
+    bookings = (
+        Booking.objects.filter(customer=request.user)
+        .select_related(
+            'venue_schedule__venue',
+            'transaction',
+            'coach_schedule__coach__user'
+        )
+        .prefetch_related('equipment_details__equipment')
+        .order_by('-venue_schedule__date')
+    )
 
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
@@ -1450,19 +1452,40 @@ def booking_history(request):
     if query:
         bookings = bookings.filter(
             Q(venue_schedule__venue__name__icontains=query) |
-            Q(id__icontains=query) 
+            Q(id__icontains=query)
         )
 
     if status:
         bookings = bookings.filter(transaction__status=status)
 
-    context = {
-        'bookings': bookings
-    }
+    user_reviews = Review.objects.filter(customer=request.user).select_related('target_venue', 'target_coach')
+
+    venue_review_map, coach_review_map = {}, {}
+    for r in user_reviews:
+        if r.target_venue_id:
+            prev = venue_review_map.get(r.target_venue_id)
+            if prev is None or r.created_at > prev.created_at:
+                venue_review_map[r.target_venue_id] = r
+        if r.target_coach_id:
+            prev = coach_review_map.get(r.target_coach_id)
+            if prev is None or r.created_at > prev.created_at:
+                coach_review_map[r.target_coach_id] = r
+
+    for b in bookings:
+        b.venue_review = None
+        b.coach_review = None
+        v_id = getattr(getattr(b, 'venue_schedule', None), 'venue_id', None)
+        c_id = getattr(getattr(b, 'coach_schedule', None), 'coach_id', None)
+        if v_id:
+            b.venue_review = venue_review_map.get(v_id)
+        if c_id:
+            b.coach_review = coach_review_map.get(c_id)
+
+    context = {'bookings': bookings}
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'main/_booking_list.html', context)
-    
+
     return render(request, 'main/booking_history.html', context)
 
 @login_required(login_url='login')
@@ -1861,3 +1884,124 @@ def landing_page_view(request):
     Selalu menampilkan landing page, tidak peduli status login.
     """
     return render(request, 'main/landing.html')
+
+
+def _guard_confirmed_owner(request, booking):
+    if booking.customer != request.user:
+        raise Http404("Tidak ditemukan.")
+    if getattr(booking, "transaction", None) and booking.transaction.status != "CONFIRMED":
+        # Untuk XHR kirim JSON error, untuk non-XHR pakai messages
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"success": False, "message": "Feedback hanya untuk booking berstatus CONFIRMED."}, status=400)
+        messages.error(request, "Feedback hanya untuk booking berstatus CONFIRMED.")
+        return False
+    return True
+
+
+@login_required
+def upsert_review(request, booking_id):
+    """Create/edit review berdasarkan target. ?target=venue|coach"""
+    target = request.GET.get("target")
+    booking = get_object_or_404(
+        Booking.objects.select_related(
+            "venue_schedule__venue", "coach_schedule__coach__user", "transaction"
+        ),
+        pk=booking_id,
+        customer=request.user
+    )
+
+    # --- Guard kepemilikan & status booking ---
+    guard = _guard_confirmed_owner(request, booking)
+    if guard is False:
+        return redirect("booking_history")
+    if isinstance(guard, JsonResponse):
+        return guard  # guard udah balikin JSON error kalau XHR
+
+    # --- Tentukan target review ---
+    instance = None
+    if target == "venue":
+        venue = getattr(getattr(booking, "venue_schedule", None), "venue", None)
+        if not venue:
+            msg = "Booking ini tidak memiliki venue yang valid."
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "message": msg}, status=400)
+            messages.error(request, msg)
+            return redirect("booking_history")
+
+        instance = Review.objects.filter(customer=request.user, target_venue=venue).order_by("-created_at").first()
+        title = "Edit Review Venue" if instance else "Beri Review Venue"
+        target_ctx = {"target": "venue", "target_name": venue.name}
+
+    elif target == "coach":
+        coach = getattr(getattr(booking, "coach_schedule", None), "coach", None)
+        if not coach:
+            msg = "Booking ini tidak memiliki pelatih."
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "message": msg}, status=400)
+            messages.error(request, msg)
+            return redirect("booking_history")
+
+        instance = Review.objects.filter(customer=request.user, target_coach=coach).order_by("-created_at").first()
+        title = "Edit Review Coach" if instance else "Beri Review Coach"
+        target_ctx = {"target": "coach", "target_name": getattr(coach, "user", coach).__str__()}
+
+    else:
+        raise Http404("Target tidak valid.")
+
+    # --- Handle POST (submit form) ---
+    if request.method == "POST":
+        form = ReviewForm(request.POST, instance=instance)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.customer = request.user
+            if target == "venue":
+                obj.target_venue, obj.target_coach = venue, None
+            else:
+                obj.target_coach, obj.target_venue = coach, None
+            obj.save()
+
+            msg = "Feedback diperbarui." if instance else "Feedback berhasil ditambahkan."
+
+            # kalau AJAX, balikin JSON biar toast muncul
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"success": True, "message": msg})
+
+            # kalau bukan AJAX (misal user akses langsung)
+            messages.success(request, msg)
+            return redirect("booking_history")
+
+        # kalau form invalid
+        err = next(iter(form.errors.values()))[0] if form.errors else "Form tidak valid."
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": False, "message": err}, status=400)
+        messages.error(request, err)
+        return redirect(request.path)
+
+    # --- Render form biasa ---
+    else:
+        form = ReviewForm(instance=instance)
+
+    return render(request, "main/review_form.html", {
+        "title": title,
+        "form": form,
+        "booking": booking,
+        **target_ctx,
+        "existing": instance is not None,
+        "existing_id": getattr(instance, "id", None),
+    })
+
+@login_required
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, pk=review_id, customer=request.user)
+    if request.method == "POST":
+        review.delete()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"success": True, "message": "Feedback dihapus."})
+        messages.success(request, "Feedback dihapus.")
+        return redirect("booking_history")
+
+    # Metode selain POST
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
+    messages.info(request, "Konfirmasi hapus dilakukan dari tombol di halaman.")
+    return redirect("booking_history")

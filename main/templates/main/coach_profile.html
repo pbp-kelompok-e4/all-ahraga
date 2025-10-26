@@ -38,7 +38,24 @@
     /* background: #B91C1C !important; /* Slightly darker red */
   }
 
-  /* Style untuk toast (jika belum ada di base) */
+  :root { --header-h: 4rem; }
+  #page-toast{
+    position:fixed;
+    top:calc(var(--header-h) + .75rem);
+    right:1.25rem;
+    z-index:10000;
+    min-width:280px; max-width:360px;
+    padding:.9rem 1rem;
+    border-radius:.9rem;
+    color:#fff;
+    background:linear-gradient(90deg,#059669,#0d9488);
+    box-shadow:0 14px 30px rgba(0,0,0,.25);
+    opacity:0; transform:translateY(-10px);
+    transition:opacity .25s ease, transform .25s ease;
+    font-weight:600;
+  }
+  #page-toast.show{ opacity:1; transform:translateY(0); }
+
   #toast { transition: transform 0.4s ease, opacity 0.4s ease; }
 </style>
 {% endblock extra_head %}
@@ -762,6 +779,55 @@
       });
     }
   });
+
+  (function(){
+  function ensureToastEl(){
+    let t = document.getElementById('page-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'page-toast';
+      t.setAttribute('role','status');
+      t.setAttribute('aria-live','polite');
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+
+  window.showToast = function(titleOrMessage, message, type='success'){
+    const t = ensureToastEl();
+
+    const text = (message === undefined || message === null)
+      ? (titleOrMessage || '')
+      : ((titleOrMessage ? titleOrMessage + ' — ' : '') + (message || ''));
+
+    t.textContent = text;
+
+    t.style.background = (type === 'error')
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#059669,#0d9488)';
+
+    requestAnimationFrame(()=> t.classList.add('show'));
+    clearTimeout(t._to);
+    t._to = setTimeout(()=> t.classList.remove('show'), 3200);
+  };
+
+  (function(){
+    const raw = localStorage.getItem('toastData');
+    if (!raw) return;
+    try{
+      const obj = JSON.parse(raw);
+      const tooOld = Date.now() - (obj.ts || 0) > 120000;
+      if (obj && obj.trigger === 'after_login_success' && !tooOld){
+        showToast('Login berhasil! Selamat datang 👋');
+        localStorage.removeItem('toastData');
+      } else if (tooOld){
+        localStorage.removeItem('toastData');
+      }
+    }catch(e){
+      localStorage.removeItem('toastData');
+    }
+  })();
+})();
 
 </script>
 {% endblock extra_js %}

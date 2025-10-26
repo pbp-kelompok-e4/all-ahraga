@@ -3,7 +3,7 @@
         {% for booking in bookings %}
             <li class="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
-                
+
                 <div class="p-6 pl-8">
                     <div class="flex items-center justify-between mb-4">
                         <h4 class="text-xl font-bold text-gray-800">
@@ -12,7 +12,7 @@
                             <span class="text-blue-600">{{ booking.venue_schedule.venue.name }}</span>
                         </h4>
                     </div>
-                    
+
                     <div class="space-y-3">
                         <div class="flex items-start">
                             <svg class="w-5 h-5 text-gray-400 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +64,9 @@
                                 <span class="text-sm font-semibold text-gray-700">Peralatan</span>
                                 <p class="text-gray-900">
                                     {% for eq in equipment_list %}
-                                    <span class="inline-block bg-gray-100 text-gray-800 text-sm px-2.5 py-1 rounded-md mr-1.5 mb-1.5">{{ eq.equipment.name }} <span class="font-semibold">×{{ eq.quantity }}</span></span>
+                                        <span class="inline-block bg-gray-100 text-gray-800 text-sm px-2.5 py-1 rounded-md mr-1.5 mb-1.5">
+                                            {{ eq.equipment.name }} <span class="font-semibold">×{{ eq.quantity }}</span>
+                                        </span>
                                     {% endfor %}
                                 </p>
                             </div>
@@ -96,6 +98,125 @@
                             </div>
                         </div>
                     </div>
+
+                    {% if booking.transaction.status == 'CONFIRMED' %}
+                    <div class="mt-8 border-t border-gray-100 pt-5">
+                        <div class="bg-gradient-to-r from-blue-50 via-cyan-50 to-teal-50 rounded-xl p-5 border border-teal-100 shadow-inner">
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-700 tracking-wide uppercase mb-1">Feedback</h3>
+                                    <p class="text-gray-600 text-sm">
+                                        Yuk, beri rating dan komentar untuk membantu meningkatkan kualitas layanan kami!
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-col gap-3 w-full sm:w-auto">
+                                    {# ===== VENUE ===== #}
+                                    {% if booking.venue_schedule and booking.venue_schedule.venue %}
+                                        {% if booking.venue_review %}
+                                        <div class="w-full sm:w-[520px] bg-white/80 backdrop-blur rounded-lg border border-blue-100 p-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide rounded bg-blue-100 text-blue-700 border border-blue-200">
+                                                            Venue
+                                                        </span>
+                                                        <div class="flex items-center gap-1">
+                                                            {% for _ in "12345" %}
+                                                                <svg class="w-4 h-4 {% if forloop.counter <= booking.venue_review.rating %}text-amber-400{% else %}text-gray-300{% endif %}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.036a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118L10 13.348l-2.985 2.125c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L3.38 8.72c-.783-.57-.38-1.81.588-1.81H7.43a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                                </svg>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% if booking.venue_review.comment %}
+                                                        <p class="mt-2 text-sm text-gray-700 max-w-prose break-words">{{ booking.venue_review.comment }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    <a href="{% url 'submit_review' booking.id %}?target=venue"
+                                                       class="px-3 py-1.5 rounded-md text-sm font-medium border border-blue-600 text-blue-700 hover:bg-blue-50">
+                                                        Edit
+                                                    </a>
+                                                    <form method="post" action="{% url 'delete_review' booking.venue_review.id %}" onsubmit="return confirm('Hapus feedback venue ini?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="px-3 py-1.5 rounded-md text-sm font-medium border border-red-600 text-red-700 hover:bg-red-50">
+                                                            Hapus
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="flex justify-end">
+                                            <a href="{% url 'submit_review' booking.id %}?target=venue"
+                                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-sm hover:shadow transition-all duration-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.868v4.264a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Feedback Venue
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {# ===== COACH ===== #}
+                                    {% if booking.coach_schedule and booking.coach_schedule.coach %}
+                                        {% if booking.coach_review %}
+                                        <div class="w-full sm:w-[520px] bg-white/80 backdrop-blur rounded-lg border border-amber-200 p-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide rounded bg-amber-100 text-amber-700 border border-amber-200">
+                                                            Coach
+                                                        </span>
+                                                        <div class="flex items-center gap-1">
+                                                            {% for _ in "12345" %}
+                                                                <svg class="w-4 h-4 {% if forloop.counter <= booking.coach_review.rating %}text-amber-400{% else %}text-gray-300{% endif %}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.036a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118L10 13.348l-2.985 2.125c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L3.38 8.72c-.783-.57-.38-1.81.588-1.81H7.43a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                                </svg>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% if booking.coach_review.comment %}
+                                                        <p class="mt-2 text-sm text-gray-700 max-w-prose break-words">{{ booking.coach_review.comment }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    <a href="{% url 'submit_review' booking.id %}?target=coach"
+                                                       class="px-3 py-1.5 rounded-md text-sm font-medium border border-blue-600 text-blue-700 hover:bg-blue-50">
+                                                        Edit
+                                                    </a>
+                                                    <form method="post" action="{% url 'delete_review' booking.coach_review.id %}" onsubmit="return confirm('Hapus feedback coach ini?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="px-3 py-1.5 rounded-md text-sm font-medium border border-red-600 text-red-700 hover:bg-red-50">
+                                                            Hapus
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="flex justify-end">
+                                            <a href="{% url 'submit_review' booking.id %}?target=coach"
+                                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600 shadow-sm hover:shadow transition-all duration-200">
+                                                {# Ikon profil kosong (lingkaran + kepala/bahu) #}
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.12"></circle>
+                                                    <circle cx="12" cy="10" r="3.5"></circle>
+                                                    <path d="M6.5 17.5c1.8-2.2 4-3.3 5.5-3.3s3.7 1.1 5.5 3.3" />
+                                                </svg>
+                                                Feedback Coach
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </li>
         {% endfor %}
