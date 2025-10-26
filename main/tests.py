@@ -1756,3 +1756,740 @@ class CoachTestCase(TestCase):
         """Cleanup setelah setiap test"""
         # Django akan otomatis rollback database
         pass
+
+class VenueTestCase(TestCase):
+    """Comprehensive test case untuk Venue functionality"""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Setup data yang tidak berubah"""
+        cls.location = LocationArea.objects.create(name='Jakarta Pusat')
+        cls.sport_category = SportCategory.objects.create(name='Basketball')
+
+    def setUp(self):
+        """Setup untuk setiap test method"""
+        # Create venue owner
+        self.owner_user = User.objects.create_user(
+            username='venue_owner_test',
+            password='testpass123',
+            email='owner@venue.com',
+            first_name='Owner',
+            last_name='Venue'
+        )
+        self.owner_profile = UserProfile.objects.create(
+            user=self.owner_user,
+            is_venue_owner=True
+        )
+
+        # Create customer
+        self.customer_user = User.objects.create_user(
+            username='customer_venue_test',
+            password='testpass123',
+            email='customer@venue.com'
+        )
+        self.customer_profile = UserProfile.objects.create(
+            user=self.customer_user,
+            is_customer=True
+        )
+
+        # Create another owner for testing permissions
+        self.other_owner = User.objects.create_user(
+            username='other_owner',
+            password='testpass123',
+            email='other@venue.com'
+        )
+        self.other_owner_profile = UserProfile.objects.create(
+            user=self.other_owner,
+            is_venue_owner=True
+        )
+
+        # Create venue
+        self.venue = Venue.objects.create(
+            name='Test Basketball Arena',
+            description='Premium basketball court for testing',
+            owner=self.owner_user,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('200000.00')
+        )
+
+        self.client = Client()
+
+    # ==================== VENUE DASHBOARD TESTS ====================
+
+    def test_01_venue_dashboard_access_by_owner(self):
+        """Test: Owner dapat akses venue dashboard"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(reverse('venue_dashboard'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('venues', response.context)
+        self.assertTemplateUsed(response, 'main/venue_dashboard.html')
+
+    def test_02_venue_dashboard_shows_only_owner_venues(self):
+        """Test: Dashboard hanya menampilkan venue milik owner yang login"""
+        # Create venue for other owner
+        other_venue = Venue.objects.create(
+            name='Other Venue',
+            description='Not mine',
+            owner=self.other_owner,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('150000.00')
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(reverse('venue_dashboard'))
+        
+        venues = response.context['venues']
+        self.assertIn(self.venue, venues)
+        self.assertNotIn(other_venue, venues)
+
+    def test_03_venue_dashboard_unauthorized_access(self):
+        """Test: Non-owner tidak bisa akses venue dashboard"""
+        self.client.login(username='customer_venue_test', password='testpass123')
+        response = self.client.get(reverse('venue_dashboard'))
+        
+        # Should redirect
+        self.assertEqual(response.status_code, 302)
+
+    def test_04_venue_dashboard_ajax_request(self):
+        """Test: AJAX request ke venue dashboard"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(
+            reverse('venue_dashboard'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertIn('venues', data)
+
+    # ==================== VENUE CREATE TESTS ====================
+
+    def test_05_venue_create_get_page(self):
+        """Test: Owner dapat akses form create venue"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(reverse('venue_create'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('form', response.context)
+        self.assertTemplateUsed(response, 'main/venue_form.html')
+
+    def test_06_venue_create_success(self):
+        """Test: Berhasil membuat venue baru"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        initial_count = Venue.objects.count()
+        
+        response = self.client.post(
+            reverse('venue_create'),
+            {
+                'name': 'New Basketball Court',
+                'description': 'Brand new court',
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': '250000',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Venue.objects.count(), initial_count + 1)
+        
+        new_venue = Venue.objects.latest('id')
+        self.assertEqual(new_venue.name, 'New Basketball Court')
+        self.assertEqual(new_venue.owner, self.owner_user)
+
+    def test_07_venue_create_with_image(self):
+        """Test: Create venue dengan upload gambar"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        # Create a test image
+        image = Image.new('RGB', (100, 100), color='red')
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG')
+        img_io.seek(0)
+        test_image = SimpleUploadedFile(
+            "test_venue.jpg",
+            img_io.read(),
+            content_type="image/jpeg"
+        )
+        
+        response = self.client.post(
+            reverse('venue_create'),
+            {
+                'name': 'Venue with Image',
+                'description': 'Has image',
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': '300000',
+                'main_image': test_image,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        new_venue = Venue.objects.latest('id')
+        self.assertTrue(new_venue.main_image)
+
+    def test_08_venue_create_invalid_data(self):
+        """Test: Create venue dengan data invalid gagal"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        initial_count = Venue.objects.count()
+        
+        response = self.client.post(
+            reverse('venue_create'),
+            {
+                'name': '',  # Empty name - invalid
+                'description': 'Test',
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': 'invalid',  # Invalid price
+            }
+        )
+        
+        # Should stay on form page with errors
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Venue.objects.count(), initial_count)
+
+    def test_09_venue_create_ajax_success(self):
+        """Test: Create venue via AJAX"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_create'),
+            {
+                'name': 'AJAX Venue',
+                'description': 'Created via AJAX',
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': '180000',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        self.assertIn('venue', data)
+
+    # ==================== VENUE MANAGE TESTS ====================
+
+    def test_10_venue_manage_access_by_owner(self):
+        """Test: Owner dapat akses manage venue miliknya"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(
+            reverse('venue_manage', args=[self.venue.id])
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('venue', response.context)
+        self.assertEqual(response.context['venue'], self.venue)
+
+    def test_11_venue_manage_access_denied_other_owner(self):
+        """Test: Owner lain tidak bisa akses venue orang lain"""
+        self.client.login(username='other_owner', password='testpass123')
+        response = self.client.get(
+            reverse('venue_manage', args=[self.venue.id])
+        )
+        
+        # Should return 404 because queryset filters by owner
+        self.assertEqual(response.status_code, 404)
+
+    def test_12_venue_edit_success(self):
+        """Test: Owner dapat edit venue miliknya"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        image = Image.new('RGB', (100, 100), color='blue')
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG')
+        img_io.seek(0)
+        test_image = SimpleUploadedFile(
+            "edit.jpg",
+            img_io.read(),
+            content_type="image/jpeg"
+        )
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'submit_venue_edit': True,
+                'name': 'Updated Venue Name',
+                'description': 'Updated description',
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': '220000',
+                'main_image' : test_image,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        self.venue.refresh_from_db()
+        self.assertEqual(self.venue.name, 'Updated Venue Name')
+        self.assertEqual(self.venue.price_per_hour, Decimal('220000.00'))
+
+    def test_13_venue_edit_ajax(self):
+        """Test: Edit venue via AJAX"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'submit_venue_edit': True,
+                'name': 'AJAX Updated Name',
+                'description': self.venue.description,
+                'location': self.location.id,
+                'sport_category': self.sport_category.id,
+                'price_per_hour': '230000',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+
+    # ==================== EQUIPMENT MANAGEMENT TESTS ====================
+
+    def test_14_add_equipment_to_venue(self):
+        """Test: Owner dapat menambah equipment ke venue"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'submit_equipment': True,
+                'name': 'Basketball',
+                'rental_price': '15000',
+                'stock_quantity': '10',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        equipment = Equipment.objects.filter(
+            venue=self.venue,
+            name='Basketball'
+        ).first()
+        
+        self.assertIsNotNone(equipment)
+        self.assertEqual(equipment.rental_price, Decimal('15000.00'))
+        self.assertEqual(equipment.stock_quantity, 10)
+
+    def test_15_add_equipment_ajax(self):
+        """Test: Add equipment via AJAX"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'submit_equipment': True,
+                'name': 'Jersey',
+                'rental_price': '20000',
+                'stock_quantity': '15',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        self.assertIn('equipments', data)
+
+    def test_16_edit_equipment(self):
+        """Test: Owner dapat edit equipment"""
+        equipment = Equipment.objects.create(
+            venue=self.venue,
+            name='Old Equipment',
+            rental_price=Decimal('10000.00'),
+            stock_quantity=5
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'action': 'edit',
+                'equipment_id': equipment.id,
+                'name': 'Updated Equipment',
+                'rental_price': '12000',
+                'stock_quantity': '8',
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        equipment.refresh_from_db()
+        self.assertEqual(equipment.name, 'Updated Equipment')
+        self.assertEqual(equipment.rental_price, Decimal('12000.00'))
+        self.assertEqual(equipment.stock_quantity, 8)
+
+    def test_17_delete_equipment(self):
+        """Test: Owner dapat delete equipment"""
+        equipment = Equipment.objects.create(
+            venue=self.venue,
+            name='To Delete',
+            rental_price=Decimal('5000.00'),
+            stock_quantity=3
+        )
+        
+        equipment_id = equipment.id
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'action': 'delete',
+                'equipment_id': equipment_id,
+            }
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Equipment.objects.filter(id=equipment_id).exists())
+
+    def test_18_add_equipment_invalid_data(self):
+        """Test: Add equipment dengan data invalid gagal"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        initial_count = Equipment.objects.filter(venue=self.venue).count()
+        
+        response = self.client.post(
+            reverse('venue_manage', args=[self.venue.id]),
+            {
+                'submit_equipment': True,
+                'name': '',  # Empty name
+                'rental_price': 'invalid',  # Invalid price
+                'stock_quantity': '-5',  # Negative stock
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            Equipment.objects.filter(venue=self.venue).count(),
+            initial_count
+        )
+
+    # ==================== VENUE SCHEDULE TESTS ====================
+
+    def test_19_venue_manage_schedule_access(self):
+        """Test: Owner dapat akses manage schedule"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(
+            reverse('venue_manage_schedule', args=[self.venue.id])
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('venue', response.context)
+        self.assertIn('schedules', response.context)
+
+    def test_20_create_venue_schedule_success(self):
+        """Test: Owner dapat membuat schedule baru"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        tomorrow = date.today() + timedelta(days=1)
+        
+        response = self.client.post(
+            reverse('venue_manage_schedule', args=[self.venue.id]),
+            {
+                'date': tomorrow.strftime('%Y-%m-%d'),
+                'start_time': '09:00',
+                'end_time_global': '12:00',
+                'is_available': True,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        
+        # Should create 3 slots (9-10, 10-11, 11-12)
+        schedules = VenueSchedule.objects.filter(
+            venue=self.venue,
+            date=tomorrow
+        )
+        self.assertEqual(schedules.count(), 3)
+
+    def test_21_create_schedule_invalid_time(self):
+        """Test: Create schedule dengan end time sebelum start time gagal"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        tomorrow = date.today() + timedelta(days=1)
+        
+        response = self.client.post(
+            reverse('venue_manage_schedule', args=[self.venue.id]),
+            {
+                'date': tomorrow.strftime('%Y-%m-%d'),
+                'start_time': '12:00',
+                'end_time_global': '09:00',  # Before start time
+                'is_available': True,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 400)
+
+    def test_22_delete_venue_schedules(self):
+        """Test: Owner dapat delete multiple schedules"""
+        tomorrow = date.today() + timedelta(days=1)
+        
+        schedule1 = VenueSchedule.objects.create(
+            venue=self.venue,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            is_booked=False
+        )
+        
+        schedule2 = VenueSchedule.objects.create(
+            venue=self.venue,
+            date=tomorrow,
+            start_time=time(11, 0),
+            end_time=time(12, 0),
+            is_booked=False
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_schedule_delete', args=[self.venue.id]),
+            json.dumps({
+                'selected_schedules': [schedule1.id, schedule2.id]
+            }),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        
+        self.assertFalse(VenueSchedule.objects.filter(id=schedule1.id).exists())
+        self.assertFalse(VenueSchedule.objects.filter(id=schedule2.id).exists())
+
+    def test_23_cannot_delete_booked_schedule(self):
+        """Test: Tidak bisa delete schedule yang sudah booked"""
+        tomorrow = date.today() + timedelta(days=1)
+        
+        schedule = VenueSchedule.objects.create(
+            venue=self.venue,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            is_booked=True  # Already booked
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('venue_schedule_delete', args=[self.venue.id]),
+            json.dumps({
+                'selected_schedules': [schedule.id]
+            }),
+            content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        # Schedule should still exist
+        self.assertTrue(VenueSchedule.objects.filter(id=schedule.id).exists())
+
+    # ==================== VENUE DELETE TESTS ====================
+
+    def test_24_delete_own_venue_success(self):
+        """Test: Owner dapat delete venue miliknya"""
+        venue_to_delete = Venue.objects.create(
+            name='To Delete',
+            description='Will be deleted',
+            owner=self.owner_user,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('100000.00')
+        )
+        
+        venue_id = venue_to_delete.id
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('delete_venue', args=[venue_id])
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Venue.objects.filter(id=venue_id).exists())
+
+    def test_25_delete_venue_ajax(self):
+        """Test: Delete venue via AJAX"""
+        venue_to_delete = Venue.objects.create(
+            name='AJAX Delete',
+            description='Will be deleted via AJAX',
+            owner=self.owner_user,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('100000.00')
+        )
+        
+        venue_id = venue_to_delete.id
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('delete_venue', args=[venue_id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        self.assertFalse(Venue.objects.filter(id=venue_id).exists())
+
+    def test_26_delete_venue_cascades_schedules(self):
+        """Test: Delete venue juga menghapus semua schedules"""
+        venue_to_delete = Venue.objects.create(
+            name='With Schedules',
+            description='Has schedules',
+            owner=self.owner_user,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('100000.00')
+        )
+        
+        tomorrow = date.today() + timedelta(days=1)
+        VenueSchedule.objects.create(
+            venue=venue_to_delete,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0)
+        )
+        
+        venue_id = venue_to_delete.id
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        self.client.post(reverse('delete_venue', args=[venue_id]))
+        
+        # Check schedules are deleted
+        self.assertEqual(
+            VenueSchedule.objects.filter(venue_id=venue_id).count(),
+            0
+        )
+
+    def test_27_cannot_delete_other_owner_venue(self):
+        """Test: Tidak bisa delete venue milik owner lain"""
+        other_venue = Venue.objects.create(
+            name='Other Owner Venue',
+            description='Not mine',
+            owner=self.other_owner,
+            location=self.location,
+            sport_category=self.sport_category,
+            price_per_hour=Decimal('150000.00')
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        
+        response = self.client.post(
+            reverse('delete_venue', args=[other_venue.id]),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 403)
+        # Venue should still exist
+        self.assertTrue(Venue.objects.filter(id=other_venue.id).exists())
+
+    # ==================== VENUE REVENUE TESTS ====================
+
+    def test_28_venue_revenue_view_access(self):
+        """Test: Owner dapat akses revenue report"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(reverse('venue_revenue'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('total_revenue', response.context)
+        self.assertIn('venue_revenue_data', response.context)
+
+    def test_29_venue_revenue_calculation(self):
+        """Test: Revenue dihitung dengan benar"""
+        # Create booking and transaction
+        tomorrow = date.today() + timedelta(days=1)
+        schedule = VenueSchedule.objects.create(
+            venue=self.venue,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+            is_booked=True
+        )
+        
+        booking = Booking.objects.create(
+            customer=self.customer_user,
+            venue_schedule=schedule,
+            total_price=Decimal('200000.00')
+        )
+        
+        Transaction.objects.create(
+            booking=booking,
+            status='CONFIRMED',
+            payment_method='CASH',
+            revenue_venue=Decimal('200000.00'),
+            revenue_coach=Decimal('0.00'),
+            revenue_platform=Decimal('0.00')
+        )
+        
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(reverse('venue_revenue'))
+        
+        self.assertEqual(response.context['total_revenue'], Decimal('200000.00'))
+
+    def test_30_venue_revenue_ajax(self):
+        """Test: Revenue report via AJAX"""
+        self.client.login(username='venue_owner_test', password='testpass123')
+        response = self.client.get(
+            reverse('venue_revenue'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        self.assertIn('total_revenue', data)
+
+    # ==================== PUBLIC VENUE VIEWS TESTS ====================
+
+    def test_31_venue_detail_public_view(self):
+        """Test: Public dapat melihat detail venue"""
+        response = self.client.get(
+            reverse('venue_detail', args=[self.venue.id])
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('venue', response.context)
+        self.assertEqual(response.context['venue'], self.venue)
+
+    def test_32_venue_list_for_customer(self):
+        """Test: Customer dapat melihat list venues"""
+        self.client.login(username='customer_venue_test', password='testpass123')
+        response = self.client.get(reverse('home'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('venues', response.context)
+
+    def test_33_filter_venues_ajax(self):
+        """Test: AJAX filter venues"""
+        response = self.client.get(
+            reverse('filter_venues_ajax'),
+            {
+                'search': 'Basketball',
+                'location': self.location.id,
+                'sport': self.sport_category.id,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data.get('success', False))
+        self.assertIn('venues', data)
+
+    def tearDown(self):
+        """Cleanup"""
+        pass
+	
