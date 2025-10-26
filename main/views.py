@@ -20,6 +20,7 @@ from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
 from django.db.models import Q, Avg
 import pytz
+from django.contrib.auth.models import User 
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -33,6 +34,9 @@ def get_dashboard_redirect_url_name(user):
     """
     if not user.is_authenticated:
         return 'index' # Jika (entah bagaimana) dipanggil oleh user non-auth
+    
+    if user.is_superuser or user.is_staff:
+        return 'admin_dashboard'  # Arahkan ke admin dashboard baru
 
     try:
         profile = user.profile
@@ -1166,10 +1170,30 @@ def coach_revenue_report(request):
     }
     return render(request, 'main/coach_revenue_report.html', context)
 
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home') 
 def admin_dashboard_view(request):
-    if not is_admin(request.user):
-        return redirect('home')
-    return redirect('home')
+    """
+    Menampilkan dashboard kustom untuk admin (superuser atau staff).
+    Hanya menampilkan 4 statistik utama.
+    """
+    
+    # 1. Ambil 4 Statistik Utama
+    total_users = User.objects.count()
+    total_venues = Venue.objects.count()
+    total_coaches = CoachProfile.objects.count()
+    total_bookings = Booking.objects.count()
+
+    # 2. Siapkan Context
+    context = {
+        'total_users': total_users,
+        'total_venues': total_venues,
+        'total_coaches': total_coaches,
+        'total_bookings': total_bookings,
+    }
+    
+    # 3. Render template
+    return render(request, 'main/admin_dashboard.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
@@ -2005,3 +2029,103 @@ def delete_review(request, review_id):
         return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
     messages.info(request, "Konfirmasi hapus dilakukan dari tombol di halaman.")
     return redirect("booking_history")
+
+# ======================================================
+# ======================================================
+# ======================================================
+
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home')
+def admin_user_management_view(request):
+    """Menampilkan halaman manajemen semua pengguna dengan pagination."""
+    user_list = User.objects.select_related('profile').order_by('-date_joined')
+    
+    paginator = Paginator(user_list, 20) # 20 user per halaman
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'users_page': page_obj
+    }
+    return render(request, 'main/admin_users.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home')
+def admin_venue_management_view(request):
+    """Menampilkan halaman manajemen semua venue dengan pagination."""
+    venue_list = Venue.objects.select_related('owner', 'sport_category', 'location').order_by('-id')
+    
+    paginator = Paginator(venue_list, 20) # 20 venue per halaman
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'venues_page': page_obj
+    }
+    return render(request, 'main/admin_venues.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home')
+def admin_booking_management_view(request):
+    """Menampilkan halaman manajemen semua booking/transaksi dengan pagination."""
+    booking_list = Booking.objects.select_related(
+        'customer', 
+        'venue_schedule__venue', 
+        'transaction', 
+        'coach_schedule__coach__user'
+    ).order_by('-booking_time')
+    
+    paginator = Paginator(booking_list, 20) # 20 booking per halaman
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'bookings_page': page_obj
+    }
+    return render(request, 'main/admin_bookings.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home')
+def admin_coach_management_view(request):
+    """Menampilkan halaman manajemen semua profil pelatih."""
+    
+    # Ambil semua CoachProfile, optimalkan query
+    coach_list = CoachProfile.objects.select_related(
+        'user', 
+        'main_sport_trained'
+    ).order_by('user__username')
+    
+    paginator = Paginator(coach_list, 20) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'coaches_page': page_obj
+    }
+    return render(request, 'main/admin_coaches.html', context)
+
+@login_required(login_url='login')
+@user_passes_test(is_admin, login_url='home')
+@require_http_methods(["POST"]) # Memastikan ini hanya bisa diakses via POST
+def admin_toggle_coach_verification_view(request, coach_id):
+    """
+    Meng-toggle status is_verified seorang Coach via AJAX.
+    """
+    try:
+        # Cari coach profile
+        coach = get_object_or_404(CoachProfile, id=coach_id)
+
+        # Balik statusnya (jika True -> False, jika False -> True)
+        coach.is_verified = not coach.is_verified
+        coach.save()
+
+        # Kirim kembali status baru dalam format JSON
+        return JsonResponse({
+            'success': True,
+            'is_verified': coach.is_verified, # Kirim status baru
+            'message': 'Status coach berhasil diperbarui.'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

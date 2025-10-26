@@ -88,7 +88,6 @@
     class="flex min-h-screen"
   >
     
-    <!-- Sidebar -->
     <aside 
       id="sidebar" 
       class="sidebar bg-white shadow-xl border-r border-gray-100 min-h-screen flex flex-col fixed inset-y-0 left-0 z-30 w-64 lg:w-auto"
@@ -101,7 +100,6 @@
       }"
       x-cloak
     >
-      <!-- Logo Header -->
       <div class="h-16 flex items-center justify-between px-6 border-b border-gray-100 flex-shrink-0">
         
         <a 
@@ -130,16 +128,46 @@
 
       </div>
 
-      <!-- Navigation -->
       <nav class="flex-1 p-6 space-y-2 overflow-y-auto">
-        {% if user.is_authenticated and user.profile %}
+
+        {% if user.is_authenticated %}
+
           {% if user.is_superuser or user.is_staff %}
-            <div class="menu-item rounded-xl">
+            
+            <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
               <a href="{% url 'admin_dashboard' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-tachometer-alt w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Admin Dashboard</span> 
+                <i class="fa-solid fa-chart-pie w-5 text-center text-gray-500 flex-shrink-0"></i>
+                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Overview</span> 
               </a>
             </div>
+
+            <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'admin_users' %}active{% endif %}">
+              <a href="{% url 'admin_users' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                <i class="fa-solid fa-users-cog w-5 text-center text-gray-500 flex-shrink-0"></i>
+                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>User</span> 
+              </a>
+            </div>
+
+            <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'admin_venues' %}active{% endif %}">
+              <a href="{% url 'admin_venues' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                <i class="fa-solid fa-store w-5 text-center text-gray-500 flex-shrink-0"></i>
+                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Venue</span> 
+              </a>
+            </div>
+
+            <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'admin_coaches' %}active{% endif %}">
+              <a href="{% url 'admin_coaches' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                <i class="fa-solid fa-chalkboard-user w-5 text-center text-gray-500 flex-shrink-0"></i>
+                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Coach</span> 
+              </a>
+            </div>
+            <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'admin_bookings' %}active{% endif %}">
+              <a href="{% url 'admin_bookings' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                <i class="fa-solid fa-receipt w-5 text-center text-gray-500 flex-shrink-0"></i>
+                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Booking</span> 
+              </a>
+            </div>
+
             <div class="menu-item rounded-xl">
               <a href="/admin/" target="_blank" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
                 <i class="fa-solid fa-cogs w-5 text-center text-gray-500 flex-shrink-0"></i>
@@ -147,56 +175,79 @@
               </a>
             </div>
 
-          {% elif user.profile.is_venue_owner %}
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'venue_dashboard' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-store w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Kelola Lapangan</span> 
-              </a>
-            </div>
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'venue_revenue' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-chart-line w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Laporan</span> 
-              </a>
-            </div>
+          {% elif user.profile %} 
+          
+            {% if user.profile.is_venue_owner %}
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'venue_dashboard' %}active{% endif %}">
+                <a href="{% url 'venue_dashboard' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-store w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Kelola Lapangan</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'venue_revenue' %}active{% endif %}">
+                <a href="{% url 'venue_revenue' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-chart-line w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Laporan</span> 
+                </a>
+              </div>
 
-          {% elif user.profile.is_coach %}
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'coach_list' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-users w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Daftar Pelatih</span> 
-              </a>
-            </div>
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'coach_revenue_report' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-file-invoice-dollar w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Laporan</span> 
-              </a>
-            </div>
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'coach_schedule' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-calendar-alt w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Jadwal Kamu</span> 
-              </a>
-            </div>
-            <div class="menu-item rounded-xl">
-              <a href="{% url 'coach_profile' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
-                <i class="fa-solid fa-user w-5 text-center text-gray-500 flex-shrink-0"></i>
-                <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Profil Kamu</span> 
-              </a>
-            </div>
+            {% elif user.profile.is_coach %}
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'coach_list' %}active{% endif %}">
+                <a href="{% url 'coach_list' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-users w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Daftar Pelatih</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'coach_revenue_report' %}active{% endif %}">
+                <a href="{% url 'coach_revenue_report' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-file-invoice-dollar w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Laporan</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'coach_schedule' %}active{% endif %}">
+                <a href="{% url 'coach_schedule' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-calendar-alt w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Jadwal Kamu</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'coach_profile' %}active{% endif %}">
+                <a href="{% url 'coach_profile' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-user w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Profil Kamu</span> 
+                </a>
+              </div>
+
+            {% else %}
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                <a href="{% url 'home' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-home w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Home</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'my_bookings' %}active{% endif %}">
+                <a href="{% url 'my_bookings' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-ticket w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Booking Saya</span> 
+                </a>
+              </div>
+              <div class="menu-item rounded-xl {% if request.resolver_match.url_name == 'booking_history' %}active{% endif %}">
+                <a href="{% url 'booking_history' %}" class="flex items-center px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all" :class="{ 'justify-center': !desktopOpen && !mobileOpen, 'space-x-3': desktopOpen || mobileOpen }">
+                  <i class="fa-solid fa-history w-5 text-center text-gray-500 flex-shrink-0"></i>
+                  <span class="font-medium whitespace-nowrap" x-show="desktopOpen || mobileOpen" x-transition>Riwayat</span> 
+                </a>
+              </div>
+
+            {% endif %}
+
           {% endif %}
         {% endif %}
       </nav>
 
-      <!-- Footer -->
       <div class="p-6 border-t border-gray-100 mt-auto" :class="{ 'text-center': !desktopOpen && !mobileOpen }">
          <span class="text-xs text-gray-400" x-show="desktopOpen || mobileOpen" x-transition>© 2025 All-Ahraga</span> 
       </div> 
     </aside>
 
-    <!-- Mobile Backdrop -->
     <div 
       x-show="mobileOpen" 
       @click="mobileOpen = false" 
@@ -211,18 +262,15 @@
       x-cloak
     ></div>
 
-    <!-- Main Content Area -->
     <div 
       class="content-area flex-1 flex flex-col w-full"
       :class="{ 'lg:pl-64': desktopOpen, 'lg:pl-20': !desktopOpen }"
     >
       
-      <!-- Header -->
       <header class="h-16 bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 sticky top-0 z-10 flex items-center">
         <div class="flex items-center justify-between w-full">
           
           <div class="flex items-center space-x-3 sm:space-x-4">
-            <!-- Desktop Toggle -->
             <button 
               @click="desktopOpen = !desktopOpen" 
               class="hidden lg:block p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -231,7 +279,6 @@
               <i class="fa-solid" :class="desktopOpen ? 'fa-chevron-left' : 'fa-chevron-right'" class="text-gray-600"></i>
             </button>
             
-            <!-- Mobile Burger -->
             <button 
               @click="mobileOpen = !mobileOpen" 
               class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -240,13 +287,11 @@
               <i class="fa-solid fa-bars text-gray-600"></i>
             </button>
             
-            <!-- Page Title -->
             <h2 class="text-lg sm:text-2xl font-semibold text-gray-900">
               {% block page_title %}Dashboard{% endblock page_title %}
             </h2>
           </div>
           
-          <!-- User Menu -->
           {% if user.is_authenticated %}
           <div class="relative" x-data="{ openUser: false }">
             <button 
@@ -287,7 +332,6 @@
         </div>
       </header>
 
-      <!-- Main Content -->
       <main class="flex-1 bg-gray-50 px-4 py-6 sm:px-6 md:px-8 lg:px-12 xl:px-16">
         <div class="max-w-7xl mx-auto">
           {% if messages %}
