@@ -27,7 +27,6 @@
     .delay-100 { animation-delay: 0.1s; } .delay-200 { animation-delay: 0.2s; } .delay-400 { animation-delay: 0.4s; }
     .delay-600 { animation-delay: 0.6s; } .delay-800 { animation-delay: 0.8s; } .delay-1000 { animation-delay: 1s; }
     
-    
     .brutal-card {
         border: 3px solid #1f2937;
         border-radius: 0 !important; 
@@ -86,8 +85,8 @@
 
     .brutal-graphic-card {
         position: relative;
-        background-color: #f3f4f6; /* gray-100 */
-        border: 4px solid #1f2937; /* gray-800/900 */
+        background-color: #f3f4f6;
+        border: 4px solid #1f2937;
         box-shadow: 12px 12px 0px 0px #14b8a6; 
         overflow: hidden; 
         display: flex;
@@ -98,7 +97,7 @@
     .brutal-graphic-element {
         position: absolute; 
         border: 2px solid #1f2937;
-        background-color: #d1d5db; /* gray-300 */
+        background-color: #d1d5db;
         box-shadow: 4px 4px 0px 0px #1f2937;
     }
     
@@ -163,104 +162,125 @@
     }
 
     .brutal-btn-smooth-approach {
-        transition: transform 0.18s ease-out, box-shadow 0.18s ease, background-color 0s !important; /* DITINGKATKAN KE 0.4s */
+        transition: transform 0.18s ease-out, box-shadow 0.18s ease, background-color 0s !important;
     }
     .brutal-btn-smooth-approach:hover {
         transform: translate(4px, 4px); 
         box-shadow: 4px 4px 0px 0px #1f2937 !important;
     }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .brutal-card {
+            box-shadow: 6px 6px 0px 0px #14b8a6;
+        }
+        
+        .brutal-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px 0px #14b8a6;
+        }
+        
+        .brutal-info-box {
+            transform: translateX(150%);
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .brutal-tagline-floating {
+            transform: translateX(-20%);
+        }
+    }
 </style>
 {% endblock extra_head %}
 
 {% block content %}
-<div class="hero-minimal -mx-4 sm:-mx-6 lg:-mx-8 -mb-2 bg-gray-50 -mt-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div class="grid md:grid-cols-2 gap-12 items-start relative">
+<!-- Hero Section -->
+<div id="home" class="hero-minimal -mx-4 sm:-mx-6 lg:-mx-8 -mb-2 bg-gray-50 -mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24">
+        <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-start relative">
             
-            <div class="space-y-8 animate-slide-in-left">
+            <div class="space-y-6 sm:space-y-8 animate-slide-in-left">
                 
-                <div class="inline-flex items-center gap-2 text-sm font-mono font-bold uppercase text-gray-700 border-2 border-gray-900 px-3 py-1 bg-white brutal-card brutal-tagline-floating" style="box-shadow: 4px 4px 0px 0px #1f2937;">
+                <div class="inline-flex items-center gap-2 text-xs sm:text-sm font-mono font-bold uppercase text-gray-700 border-2 border-gray-900 px-3 py-1 bg-white brutal-card brutal-tagline-floating" style="box-shadow: 4px 4px 0px 0px #1f2937;">
                     <span class="text-teal-600">•</span>
                     Platform Olahraga Terpadu
                 </div>
                 
-                <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 leading-tight tracking-tighter mt-16 pt-4">
-                    <span class="block whitespace-nowrap">BOOK VENUES.</span>
-                    <span class="block whitespace-nowrap">HIRE COACHES.</span>
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 leading-tight tracking-tighter mt-12 sm:mt-16 pt-4">
+                    <span class="block">BOOK VENUES.</span>
+                    <span class="block">HIRE COACHES.</span>
                     <span class="brutal-highlight-text">PLAY SPORTS.</span>
                 </h1>
                 
-                <p class="text-lg md:text-xl font-mono text-gray-700 leading-relaxed max-w-lg">
+                <p class="text-base sm:text-lg md:text-xl font-mono text-gray-700 leading-relaxed max-w-lg">
                     Satu platform untuk semua kebutuhan olahraga Anda. Sederhana, cepat, dan efisien. [v.2025]
                 </p>
                 
                 <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                    <a href="{% url 'register' %}" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-teal-600 text-white font-extrabold text-lg rounded-none border-4 border-gray-900 brutal-card brutal-btn-approach teal-shadow-on-hover">
+                    <a href="{% url 'register' %}" class="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-teal-600 text-white font-extrabold text-base sm:text-lg rounded-none border-4 border-gray-900 brutal-card brutal-btn-approach teal-shadow-on-hover">
                         MULAI GRATIS
                         <i class="fas fa-arrow-right text-sm"></i>
                     </a>
                     
-                    <a href="{% url 'login' %}" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-gray-900 font-extrabold text-lg rounded-none border-4 border-gray-900 hover:bg-gray-200 brutal-card brutal-btn-approach" style="box-shadow: 8px 8px 0px 0px #1f2937;">
+                    <a href="{% url 'login' %}" class="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 font-extrabold text-base sm:text-lg rounded-none border-4 border-gray-900 hover:bg-gray-200 brutal-card brutal-btn-approach" style="box-shadow: 8px 8px 0px 0px #1f2937;">
                         MASUK
                     </a>
                 </div>
-                
-                <div class="hidden"></div> 
             </div>
             
             <div class="relative flex flex-col items-center justify-start animate-slide-in-right">
                 
-                <div class="brutal-graphic-card w-full h-full min-h-[350px] p-6 md:p-8 overflow-visible">
+                <div class="brutal-graphic-card w-full h-full min-h-[300px] sm:min-h-[350px] p-4 sm:p-6 md:p-8 overflow-visible">
                     
                     <div class="brutal-graphic-element w-full h-full bg-gray-300 transform -rotate-3 absolute" style="box-shadow: 10px 10px 0px 0px #1f2937; z-index: 1;">
-                        <div class="absolute inset-0 flex items-center justify-center text-gray-900 text-5xl md:text-6xl font-black opacity-10">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black opacity-10">
                             ALL-AHRAGA
                         </div>
                     </div>
 
-                    <div class="relative grid grid-cols-2 gap-4 w-full h-full p-2 md:p-4 z-20">
+                    <div class="relative grid grid-cols-2 gap-3 sm:gap-4 w-full h-full p-2 md:p-4 z-20">
                         
                         <div class="brutal-sport-icon teal flex flex-col items-center justify-center space-y-2 transform rotate-2 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-futbol text-3xl"></i>
+                            <i class="fas fa-futbol text-2xl sm:text-3xl"></i>
                             <span class="text-xs font-mono font-bold uppercase">FUTSAL</span>
                         </div>
                         
                         <div class="brutal-sport-icon bg-gray-700 text-white flex flex-col items-center justify-center space-y-2 transform -rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-basketball-ball text-3xl"></i>
+                            <i class="fas fa-basketball-ball text-2xl sm:text-3xl"></i>
                             <span class="text-xs font-mono font-bold uppercase">BASKET</span>
                         </div>
                         
                         <div class="brutal-sport-icon bg-gray-100 flex flex-col items-center justify-center space-y-2 transform -rotate-2 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-tennis-ball text-3xl text-teal-800"></i>
+                            <i class="fas fa-tennis-ball text-2xl sm:text-3xl text-teal-800"></i>
                             <span class="text-xs font-mono font-bold uppercase">TENNIS</span>
                         </div>
                         
                         <div class="brutal-sport-icon teal flex flex-col items-center justify-center space-y-2 transform rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-volleyball-ball text-3xl"></i>
+                            <i class="fas fa-volleyball-ball text-2xl sm:text-3xl"></i>
                             <span class="text-xs font-mono font-bold uppercase">VOLLEY</span>
                         </div>
 
                     </div>
                     
-                    <div class="brutal-info-box z-30">
+                    <div class="brutal-info-box z-30 hidden sm:block">
                         <p class="font-bold">TOTAL SPORTS: <span class="text-teal-400">12+</span></p>
                         <p class="mt-1">VENUE RATING: <span class="text-teal-400">4.8/5</span></p>
                     </div>
 
                 </div>
 
-                <div class="grid grid-cols-3 gap-6 pt-8 border-t-4 border-gray-900 mt-8 w-full bg-gray-50 p-4 brutal-card" style="box-shadow: 8px 8px 0px 0px #1f2937;">
+                <div class="grid grid-cols-3 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t-4 border-gray-900 mt-6 sm:mt-8 w-full bg-gray-50 p-3 sm:p-4 brutal-card" style="box-shadow: 8px 8px 0px 0px #1f2937;">
                     <div class="brutal-stat-card">
-                        <div class="text-4xl font-black text-gray-900">500+</div>
-                        <div class="text-sm font-mono text-gray-700 mt-1 uppercase">Venues</div>
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">500+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Venues</div>
                     </div>
                     <div class="brutal-stat-card">
-                        <div class="text-4xl font-black text-gray-900">200+</div>
-                        <div class="text-sm font-mono text-gray-700 mt-1 uppercase">Coaches</div>
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">200+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Coaches</div>
                     </div>
                     <div class="brutal-stat-card">
-                        <div class="text-4xl font-black text-gray-900">10K+</div>
-                        <div class="text-sm font-mono text-gray-700 mt-1 uppercase">Users</div>
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">10K+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Users</div>
                     </div>
                 </div>
             </div>
@@ -268,10 +288,11 @@
     </div>
 </div>
 
-<div class="py-12 mb-20">
+<!-- Features Section -->
+<div id="features" class="py-12 sm:py-16 md:py-20 mb-12 sm:mb-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16 border-b-4 border-gray-900 pb-4 animate-fade-in-up">
-            <h2 class="text-5xl font-black text-gray-900 tracking-tighter mb-4">
+        <div class="text-center mb-12 sm:mb-16 border-b-4 border-gray-900 pb-4 animate-fade-in-up">
+            <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tighter mb-4">
                 KENAPA ALL-AHRAGA?
             </h2>
             <p class="text-lg font-mono text-gray-700 max-w-2xl mx-auto">
@@ -314,7 +335,7 @@
     </div>
 </div>
 
-<div class="py-24 bg-gray-900 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-t-4 border-b-4 border-gray-900">
+<div id="how-it-works" class="py-24 bg-gray-900 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-t-4 border-b-4 border-gray-900">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-16 animate-fade-in-up">
             <h2 class="text-5xl font-black text-white tracking-tighter mb-4">
@@ -370,7 +391,7 @@
     </div>
 </div>
 
-<div class="pt-24 pb-12 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+<div id="testimonials" class="pt-24 pb-12 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
         
         <div class="mb-16 border-b-4 border-gray-900 pb-4 animate-slide-in-left delay-100">
