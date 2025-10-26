@@ -2,82 +2,174 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <title>All-Ahraga | {% block title %}{% endblock title %}</title> 
-    
-    <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
-        header { background-color: #333; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-        header a { color: white; text-decoration: none; margin-left: 20px; }
-        main { min-height: 80vh; padding: 20px; }
-        footer { background-color: #333; color: white; text-align: center; padding: 10px; margin-top: 20px; }
-        .logo { font-size: 1.5em; font-weight: bold; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All-Ahraga | {% block title %}{% endblock title %}</title> 
 
-    {% block extra_head %}{% endblock extra_head %} 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Poppins', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+    .logo-gradient {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+
+  {% block extra_head %}{% endblock extra_head %}
 </head>
 
-<body>
-    <header>
-        <div class="logo"><a href="{% url 'home' %}">All-Ahraga</a></div>
-        <nav>
-            {% if user.is_authenticated %}
-                
-                {% if user.profile %}
-                
-                    {% if user.is_superuser or user.is_staff %}
-                        <a href="{% url 'admin_dashboard' %}">ADMIN DASHBOARD</a>
-                        <a href="/admin/" target="_blank">Django Admin</a> 
-                    
-                    {% elif user.profile.is_venue_owner %}
-                        <a href="{% url 'venue_dashboard' %}">Kelola Lapangan</a>
-                        <a href="{% url 'venue_dashboard' %}">Laporan Pendapatan</a>
-                    
-                    {% elif user.profile.is_coach %}
-                        <a href="{% url 'coach_dashboard' %}">Jadwal Sesi</a>
-                        <a href="{% url 'coach_dashboard' %}">Profil Pelatih</a>
-                    
-                    {% elif user.profile.is_customer %}
-                        <a href="{% url 'customer_dashboard' %}">Booking Saya</a>
-                    
-                    {% endif %}
+<body class="min-h-screen flex flex-col bg-gray-50 text-gray-800 font-sans">
 
-                {% endif %} 
-                
-                <span style="margin-left: 20px;">|</span>
-                <a href="{% url 'logout' %}">Keluar ({{ user.username }})</a>
-                
-            {% else %}
-                <a href="{% url 'register' %}">Daftar</a>
-                <a href="{% url 'login' %}">Masuk</a>
-                {% endif %}
-        </nav>
-    </header>
+<header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40" x-data="{ openMenu: false }">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <div class="grid grid-cols-3 items-center h-16">
 
-    <main>
-        {% if messages %}
-            <div style="padding: 10px;">
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+      <div class="justify-self-start">
+        <a href="{% url 'index' %}" class="flex items-center space-x-3 flex-shrink-0">
+           <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl flex items-center justify-center shadow-md">
+              <i class="fa-solid fa-futbol text-white"></i>
             </div>
+            <span class="text-2xl font-bold logo-gradient hidden sm:inline">All-Ahraga</span>
+        </a>
+      </div>
+
+      <nav class="hidden md:flex justify-self-center space-x-6 text-sm font-medium text-gray-600">
+        {% if user.is_authenticated and user.profile %}
+          {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
+             <a href="{% url 'dashboard_redirect' %}" class="hover:text-teal-600 transition whitespace-nowrap">Ke Dashboard</a>
+          {% endif %}
+          {% if user.profile.is_customer %}
+            <a href="{% url 'my_bookings' %}" class="hover:text-teal-600 transition whitespace-nowrap">Bookingan Saya</a>
+            <a href="{% url 'booking_history' %}" class="hover:text-teal-600 transition whitespace-nowrap">Riwayat Booking</a>
+          {% endif %}
         {% endif %}
-        
-        {% block content %}
-        {% endblock content %}
-    </main>
+      </nav>
+      <div class="md:hidden justify-self-center"></div>
 
-    <footer>
-        &copy; 2025 All-Ahraga — Kelompok 4 PBP E
-    </footer>
+      <div class="flex items-center space-x-3 justify-self-end">
 
-    {% block extra_js %}{% endblock extra_js %}
+        {% if user.is_authenticated %}
+          <div class="relative" x-data="{ openUser: false }">
+            <button @click="openUser = !openUser" class="flex items-center space-x-2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+               <span class="w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0"><span class="text-white font-semibold text-xs">{{ user.username|slice:":2"|upper }}</span></span>
+               <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ user.username }}</span>
+               <i class="fa-solid fa-chevron-down text-xs text-gray-400 hidden sm:inline"></i>
+            </button>
+            <div x-show="openUser" @click.away="openUser = false" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5" style="display: none;" x-cloak>
+              <div class="px-4 py-2 text-sm text-gray-500 border-b">Masuk sebagai <strong class="text-gray-900">{{ user.username }}</strong></div>
+              <a href="{% url 'logout' %}" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition"><i class="fa-solid fa-right-from-bracket w-4 mr-2"></i> Keluar</a>
+            </div>
+          </div>
+        {% else %}
+          <div class="hidden md:flex items-center space-x-4">
+             <a href="{% url 'register' %}" class="text-sm font-medium text-gray-600 hover:text-teal-600 transition whitespace-nowrap">Daftar</a>
+             <a href="{% url 'login' %}" class="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 transition shadow-sm whitespace-nowrap">Masuk</a>
+          </div>
+        {% endif %}
+
+        <button @click="openMenu = !openMenu" class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <span class="sr-only">Buka menu</span>
+          <i class="fa-solid fa-bars w-6 h-6" x-show="!openMenu"></i>
+          <i class="fa-solid fa-xmark w-6 h-6" x-show="openMenu" x-cloak></i>
+        </button>
+      </div>
+    </div>
+
+    <div x-show="openMenu" x-transition @click.away="openMenu = false" class="md:hidden absolute top-16 left-0 right-0 z-30 bg-white shadow-lg rounded-b-lg border-t border-gray-100 p-4" style="display: none;" x-cloak>
+      <nav class="flex flex-col space-y-3 text-base text-gray-700 font-medium">
+        {% if user.is_authenticated and user.profile %}
+          {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
+             <a href="{% url 'dashboard_redirect' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Ke Dashboard</a>
+          {% endif %}
+          {% if user.profile.is_customer %}
+            <a href="{% url 'my_bookings' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Bookingan Saya</a>
+            <a href="{% url 'booking_history' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Riwayat Booking</a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'register' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Daftar</a>
+          <a href="{% url 'login' %}" class="block px-3 py-2 rounded bg-teal-50 text-teal-700 font-semibold hover:bg-teal-100 transition">Masuk</a>
+        {% endif %}
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="flex-grow container mx-auto px-4 py-8 sm:px-6 lg:px-8"> 
+  {% if messages %} 
+    <div class="mb-6 space-y-3"> 
+      {% for message in messages %} 
+        <div class="p-4 rounded-lg shadow-sm border text-sm sm:text-base {% if message.tags == 'success' %}bg-green-100 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border-red-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">
+          {{ message }}
+        </div> 
+      {% endfor %} 
+    </div> 
+  {% endif %}
+  {% block content %}{% endblock content %}
+</main>
+
+<footer class="bg-white text-gray-600 py-8 sm:py-10 mt-12 border-t border-gray-100"> 
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
+    
+    <!-- About Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Tentang All-Ahraga</h3> 
+      <p class="text-gray-500 text-sm leading-relaxed"> 
+        Platform pemesanan lapangan dan pelatih olahraga modern, menghubungkan Anda dengan penyedia jasa terbaik. 
+      </p> 
+    </div>
+    
+    <!-- Navigation Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Navigasi</h3> 
+      <ul class="space-y-1.5 text-sm text-gray-500"> 
+        <li><a href="{% url 'landing' %}" class="hover:text-teal-600 transition">Beranda</a></li>
+        <li><a href="{% url 'landing' %}#features" class="hover:text-teal-600 transition">Fitur</a></li>
+        <li><a href="{% url 'landing' %}#how-it-works" class="hover:text-teal-600 transition">Cara Kerja</a></li> 
+        <li><a href="{% url 'landing' %}#testimonials" class="hover:text-teal-600 transition">Testimoni</a></li>
+      </ul> 
+    </div>
+    
+    <!-- Social Media Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Ikuti Kami</h3> 
+      <div class="flex justify-center sm:justify-start space-x-4 text-gray-500"> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Facebook"><i class="fa-brands fa-facebook text-lg sm:text-xl"></i></a> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Twitter"><i class="fa-brands fa-twitter text-lg sm:text-xl"></i></a> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Instagram"><i class="fa-brands fa-instagram text-lg sm:text-xl"></i></a> 
+      </div> 
+    </div>
+  </div>
+  
+  <div class="mt-8 border-t border-gray-200 pt-5 text-center text-sm text-gray-500"> 
+    &copy; {% now "Y" %} All-Ahraga. All rights reserved. 
+  </div>
+</footer>
+
+{% block extra_js %}{% endblock extra_js %}
 </body>
 </html>

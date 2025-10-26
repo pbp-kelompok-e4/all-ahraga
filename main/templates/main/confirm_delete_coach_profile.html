@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Hapus Profil Pelatih{% endblock title %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+
+    <div class="text-center mb-8">
+        <div class="text-5xl mb-4 text-red-500">🗑️</div>
+        <h2 class="text-3xl font-extrabold text-gray-900">
+            Konfirmasi Hapus Profil Pelatih
+        </h2>
+    </div>
+    
+    <p class="text-lg text-gray-700 mb-6 text-center">
+        Apakah Anda yakin ingin menghapus profil pelatih Anda? 
+        <strong class="text-red-600">Tindakan ini tidak dapat dibatalkan.</strong>
+    </p>
+
+    <div class="bg-red-50 border border-red-300 rounded-xl p-4 mb-8">
+        <p class="text-red-800 font-semibold text-sm">
+            ⚠️ Penghapusan akan menghapus semua detail profil, jadwal, dan data terkait pelatih Anda.
+        </p>
+    </div>
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <button type="submit" 
+              class="w-full py-3 px-6 bg-red-600 text-white text-lg font-bold rounded-xl 
+                     shadow-md hover:bg-red-700 transition-colors duration-200 transform hover:scale-[1.005]">
+        Ya, Hapus
+      </button>
+      <a href="{% url 'coach_profile' %}" 
+         class="block w-full text-center py-3 px-6 bg-gray-500 text-white text-lg font-bold rounded-xl 
+                shadow-md hover:bg-gray-600 transition-colors duration-200">
+        Batal
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock content %}

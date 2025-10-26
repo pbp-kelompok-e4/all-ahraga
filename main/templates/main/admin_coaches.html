@@ -1,0 +1,152 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Coach Management{% endblock title %}
+{% block page_title %}Coach Management{% endblock page_title %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+  <h3 class="text-xl font-semibold text-gray-900 mb-4">Semua Pelatih ({{ coaches_page.paginator.count }})</h3>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-max text-left">
+      <thead>
+        <tr class="border-b border-gray-200">
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Username</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Sport Utama</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Rate/Jam</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Status</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for coach in coaches_page %}
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="py-3 px-4 text-sm text-gray-700 font-medium">{{ coach.user.username }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">{{ coach.main_sport_trained.name|default:"-" }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">Rp {{ coach.rate_per_hour|intcomma }}</td>
+            
+            <td class="py-3 px-4 text-sm" id="status-badge-{{ coach.id }}">
+              {% if coach.is_verified %}
+                <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">Verified</span>
+              {% else %}
+                <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">Pending</span>
+              {% endif %}
+            </td>
+            
+            <td class="py-3 px-4 text-sm text-gray-600">
+              <button
+                class="toggle-verify-btn text-xs py-1 px-3 rounded-md font-medium transition-colors
+                       {% if coach.is_verified %}
+                         bg-yellow-100 text-yellow-800 hover:bg-yellow-200
+                       {% else %}
+                         bg-blue-100 text-blue-800 hover:bg-blue-200
+                       {% endif %}"
+                data-coach-id="{{ coach.id }}"
+              >
+                {% if coach.is_verified %}
+                  Set to Pending
+                {% else %}
+                  Verify Now
+                {% endif %}
+              </button>
+            </td>
+            
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="py-4 px-4 text-center text-gray-500">Belum ada pelatih.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'main/_pagination.html' with page_obj=coaches_page %}
+</div>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script>
+
+// Helper function untuk mengambil CSRF token dari cookie
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === ('csrftoken' + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCSRFToken();
+
+// Tambahkan event listener ke seluruh dokumen
+document.addEventListener('click', function(e) {
+    
+    // Cek apakah yang diklik adalah tombol toggle kita
+    if (e.target.matches('.toggle-verify-btn')) {
+        e.preventDefault();
+        
+        const button = e.target;
+        const coachId = button.dataset.coachId;
+        const url = `/dashboard/admin/coaches/toggle-verify/${coachId}/`;
+
+        // Matikan tombol sementara
+        button.disabled = true;
+        button.textContent = 'Loading...';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Sukses! Update tampilan di halaman
+                const badgeCell = document.getElementById(`status-badge-${coachId}`);
+                
+                if (data.is_verified) {
+                    // --- Update ke status VERIFIED ---
+                    badgeCell.innerHTML = '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">Verified</span>';
+                    
+                    button.textContent = 'Set to Pending';
+                    button.classList.remove('bg-blue-100', 'text-blue-800', 'hover:bg-blue-200');
+                    button.classList.add('bg-yellow-100', 'text-yellow-800', 'hover:bg-yellow-200');
+                } else {
+                    // --- Update ke status PENDING ---
+                    badgeCell.innerHTML = '<span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">Pending</span>';
+                    
+                    button.textContent = 'Verify Now';
+                    button.classList.remove('bg-yellow-100', 'text-yellow-800', 'hover:bg-yellow-200');
+                    button.classList.add('bg-blue-100', 'text-blue-800', 'hover:bg-blue-200');
+                }
+            } else {
+                alert('Error: ' + data.message);
+                // Kembalikan teks tombol jika error
+                button.textContent = data.is_verified ? 'Set to Pending' : 'Verify Now'; 
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Terjadi kesalahan. Silakan coba lagi.');
+        })
+        .finally(() => {
+            // Hidupkan kembali tombolnya
+            button.disabled = false;
+        });
+    }
+});
+</script>
+{% endblock extra_js %}

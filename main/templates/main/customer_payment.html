@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Konfirmasi Pembayaran - Booking #{{ booking.id }}{% endblock title %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto my-12 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
+  
+  <div class="text-center mb-6">
+    <h2 class="text-3xl font-bold text-gray-900">Konfirmasi Pembayaran</h2>
+    <p class="text-lg text-gray-600">Booking #{{ booking.id }}</p>
+  </div>
+  
+  <hr class="my-6 border-gray-200">
+
+  {% if transaction.payment_method|default:""|upper == "TRANSFER" %}
+    <p class="text-gray-700 text-base mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
+      Silakan lakukan transfer sesuai instruksi. Setelah melakukan transfer, tekan tombol "Sudah bayar" untuk mengonfirmasi.
+    </p>
+    
+    <div class="bg-gray-100 p-6 rounded-xl mb-6 shadow-inner">
+      <h3 class="text-xl font-bold text-gray-800 mb-3">Rincian Pembayaran</h3>
+      <div class="space-y-2">
+        <p class="flex justify-between font-medium"><span>Total Tagihan:</span> <span class="text-teal-600 font-extrabold">Rp {{ booking.total_price|floatformat:0 }}</span></p>
+        <p class="flex justify-between text-sm text-gray-600"><span>Metode:</span> <span>Transfer Bank</span></p>
+        </div>
+    </div>
+
+    <form method="post" class="mt-4" id="payment-form">
+      {% csrf_token %}
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button type="submit" 
+                id="submit-button"
+                class="flex-1 px-6 py-3 bg-teal-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-teal-700 transition-colors">
+          Sudah bayar
+        </button>
+        <a href="{% url 'my_bookings' %}" 
+           class="flex-1 text-center px-6 py-3 bg-gray-500 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-gray-600 transition-colors">
+          Kembali ke Daftar Booking
+        </a>
+      </div>
+    </form>
+  {% else %}
+    <div class="p-6 text-center bg-green-50 border-l-4 border-green-400 rounded-lg">
+      <p class="text-lg font-semibold text-green-700">
+        Booking berhasil dibuat! Pembayaran akan dilakukan secara Cash (Bayar di Tempat) saat Anda tiba di venue.
+      </p>
+      <a href="{% url 'my_bookings' %}" class="mt-4 inline-block text-teal-600 font-semibold hover:underline">
+        Lihat Detail Booking Anda →
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<div id="user-toast-container" class="fixed bottom-4 right-4 z-[100] space-y-3"></div>
+
+<style>
+     .user-toast { 
+        position: relative; 
+        min-width: 280px; max-width: 400px;
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.15);
+        opacity: 0; 
+        transform: translateY(100%);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        display: flex; align-items: center; gap: 0.75rem;
+        color: white;
+        font-weight: 600;
+     }
+     .user-toast.show { opacity: 1; transform: translateY(0); } 
+     .user-toast.success { 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+     }
+     .user-toast.error { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+     }
+     .user-toast.info { 
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+     }
+     .user-toast.warning { 
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+     }
+     .user-toast-content { display: flex; align-items: center; flex-grow: 1; gap: 0.5rem; }
+     .user-toast-content .icon { font-size: 1.5rem; } /* Asumsi Anda memuat FontAwesome */
+     .user-toast-content .message { font-size: 0.95rem; line-height: 1.4; }
+     .user-toast .close-btn { 
+        background: none; border: none; color: white; 
+        opacity: 0.9; cursor: pointer; padding: 0.25rem; 
+        margin-left: auto; font-size: 1.5rem; font-weight: bold;
+        transition: opacity 0.2s;
+     }
+     .user-toast .close-btn:hover { opacity: 1; transform: scale(1.1); }
+</style>
+
+<script>
+function showUserToast(message, type = 'info') {
+    const container = document.getElementById('user-toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `user-toast ${type}`; 
+
+    let iconHtml = '';
+    if (type === 'success') iconHtml = '<i class="fas fa-check-circle icon"></i>';
+    else if (type === 'error') iconHtml = '<i class="fas fa-times-circle icon"></i>';
+    else if (type === 'warning') iconHtml = '<i class="fas fa-exclamation-triangle icon"></i>';
+    else iconHtml = '<i class="fas fa-info-circle icon"></i>';
+
+    toast.innerHTML = `
+        <div class="user-toast-content">
+            ${iconHtml}
+            <span class="message">${message}</span>
+        </div>
+        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    `;
+
+    container.appendChild(toast);
+    toast.classList.add('show'); // Tambahkan class 'show' untuk memicu animasi
+
+    const closeBtn = toast.querySelector('.close-btn');
+    const closeToast = () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    };
+    
+    const timer = setTimeout(closeToast, 4000);
+    
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(timer);
+        closeToast();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const paymentForm = document.getElementById('payment-form');
+  const submitButton = document.getElementById('submit-button');
+
+  if (paymentForm) {
+    paymentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const startTime = Date.now();
+        const minProcessingTime = 2000; 
+ 
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...'; 
+        }
+
+        const csrfToken = this.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        const handleSuccess = (data) => {
+            showUserToast(data.message || 'Pembayaran berhasil dikonfirmasi!', 'success'); 
+            setTimeout(() => {
+                window.location.href = data.redirect_url || "{% url 'my_bookings' %}"; 
+            }, 3000); 
+        };
+
+        const handleError = (errorMessage) => {
+            showUserToast(errorMessage || 'Terjadi kesalahan. Silakan coba lagi.', 'error');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Sudah bayar';
+            }
+        };
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => {
+            return response.json().then(data => ({ ok: response.ok, data }));
+        })
+        .then(({ ok, data }) => {
+            const duration = Date.now() - startTime;
+            const delay = Math.max(0, minProcessingTime - duration);
+            
+            if (ok && data.success) {
+                // Panggil 'handleSuccess' SETELAH sisa waktu tunggu
+                setTimeout(() => handleSuccess(data), delay);
+               } else {
+                // Panggil 'handleError' SETELAH sisa waktu tunggu
+                 const errorMsg = data.message || 'Terjadi kesalahan saat memproses pembayaran.';
+                setTimeout(() => handleError(errorMsg), delay);
+              }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+            const duration = Date.now() - startTime;
+            const delay = Math.max(0, minProcessingTime - duration);
+            setTimeout(() => handleError(error.message), delay);
+        });
+    });
+  }
+});
+</script>
+{% endblock content %}

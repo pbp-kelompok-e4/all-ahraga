@@ -1,0 +1,833 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %}Profil Pelatih{% endblock title %}
+
+{% block page_title %}
+  Profil Kamu
+{% endblock page_title %}
+
+{% block extra_head %}
+<style>
+  /* Tailwind-compatible animations and utility classes */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  @keyframes pulse-slow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
+  .animate-slideUp { animation: slideUp 0.3s ease forwards; }
+  .animate-slideInRight { animation: slideInRight 0.4s ease forwards; }
+  .animate-pulse { animation: pulse 2s infinite; }
+  .animate-pulse-slow { animation: pulse-slow 2s infinite; }
+  .animate-spin { animation: spin 1s linear infinite; }
+  .text-shadow-lg { text-shadow: 0 1px 4px rgba(0,0,0,0.5); } /* Custom utility for modal close btn */
+
+  /* Ensure modal is displayed when JS removes 'hidden' */
+  #manageModal:not(.hidden), #deleteModal:not(.hidden) { display: flex; }
+
+  /* Custom styling overrides based on previous style block */
+  #confirmDeleteBtn:not(:disabled) {
+    cursor: pointer !important;
+    opacity: 1 !important;
+  }
+  
+  #confirmDeleteBtn:not(:disabled):hover {
+    /* Menggunakan class Tailwind hover:bg-red-700 */
+    /* background: #B91C1C !important; /* Slightly darker red */
+  }
+
+  :root { --header-h: 4rem; }
+  #page-toast{
+    position:fixed;
+    bottom: 1rem;
+    right:1.25rem;
+    z-index:10000;
+    min-width:280px; max-width:360px;
+    padding:.9rem 1rem;
+    border-radius:.9rem;
+    color:#fff;
+    background:linear-gradient(90deg,#059669,#0d9488);
+    box-shadow:0 14px 30px rgba(0,0,0,.25);
+    opacity:0; transform:translateY(10px);
+    transition:opacity .25s ease, transform .25s ease;
+    font-weight:600;
+  }
+  #page-toast.show{ opacity:1; transform:translateY(0); }
+
+  #toast { transition: transform 0.4s ease, opacity 0.4s ease; }
+</style>
+{% endblock extra_head %}
+
+
+{% block content %}
+{# Container luar dihapus karena sudah ada di base_dashboard #}
+
+<div class="max-w-4xl mx-auto shadow-2xl rounded-3xl overflow-hidden bg-white"> {# Tambah bg-white di sini #}
+   
+  <div class="bg-gradient-to-br from-teal-700 to-teal-900 rounded-t-3xl p-8 sm:p-10 text-center shadow-lg relative"> {# Sedikit penyesuaian padding #}
+   
+    <div class="mb-5 flex justify-center">
+      <div id="profilePictureContainer">
+        {% if coach_profile and coach_profile.profile_picture %}
+          <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil"
+               id="headerProfilePic"
+               class="w-32 h-32 sm:w-36 sm:h-36 rounded-full object-cover border-4 border-yellow-400 shadow-xl transition-transform duration-300 hover:scale-105"> {# Border sedikit lebih terang #}
+        {% else %}
+          <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white bg-opacity-10 mx-auto
+                      flex items-center justify-center border-4 border-yellow-400 shadow-xl">
+            <span class="text-5xl text-white opacity-80">
+              <i class="fa-solid fa-user"></i> {# Menggunakan ikon FontAwesome #}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <h1 class="text-white mx-0 mb-2 text-3xl sm:text-4xl font-extrabold tracking-tight">
+      {{ user_obj.username }}
+    </h1>
+   
+    <div id="verifiedBadge" {% if not coach_profile or not coach_profile.is_verified %}class="hidden"{% endif %}>
+      <div class="inline-flex items-center gap-1.5 bg-yellow-400 bg-opacity-20 px-4 py-1.5
+                  rounded-full border border-yellow-500 shadow-sm mt-2"> {# Border lebih tipis #}
+        <span class="text-lg text-yellow-400"><i class="fa-solid fa-check-circle"></i></span> {# Ikon FontAwesome #}
+        <span class="text-white font-medium text-sm">Pelatih Terverifikasi</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-6 sm:p-8 lg:p-10">
+   
+    <div id="profileContent">
+      {% if coach_profile %}
+        <div id="profileDataView">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+           
+            <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"> {# Border lebih terang #}
+              <div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Email</div>
+              <div class="text-teal-900 font-semibold break-all">{{ user_obj.email }}</div> {# Font Semibold #}
+            </div>
+
+            <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm">
+              <div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Nomor Telepon</div>
+              <div class="text-teal-900 font-semibold">{{ phone_number|default:"-" }}</div> {# Tambah default #}
+            </div>
+
+            <div class="bg-yellow-50 p-5 rounded-xl border-l-4 border-yellow-500 shadow-sm">
+              <div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Umur</div>
+              <div class="text-teal-900 font-semibold text-lg" id="displayAge">{{ coach_profile.age|default:"-" }} tahun</div> {# Font Semibold #}
+            </div>
+
+            <div class="bg-yellow-50 p-5 rounded-xl border-l-4 border-yellow-500 shadow-sm">
+              <div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Rate Per Jam</div>
+              <div class="text-yellow-700 font-bold text-2xl" id="displayRate">Rp {{ coach_profile.rate_per_hour|floatformat:0 }}</div> {# Warna lebih gelap, font bold #}
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <h3 class="text-xl sm:text-2xl text-teal-800 font-bold mb-5 pb-2 border-b-2 border-gray-100 flex items-center gap-2"> {# Border lebih subtle, ukuran font disesuaikan #}
+               <i class="fa-solid fa-clipboard-list text-teal-700"></i> Detail Pelatihan
+            </h3>
+
+            <div class="space-y-5"> {# Menggunakan space-y #}
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"> {# Style disamakan #}
+                <div class="text-xs text-gray-500 font-medium uppercase mb-2 flex items-center gap-2 tracking-wider">
+                  <i class="fa-solid fa-trophy text-lg text-yellow-600"></i> Olahraga Utama
+                </div>
+                <div class="text-teal-900 font-semibold text-lg" id="displaySport">{{ coach_profile.main_sport_trained.name }}</div>
+              </div>
+
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm">
+                <div class="text-xs text-gray-500 font-medium uppercase mb-2 flex items-center gap-2 tracking-wider">
+                  <i class="fa-solid fa-briefcase text-lg text-gray-600"></i> Pengalaman
+                </div>
+                <div class="text-gray-700 leading-relaxed text-base prose prose-sm max-w-none" id="displayExperience">{{ coach_profile.experience_desc|default:"-"|linebreaksbr }}</div> {# Tambah linebreaksbr #}
+              </div>
+
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm">
+                <div class="text-xs text-gray-500 font-medium uppercase mb-3 flex items-center gap-2 tracking-wider">
+                  <i class="fa-solid fa-map-location-dot text-lg text-blue-600"></i> Area Layanan
+                </div>
+                <div class="flex flex-wrap gap-2" id="displayAreas">
+                  {% for area in coach_profile.service_areas.all %}
+                    <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium border border-teal-200 shadow-sm"> {# Warna badge diubah #}
+                      {{ area.name }}
+                    </span>
+                  {% empty %}
+                    <span class="text-gray-500 italic text-sm">Belum ada area layanan</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div id="noProfileView" class="text-center p-10 bg-gray-100 rounded-xl mb-8 border border-dashed border-gray-300">
+          <div class="text-5xl mb-4 text-teal-600"><i class="fa-solid fa-clipboard-question"></i></div> {# Ikon FontAwesome #}
+          <h3 class="text-teal-800 text-xl font-bold mb-2">Profil Belum Lengkap</h3>
+          <p class="text-gray-600 text-base">
+            Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div id="actionButtons" class="grid grid-cols-1 gap-4 mt-8 border-t border-gray-100 pt-6 {% if coach_profile %}sm:grid-cols-2{% endif %}">
+    
+      <button onclick="showManageModal()" id="manageProfileBtn"
+        class="manage-btn flex items-center justify-center gap-2
+                py-3 px-6
+                bg-gradient-to-r from-teal-600 to-teal-800
+                text-white rounded-lg
+                font-semibold text-base sm:text-lg transition-all duration-300
+                shadow-md hover:from-teal-700 hover:to-teal-900 hover:scale-[1.02] hover:shadow-lg">
+        <i class="fa-solid fa-pencil"></i> 
+        <span id="manageButtonText">
+          {% if coach_profile %}Update Profil{% else %}Lengkapi Profil{% endif %}
+        </span>
+      </button>
+
+      {% if coach_profile %}
+        <button onclick="showDeleteModal()" id="deleteBtn"
+          class="flex items-center justify-center gap-2
+                  py-3 px-6
+                  bg-red-600 hover:bg-red-700
+                  text-white rounded-lg
+                  font-semibold text-base sm:text-lg transition-all duration-300
+                  shadow-md hover:shadow-lg hover:scale-[1.02]">
+           <i class="fa-solid fa-trash-can"></i> Hapus Profil
+        </button>
+      {% else %}
+        <button onclick="showDeleteModal()" id="deleteBtn" class="hidden">
+           <i class="fa-solid fa-trash-can"></i> Hapus Profil
+        </button>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<div id="manageModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[9999]
+                            flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fadeIn">
+ 
+  <div class="bg-white rounded-2xl max-w-2xl w-full
+              shadow-2xl relative max-h-[90vh] flex flex-col
+              animate-slideUp">
+   
+    <button onclick="hideManageModal()"
+            class="absolute top-3 right-3 z-10 p-2 rounded-full text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors">
+      <i class="fa-solid fa-xmark text-xl"></i>
+    </button>
+
+    <div class="bg-gradient-to-r from-teal-700 to-teal-800
+                p-6 text-center rounded-t-2xl flex items-center justify-center gap-3">
+       <i class="fa-solid fa-user-pen text-white text-2xl"></i>
+      <h2 class="text-white text-xl sm:text-2xl font-bold">
+        Kelola Profil Pelatih
+      </h2>
+    </div>
+
+    <div id="formContainer" class="p-6 overflow-y-auto flex-1">
+      <div class="text-center p-10 text-gray-600">
+        <div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>
+        Memuat formulir...
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[9999]
+                            flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fadeIn">
+ 
+  <div class="bg-white rounded-2xl max-w-md w-full
+              shadow-2xl relative animate-slideUp">
+   
+    <button onclick="hideDeleteModal()"
+            class="absolute top-3 right-3 z-10 p-2 rounded-full text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors">
+      <i class="fa-solid fa-xmark text-xl"></i>
+    </button>
+
+    <div class="bg-gradient-to-r from-red-600 to-red-700
+                p-6 text-center rounded-t-2xl flex items-center justify-center gap-3">
+       <i class="fa-solid fa-triangle-exclamation text-white text-2xl animate-pulse-slow"></i>
+      <h2 class="text-white text-xl sm:text-2xl font-bold">
+        Konfirmasi Penghapusan
+      </h2>
+    </div>
+
+    <div class="p-6">
+      <p class="text-gray-700 mx-0 mb-4 leading-relaxed text-sm text-center">
+        Apakah Anda yakin ingin menghapus profil pelatih Anda?
+        <strong class="text-red-600 block mt-1">Tindakan ini tidak dapat dibatalkan.</strong>
+      </p>
+
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 text-sm">
+        <div class="text-red-800 font-semibold mb-2 flex items-center gap-1">
+           <i class="fa-solid fa-circle-info"></i> Yang akan terhapus:
+        </div>
+        <ul class="list-disc space-y-1 pl-5 text-red-700">
+          <li>Informasi profil pribadi Anda</li>
+          <li>Semua jadwal latihan Anda</li>
+          <li>Riwayat transaksi dan pendapatan</li>
+          <li>Rating dan ulasan dari pengguna</li>
+        </ul>
+      </div>
+      
+      <label class="flex items-start gap-3 bg-gray-50 p-4 border border-gray-200 rounded-xl cursor-pointer mb-5 transition-colors duration-200 hover:bg-gray-100">
+        <input type="checkbox" id="confirmCheckbox"
+               class="mt-1 flex-shrink-0 form-checkbox h-5 w-5 cursor-pointer text-red-600 focus:ring-red-500 rounded border-gray-300 accent-red-600">
+        <span class="text-gray-700 text-sm leading-relaxed">
+          Saya memahami konsekuensinya dan ingin melanjutkan penghapusan profil pelatih.
+        </span>
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="hideDeleteModal()"
+                class="py-2.5 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold text-sm cursor-pointer transition-colors duration-200">
+          Batal
+        </button>
+        <button id="confirmDeleteBtn" onclick="confirmDelete()" disabled
+                class="py-2.5 px-4 bg-red-600 text-white rounded-lg font-semibold text-sm cursor-not-allowed transition-all duration-200 opacity-50 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-700 disabled:hover:bg-red-600 flex items-center justify-center gap-1">
+           <i class="fa-solid fa-trash-can"></i> Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-6 right-6
+                        text-white p-4 rounded-xl shadow-2xl z-[10000]
+                        min-w-[300px] animate-slideInRight">
+  <div class="flex items-center gap-3">
+    <span id="toastIcon" class="text-2xl"></span> {# Ukuran ikon disesuaikan #}
+    <div>
+      <div id="toastTitle" class="font-bold text-base mb-0.5"></div>
+      <div id="toastMessage" class="text-sm opacity-90"></div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+
+{% block extra_js %}
+<script>
+  // Fungsi getCookie, showToast, modal handling, AJAX (sama seperti sebelumnya)
+  // ... (Salin semua fungsi JavaScript dari file asli Anda ke sini) ...
+  // Pastikan URL AJAX sudah benar:
+  // - fetch("{% url 'get_coach_profile_form_ajax' %}")
+  // - fetch("{% url 'save_coach_profile_ajax' %}")
+  // - fetch("{% url 'delete_coach_profile_ajax' %}")
+
+  // --- Salin SEMUA kode JavaScript dari file asli Anda ke bagian ini ---
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
+   
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+   
+    let gradientClass = '';
+    let iconContent = '';
+
+    if (type === 'success') {
+      gradientClass = 'bg-gradient-to-br from-green-600 to-green-800';
+      iconContent = '✅';
+    } else if (type === 'error') {
+      gradientClass = 'bg-gradient-to-br from-red-600 to-red-800';
+      iconContent = '❌';
+    } else { // Misal 'warning' atau 'info'
+      gradientClass = 'bg-gradient-to-br from-yellow-500 to-yellow-700';
+      iconContent = '⚠️';
+    }
+   
+    // Terapkan class Tailwind untuk background
+    toast.className = `fixed bottom-6 right-6 text-white p-4 rounded-xl shadow-2xl z-[10000] min-w-[300px] animate-slideInRight ${gradientClass}`;
+    toastIcon.textContent = iconContent;
+   
+    toast.classList.remove('hidden');
+   
+    // Sembunyikan setelah 3 detik
+    setTimeout(() => {
+      // Opsi: Tambahkan animasi fade out jika diinginkan
+      toast.classList.add('hidden');
+    }, 3000);
+  }
+
+  function showManageModal() {
+    const modal = document.getElementById('manageModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Cegah scroll background
+    loadProfileForm(); // Muat form saat modal dibuka
+  }
+
+  function hideManageModal() {
+    const modal = document.getElementById('manageModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto'; // Kembalikan scroll background
+    // Kosongkan kontainer form untuk memuat ulang saat dibuka lagi (opsional)
+     document.getElementById('formContainer').innerHTML = '<div class="text-center p-10 text-gray-600"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
+  }
+
+  function loadProfileForm() {
+    const formContainer = document.getElementById('formContainer');
+    if (!formContainer) return;
+
+    // Tampilkan loading state
+    formContainer.innerHTML = '<div class="text-center p-10 text-gray-600"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
+   
+    fetch("{% url 'get_coach_profile_form_ajax' %}")
+      .then(response => {
+          if (!response.ok) { throw new Error('Network response was not ok'); }
+          return response.text();
+      })
+      .then(html => {
+        formContainer.innerHTML = html;
+        attachFormHandler(); // Pasang event listener ke form yang baru dimuat
+      })
+      .catch(error => {
+        console.error("Fetch form error:", error);
+        formContainer.innerHTML = '<div class="text-center p-10 text-red-600">' +
+          '<div class="text-4xl mb-3"><i class="fa-solid fa-circle-exclamation"></i></div>' +
+          '<p class="font-semibold">Gagal memuat formulir.</p><p class="text-sm">Silakan coba lagi.</p>' +
+          '<button onclick="loadProfileForm()" class="mt-4 py-2 px-4 bg-teal-700 text-white rounded-lg font-semibold hover:bg-teal-800 transition-colors text-sm">Muat Ulang</button>' +
+          '</div>';
+      });
+  }
+
+  function attachFormHandler() {
+    const form = document.getElementById('coachProfileForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+     
+      const submitBtn = form.querySelector('button[type="submit"]'); // Lebih spesifik
+      if (!submitBtn) return;
+      const originalText = submitBtn.innerHTML;
+     
+      // State Loading
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<svg class="animate-spin inline-block w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyimpan...';
+     
+      // Reset error messages
+      form.querySelectorAll('.field-error').forEach(el => {
+        el.classList.add('hidden');
+        el.textContent = '';
+      });
+      const formErrors = document.getElementById('formErrors'); // Pastikan ID ini ada di template form
+      if (formErrors) formErrors.classList.add('hidden');
+     
+      const formData = new FormData(form);
+      const csrftoken = getCookie('csrftoken');
+     
+      fetch("{% url 'save_coach_profile_ajax' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest' // Penting untuk request.is_ajax() di Django
+        },
+        body: formData
+        // credentials: 'same-origin' // Tidak perlu jika X-CSRFToken dikirim
+      })
+      .then(response => {
+          if (!response.ok) {
+               // Coba parse error JSON dari server jika status bukan 2xx
+               return response.json().then(errData => { throw errData; });
+           }
+          return response.json();
+       })
+      .then(data => {
+        if (data.success) {
+          updateProfileUI(data.profile); // Update tampilan profil utama
+          hideManageModal(); // Tutup modal
+          showToast('Berhasil!', data.message || 'Profil berhasil disimpan.', 'success'); // Tampilkan notif sukses
+        } else {
+          // Tampilkan error validasi form
+          displayFormErrors(data.errors || {}); 
+          showToast('Gagal!', data.message || 'Periksa kembali isian form.', 'error'); // Tampilkan notif gagal
+        }
+      })
+      .catch(error => {
+        console.error('Error submitting form:', error);
+        let errorMsg = 'Terjadi kesalahan saat menyimpan profil.';
+        // Coba tampilkan pesan error dari server jika ada
+        if (error && error.message) {
+            errorMsg = error.message;
+        } else if (error && error.errors) {
+            errorMsg = Object.values(error.errors).flat().join(' ');
+        }
+        showToast('Error!', errorMsg, 'error'); // Tampilkan notif error umum
+        // Tampilkan error non-field jika ada di form (pastikan elemennya ada)
+        const formErrorsEl = document.getElementById('formErrors'); 
+        const errorListEl = document.getElementById('errorList');
+        if (formErrorsEl && errorListEl && errorMsg !== 'Terjadi kesalahan saat menyimpan profil.') {
+             errorListEl.innerHTML = `<li>${errorMsg}</li>`;
+             formErrorsEl.classList.remove('hidden');
+        }
+      })
+      .finally(() => {
+        // Kembalikan state tombol submit
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+
+  // Fungsi untuk menampilkan error validasi di form
+  function displayFormErrors(errors) {
+    // Reset error field sebelumnya
+    document.querySelectorAll('.field-error').forEach(el => {
+      el.classList.add('hidden');
+      el.textContent = '';
+    });
+    
+    let hasFieldErrors = false;
+    for (const [field, messages] of Object.entries(errors)) {
+       // Target elemen error di bawah field (misal: <div class="field-error text-red-500 text-sm mt-1 hidden" id="error_id_age"></div>)
+       const errorElement = document.getElementById(`error_id_${field}`);
+       if (errorElement) {
+         errorElement.textContent = messages.join(', ');
+         errorElement.classList.remove('hidden');
+         hasFieldErrors = true;
+       }
+       // Highlight field input jika perlu (tambahkan border merah)
+       const fieldInput = document.getElementById('id_' + field);
+       if (fieldInput) {
+           fieldInput.classList.add('border-red-500'); // Contoh
+           // Hapus highlight saat user mulai mengetik lagi
+           fieldInput.addEventListener('input', () => {
+                fieldInput.classList.remove('border-red-500');
+                if (errorElement) errorElement.classList.add('hidden');
+           }, { once: true });
+       }
+    }
+
+    // Tampilkan error non-field (jika ada dan elemennya tersedia)
+    const formErrorsEl = document.getElementById('formErrors'); 
+    const errorListEl = document.getElementById('errorList');
+    if (errors.__all__ && formErrorsEl && errorListEl) {
+        errorListEl.innerHTML = errors.__all__.map(msg => `<li>${msg}</li>`).join('');
+        formErrorsEl.classList.remove('hidden');
+    } else if (formErrorsEl && !hasFieldErrors) { // Sembunyikan jika tidak ada error field & non-field
+         formErrorsEl.classList.add('hidden');
+    }
+  }
+  
+  // Fungsi untuk update teks tombol Kelola/Update
+  function updateManageButtonText(hasProfile) {
+    const buttonText = document.getElementById('manageButtonText');
+    if (buttonText) {
+      buttonText.textContent = hasProfile ? 'Update Profil' : 'Lengkapi Profil';
+    }
+  }
+
+  // Fungsi untuk update UI profil setelah save/delete
+  function updateProfileUI(profile) {
+    // Update Foto Profil
+    const profilePicContainer = document.getElementById('profilePictureContainer');
+    if (profilePicContainer) {
+        if (profile.profile_picture) {
+          profilePicContainer.innerHTML =
+            `<img src="${profile.profile_picture}?t=${new Date().getTime()}" alt="Foto Profil" id="headerProfilePic" class="w-32 h-32 sm:w-36 sm:h-36 rounded-full object-cover border-4 border-yellow-400 shadow-xl transition-transform duration-300 hover:scale-105">`; // Tambah cache buster
+        } else {
+            profilePicContainer.innerHTML =
+            `<div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white bg-opacity-10 mx-auto flex items-center justify-center border-4 border-yellow-400 shadow-xl"><span class="text-5xl text-white opacity-80"><i class="fa-solid fa-user"></i></span></div>`;
+        }
+    }
+  
+    // Update Badge Verifikasi
+    const verifiedBadge = document.getElementById('verifiedBadge');
+    if (verifiedBadge) {
+        verifiedBadge.classList.toggle('hidden', !profile.is_verified);
+    }
+  
+    // Update atau Buat Tampilan Detail
+    const profileContent = document.getElementById('profileContent');
+    const existingDataView = document.getElementById('profileDataView');
+    const noProfileView = document.getElementById('noProfileView');
+
+    if (existingDataView) { // Jika sudah ada, update isinya
+        if (noProfileView) noProfileView.remove(); // Hapus pesan 'belum lengkap' jika ada
+        
+        document.getElementById('displayAge').textContent = `${profile.age || '-'} tahun`;
+        document.getElementById('displayRate').textContent = `Rp ${new Intl.NumberFormat('id-ID').format(profile.rate_per_hour)}`;
+        document.getElementById('displaySport').textContent = profile.main_sport_trained || '-'; // Tambah fallback
+        document.getElementById('displayExperience').textContent = profile.experience_desc || '-';
+      
+        const areasContainer = document.getElementById('displayAreas');
+        if (areasContainer) {
+            const areasHTML = profile.service_areas && profile.service_areas.length > 0
+              ? profile.service_areas.map(area => `<span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium border border-teal-200 shadow-sm">${area}</span>`).join('')
+              : '<span class="text-gray-500 italic text-sm">Belum ada area layanan</span>';
+            areasContainer.innerHTML = areasHTML;
+        }
+        updateManageButtonText(true); // Pastikan teks tombol jadi 'Update'
+    
+    } else { // Jika belum ada (pertama kali isi), buat elemennya
+      if (noProfileView) noProfileView.remove();
+      
+      const areasHTML = profile.service_areas && profile.service_areas.length > 0
+          ? profile.service_areas.map(area => `<span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium border border-teal-200 shadow-sm">${area}</span>`).join('')
+          : '<span class="text-gray-500 italic text-sm">Belum ada area layanan</span>';
+      
+      // Buat HTML untuk profileDataView (lebih aman dari XSS jika data dari server)
+      const dataViewHTML = `
+        <div id="profileDataView">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+            <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Email</div><div class="text-teal-900 font-semibold break-all">${profile.email || '-'}</div></div>
+            <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Nomor Telepon</div><div class="text-teal-900 font-semibold">${profile.phone_number || '-'}</div></div>
+            <div class="bg-yellow-50 p-5 rounded-xl border-l-4 border-yellow-500 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Umur</div><div class="text-teal-900 font-semibold text-lg" id="displayAge">${profile.age || '-'} tahun</div></div>
+            <div class="bg-yellow-50 p-5 rounded-xl border-l-4 border-yellow-500 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-1 tracking-wider">Rate Per Jam</div><div class="text-yellow-700 font-bold text-2xl" id="displayRate">Rp ${new Intl.NumberFormat('id-ID').format(profile.rate_per_hour)}</div></div>
+          </div>
+          <div class="mb-8">
+            <h3 class="text-xl sm:text-2xl text-teal-800 font-bold mb-5 pb-2 border-b-2 border-gray-100 flex items-center gap-2"><i class="fa-solid fa-clipboard-list text-teal-700"></i> Detail Pelatihan</h3>
+            <div class="space-y-5">
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-2 flex items-center gap-2 tracking-wider"><i class="fa-solid fa-trophy text-lg text-yellow-600"></i> Olahraga Utama</div><div class="text-teal-900 font-semibold text-lg" id="displaySport">${profile.main_sport_trained || '-'}</div></div>
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-2 flex items-center gap-2 tracking-wider"><i class="fa-solid fa-briefcase text-lg text-gray-600"></i> Pengalaman</div><div class="text-gray-700 leading-relaxed text-base prose prose-sm max-w-none" id="displayExperience">${profile.experience_desc || '-'}</div></div>
+              <div class="bg-gray-50 p-5 rounded-xl border-l-4 border-teal-600 shadow-sm"><div class="text-xs text-gray-500 font-medium uppercase mb-3 flex items-center gap-2 tracking-wider"><i class="fa-solid fa-map-location-dot text-lg text-blue-600"></i> Area Layanan</div><div class="flex flex-wrap gap-2" id="displayAreas">${areasHTML}</div></div>
+            </div>
+          </div>
+        </div>`;
+      
+      profileContent.innerHTML = dataViewHTML; // Masukkan HTML baru
+      updateManageButtonText(true); // Teks tombol jadi 'Update'
+
+      // Tampilkan tombol Hapus dan sesuaikan grid tombol aksi
+      const deleteBtn = document.getElementById('deleteBtn');
+      if (deleteBtn) deleteBtn.classList.remove('hidden');
+      const actionButtons = document.getElementById('actionButtons');
+      if (actionButtons) {
+         actionButtons.classList.remove('grid-cols-1', 'sm:grid-cols-1'); // Hapus class lama
+         actionButtons.classList.add('sm:grid-cols-2'); // Tambah class baru
+      }
+    }
+  }
+
+  // --- Fungsi Modal Hapus ---
+  function showDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // Reset state checkbox dan tombol konfirmasi
+    const checkbox = document.getElementById('confirmCheckbox');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    if(checkbox) checkbox.checked = false;
+    if(deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+  }
+
+  function hideDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  function confirmDelete() {
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    if (deleteBtn.disabled) return;
+   
+    // State Loading
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<svg class="animate-spin inline-block w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">...</svg> Menghapus...'; // Ganti ikon spinner jika perlu
+    deleteBtn.classList.add('opacity-75');
+    deleteBtn.style.cursor = 'not-allowed';
+
+    const csrftoken = getCookie('csrftoken');
+   
+    fetch("{% url 'delete_coach_profile_ajax' %}", {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest', // Penting
+        'Content-Type': 'application/json', // Jika Anda mengirim data, tapi ini kosong
+      }
+      // body tidak diperlukan karena ID coach diambil dari user session di backend
+    })
+    .then(response => {
+        if (!response.ok) { return response.json().then(err => { throw err; }); }
+        return response.json();
+     })
+    .then(data => {
+      if (data.success) {
+        hideDeleteModal();
+        showToast('Berhasil!', data.message || 'Profil berhasil dihapus.', 'success'); // Notif sukses (bukan error)
+        // Update UI untuk menunjukkan profil sudah tidak ada
+        updateUIAfterDelete(); 
+      } else {
+        throw new Error(data.message || 'Gagal menghapus profil.'); // Lemparkan error jika success=false
+      }
+    })
+    .catch(error => { // Tangkap error network atau error dari server
+      console.error("Delete Error:", error);
+      showToast('Error!', error.message || 'Terjadi kesalahan saat menghapus.', 'error');
+    })
+    .finally(() => {
+        // Kembalikan state tombol Hapus (jika diperlukan, misal jika error)
+        // Biasanya setelah sukses, UI berubah jadi tidak perlu reset tombol
+        // Jika ingin reset:
+         const checkbox = document.getElementById('confirmCheckbox');
+         if(checkbox) checkbox.checked = false; // Uncheck
+         deleteBtn.disabled = true; // Tetap disabled karena checkbox unchecked
+         deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Ya, Hapus';
+         deleteBtn.classList.remove('opacity-75');
+         deleteBtn.classList.add('opacity-50'); // Kembali ke state disabled
+         deleteBtn.style.cursor = 'not-allowed';
+    });
+  }
+
+  // Fungsi untuk update UI setelah profil dihapus
+  function updateUIAfterDelete() {
+    // Kosongkan foto profil
+    const profilePicContainer = document.getElementById('profilePictureContainer');
+    if (profilePicContainer) {
+        profilePicContainer.innerHTML =
+          '<div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white bg-opacity-10 mx-auto flex items-center justify-center border-4 border-yellow-400 shadow-xl"><span class="text-5xl text-white opacity-80"><i class="fa-solid fa-user"></i></span></div>';
+    }
+  
+    // Sembunyikan badge verifikasi
+    const verifiedBadge = document.getElementById('verifiedBadge');
+    if(verifiedBadge) verifiedBadge.classList.add('hidden');
+  
+    // Tampilkan pesan "Profil Belum Lengkap"
+    const profileContent = document.getElementById('profileContent');
+    if (profileContent) {
+        profileContent.innerHTML =
+          '<div id="noProfileView" class="text-center p-10 bg-gray-100 rounded-xl mb-8 border border-dashed border-gray-300">' +
+            '<div class="text-5xl mb-4 text-teal-600"><i class="fa-solid fa-clipboard-question"></i></div>' +
+            '<h3 class="text-teal-800 text-xl font-bold mb-2">Profil Belum Lengkap</h3>' +
+            '<p class="text-gray-600 text-base">Anda belum menambahkan detail profil pelatih. Lengkapi profil untuk mulai menerima klien.</p>' +
+          '</div>';
+    }
+  
+    // Ubah teks tombol utama
+    updateManageButtonText(false);
+  
+    // Sembunyikan tombol Hapus dan sesuaikan grid tombol aksi
+    const deleteBtn = document.getElementById('deleteBtn');
+    if(deleteBtn) deleteBtn.classList.add('hidden');
+    const actionButtons = document.getElementById('actionButtons');
+    if (actionButtons) {
+       actionButtons.classList.remove('sm:grid-cols-2');
+       actionButtons.classList.add('grid-cols-1'); // Kembali ke 1 kolom
+    }
+  }
+
+  // --- Event Listeners ---
+  document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox konfirmasi hapus
+    const checkbox = document.getElementById('confirmCheckbox');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    if (checkbox && deleteBtn) {
+      checkbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        deleteBtn.disabled = !isChecked;
+        deleteBtn.classList.toggle('opacity-50', !isChecked);
+        deleteBtn.classList.toggle('cursor-not-allowed', !isChecked);
+         deleteBtn.classList.toggle('hover:bg-red-700', isChecked); // Aktifkan hover hanya jika checked
+      });
+    }
+
+    // Set teks tombol awal berdasarkan data profil
+    const hasProfile = {% if coach_profile %}true{% else %}false{% endif %};
+    updateManageButtonText(hasProfile);
+
+    // Klik di luar modal untuk menutup
+    const manageModal = document.getElementById('manageModal');
+    if(manageModal) {
+      manageModal.addEventListener('click', function(e) {
+        // Tutup hanya jika klik pada backdrop (elemen modal itu sendiri)
+        if (e.target === manageModal) {
+          hideManageModal();
+        }
+      });
+    }
+
+    const deleteModal = document.getElementById('deleteModal');
+    if(deleteModal) {
+      deleteModal.addEventListener('click', function(e) {
+        if (e.target === deleteModal) {
+          hideDeleteModal();
+        }
+      });
+    }
+  });
+
+  (function(){
+  function ensureToastEl(){
+    let t = document.getElementById('page-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'page-toast';
+      t.setAttribute('role','status');
+      t.setAttribute('aria-live','polite');
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+
+  window.showToast = function(titleOrMessage, message, type='success'){
+    const t = ensureToastEl();
+
+    const text = (message === undefined || message === null)
+      ? (titleOrMessage || '')
+      : ((titleOrMessage ? titleOrMessage + ' — ' : '') + (message || ''));
+
+    t.textContent = text;
+
+    t.style.background = (type === 'error')
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#059669,#0d9488)';
+
+    requestAnimationFrame(()=> t.classList.add('show'));
+    clearTimeout(t._to);
+    t._to = setTimeout(()=> t.classList.remove('show'), 3200);
+  };
+
+  (function(){
+    const raw = localStorage.getItem('toastData');
+    if (!raw) return;
+    try{
+      const obj = JSON.parse(raw);
+      const tooOld = Date.now() - (obj.ts || 0) > 120000;
+      if (obj && obj.trigger === 'after_login_success' && !tooOld){
+        showToast('Login berhasil! Selamat datang 👋');
+        localStorage.removeItem('toastData');
+      } else if (tooOld){
+        localStorage.removeItem('toastData');
+      }
+    }catch(e){
+      localStorage.removeItem('toastData');
+    }
+  })();
+})();
+
+</script>
+{% endblock extra_js %}

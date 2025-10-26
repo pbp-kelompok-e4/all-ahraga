@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+  /* ------ Toast container ------ */
+  #toast-root{
+    position:fixed; inset:1rem 1rem auto auto; z-index:9999;
+    display:flex; flex-direction:column; gap:.75rem; pointer-events:none;
+  }
+
+  .toast{
+    pointer-events:auto;
+    max-width:min(92vw, 380px);
+    border-radius:1rem;
+    padding:1rem 1.1rem 0.9rem 1.1rem;
+    background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+    border:1px solid rgba(16,185,129,.18);
+    box-shadow:0 10px 25px rgba(16,185,129,.15), 0 2px 6px rgba(0,0,0,.06);
+    backdrop-filter:blur(8px);
+    transform:translateY(.6rem) scale(.98);
+    opacity:0; transition:transform .28s ease, opacity .28s ease;
+    position:relative; overflow:hidden;
+  }
+  .toast::before{
+    content:""; position:absolute; inset:0 auto 0 0; width:6px;
+    background:linear-gradient(180deg,#34d399,#10b981);
+    opacity:.9;
+  }
+  .toast-enter{ transform:translateY(0) scale(1); opacity:1; }
+  .toast-progress{height:.35rem;border-radius:.35rem;overflow:hidden;background:#eef2f7;margin-top:.6rem}
+  .toast-progress>div{height:100%;transform-origin:left;animation:grow 3.6s linear forwards}
+  .toast[data-variant="success"]{border-color:rgba(16,185,129,.28);}
+  .toast[data-variant="success"] .toast-progress>div{background:#10b981;}
+  .toast[data-variant="error"]{border-color:rgba(239,68,68,.28);}
+  .toast[data-variant="error"] .toast-progress>div{background:#ef4444;}
+  .toast[data-variant="warning"]{border-color:rgba(245,158,11,.28);}
+  .toast[data-variant="warning"] .toast-progress>div{background:#f59e0b;}
+  .toast[data-variant="info"]{border-color:rgba(59,130,246,.28);}
+  .toast[data-variant="info"] .toast-progress>div{background:#3b82f6;}
+  .toast-title{font-weight:700;font-size:.95rem;color:#064e3b;}
+  .toast-msg{margin-top:.15rem;font-size:.9rem;color:#1f2937;}
+  .toast-close{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:.65rem;transition:.15s;color:#065f46;background:transparent;}
+  .toast-close:hover{background:rgba(16,185,129,.1);color:#065f46;}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+</style>
+
+<script>
+(function(){
+  const ICONS = {
+    success:`<svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.172 7.707 8.879a1 1 0 10-1.414 1.414L9 13l4.707-4.707z" clip-rule="evenodd"/></svg>`,
+    error:`<svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 6h2v6H9v-6zm0 8h2v2H9v-2z" clip-rule="evenodd"/></svg>`,
+    warning:`<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2V9h2v5z"/></svg>`,
+    info:`<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1010 10A10.011 10.011 0 0012 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>`
+  };
+  const TITLES = { success:'Berhasil', error:'Gagal', warning:'Perhatian', info:'Info' };
+
+  function ensureRoot(cb){
+    function make(){
+      let root = document.getElementById('toast-root');
+      if(!root){
+        root = document.createElement('div');
+        root.id = 'toast-root';
+        document.body.appendChild(root);
+      }
+      cb(root);
+    }
+    if(document.body) make();
+    else document.addEventListener('DOMContentLoaded', make, { once:true });
+  }
+
+  window.toast = function(message, variant='success', title){
+    ensureRoot((root)=>{
+      const node = document.createElement('div');
+      node.className = 'toast';
+      node.setAttribute('data-variant', variant);
+      node.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 text-emerald-600">${ICONS[variant] || ICONS.success}</div>
+          <div class="flex-1 min-w-0">
+            <p class="toast-title">${title || TITLES[variant] || TITLES.success}</p>
+            <p class="toast-msg">${message}</p>
+          </div>
+          <button class="toast-close" aria-label="Tutup">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="toast-progress"><div></div></div>
+      `;
+
+      const DURATION = 3600;
+      node.querySelector('.toast-progress > div').style.animationDuration = DURATION + 'ms';
+
+      root.appendChild(node);
+      requestAnimationFrame(()=> node.classList.add('toast-enter'));
+
+      const close = ()=>{ node.classList.remove('toast-enter'); setTimeout(()=>node.remove(), 220); };
+      node.querySelector('.toast-close').addEventListener('click', close);
+      setTimeout(close, DURATION);
+    });
+  };
+
+  (function(){
+    const KEY='__flash_toast__';
+    const raw = sessionStorage.getItem(KEY);
+    if(!raw) return;
+    sessionStorage.removeItem(KEY);
+    try{
+      const {msg, variant='success', title=null, until=null} = JSON.parse(raw) || {};
+      if(until && Date.now() > until) return;
+      window.toast(msg, variant, title);
+    }catch(e){}
+  })();
+
+})();
+</script>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto">
+
+    <!-- Header -->
+    <div class="relative overflow-hidden bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-700 rounded-2xl shadow-xl mb-8">
+      <div class="absolute inset-0 bg-black/10 pointer-events-none"></div>
+      <div class="relative p-8 z-10">
+        <div class="flex items-center gap-4">
+          <div class="flex-shrink-0 p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-grow">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white mb-1">{{ title }}</h1>
+            <p class="text-teal-50">
+              {% if target_name %}<span class="font-semibold">{{ target_name }}</span>{% endif %}
+              {% if target %}<span class="opacity-80"> ({{ target|title }})</span>{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if booking %}
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-100">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Booking</p>
+          <p class="text-gray-900 font-semibold">#{{ booking.id }}</p>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tanggal & Waktu</p>
+          <p class="text-gray-900 font-medium">
+            {{ booking.venue_schedule.date|date:"l, d F Y" }} •
+            {{ booking.venue_schedule.start_time|time:"H:i" }}–{{ booking.venue_schedule.end_time|time:"H:i" }}
+          </p>
+        </div>
+        {% if booking.venue_schedule and booking.venue_schedule.venue %}
+        <div>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Venue</p>
+          <p class="text-gray-900 font-semibold">{{ booking.venue_schedule.venue.name }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Form Review -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 relative z-10">
+      <form id="reviewForm" method="post" class="space-y-6" data-mode="{% if existing %}edit{% else %}add{% endif %}">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Rating</label>
+          <div class="flex items-center gap-2" id="starGroup">
+            {% for val in "12345" %}
+              <input class="sr-only star-input" type="radio" name="rating" id="star-{{ val }}" value="{{ val }}"
+                     {% if form.instance.rating|stringformat:"s" == val or form.data.rating == val %}checked{% endif %}>
+              <label for="star-{{ val }}" class="star-label text-3xl cursor-pointer select-none">★</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label for="id_comment" class="block text-sm font-semibold text-gray-700 mb-2">Komentar</label>
+          <textarea id="id_comment" name="comment" rows="4"
+            class="w-full rounded-xl border-2 border-gray-200 p-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+            placeholder="Ceritakan pengalamanmu...">{{ form.instance.comment }}{{ form.data.comment }}</textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <a href="{% url 'booking_history' %}" class="px-4 py-2 rounded-xl border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition">Batal</a>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow-sm transition">Simpan</button>
+        </div>
+      </form>
+    </div>
+
+    {% if existing and existing_id %}
+    <div class="bg-white rounded-2xl shadow p-4 border border-gray-100 mt-4 relative z-20">
+      <form id="deleteReviewForm" method="post" action="{% url 'delete_review' existing_id %}">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 rounded-xl border-2 border-red-600 text-red-700 hover:bg-red-50 transition">
+          Hapus Feedback
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Interaksi bintang + AJAX -->
+<script>
+/* helper: simpan flash toast & redirect */
+function flashAndGo(url, msg, variant='success', title){
+  try{
+    sessionStorage.setItem('__flash_toast__', JSON.stringify({
+      msg, variant, title: title || null, until: Date.now() + 8000
+    }));
+  }catch(e){}
+  window.location.href = url;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const labels = [...document.querySelectorAll("#starGroup .star-label")];
+  const inputs = [...document.querySelectorAll("#starGroup .star-input")];
+  const paint = (v) => labels.forEach((el, i) => el.classList.toggle("active", i < v));
+  const idx = inputs.findIndex((r) => r.checked);
+  paint(idx >= 0 ? idx + 1 : 0);
+  labels.forEach((lab, i) => {
+    lab.addEventListener("mouseenter", () => paint(i + 1));
+    lab.addEventListener("mouseleave", () => {
+      const ci = inputs.findIndex((r) => r.checked);
+      paint(ci >= 0 ? ci + 1 : 0);
+    });
+    lab.addEventListener("click", () => {
+      inputs[i].checked = true;
+      paint(i + 1);
+    });
+  });
+
+  const reviewForm  = document.getElementById("reviewForm");
+  const deleteForm  = document.getElementById("deleteReviewForm");
+  const csrf        = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+  const redirectURL = "{% url 'booking_history' %}";
+
+  // ADD/EDIT via AJAX
+  if (reviewForm) {
+    reviewForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(reviewForm);
+      try {
+        const res  = await fetch(window.location.href, {
+          method: "POST",
+          body: fd,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        const data = await res.json().catch(() => null);
+        const mode = reviewForm.dataset.mode;
+        const okMsg = data?.message || (mode === "edit" ? "Perubahan disimpan." : "Feedback tersimpan.");
+
+        if (data?.success) {
+          if (typeof window.toast === 'function') window.toast(okMsg, "success");
+          flashAndGo(redirectURL, okMsg, 'success');
+        } else {
+          const errMsg = data?.message || "Gagal menyimpan feedback.";
+          if (typeof window.toast === 'function') window.toast(errMsg, "error"); else alert(errMsg);
+        }
+      } catch (err) {
+        console.error(err);
+        if (typeof window.toast === 'function') window.toast("Terjadi kesalahan koneksi.", "error"); else alert("Terjadi kesalahan koneksi.");
+      }
+    });
+  }
+
+  // DELETE via AJAX
+  if (deleteForm) {
+    deleteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!confirm("Hapus feedback ini?")) return;
+      try {
+        const res  = await fetch(deleteForm.action, {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": csrf },
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.success) {
+          const okMsg = data.message || "Feedback dihapus.";
+          if (typeof window.toast === 'function') window.toast(okMsg, "success");
+          flashAndGo(redirectURL, okMsg, 'success');
+        } else {
+          const errMsg = data?.message || "Gagal menghapus feedback.";
+          if (typeof window.toast === 'function') window.toast(errMsg, "error"); else alert(errMsg);
+        }
+      } catch (err) {
+        console.error(err);
+        if (typeof window.toast === 'function') window.toast("Terjadi kesalahan koneksi.", "error"); else alert("Terjadi kesalahan koneksi.");
+      }
+    });
+  }
+});
+</script>
+
+<style>
+  .star-label { color:#d1d5db; transition:transform .1s ease, color .2s ease; }
+  .star-label.active { color:#fbbf24; }
+  .star-label:hover { transform:scale(1.1); color:#f59e0b; }
+</style>
+{% endblock %}

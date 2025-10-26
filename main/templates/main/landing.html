@@ -1,0 +1,620 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Selamat Datang di All-Ahraga{% endblock title %}
+
+{% block extra_head %}
+<style>
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pulseOutline {
+        0% { outline-offset: 0px; }
+        50% { outline-offset: 5px; }
+        100% { outline-offset: 0px; }
+    }
+    
+    .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+    .animate-slide-in-left { animation: slideInLeft 0.8s ease-out forwards; opacity: 0; }
+    .animate-slide-in-right { animation: slideInRight 0.8s ease-out forwards; opacity: 0; }
+    .animate-scale-in { animation: scaleIn 0.6s ease-out forwards; opacity: 0; }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .animate-pulse-outline { animation: pulseOutline 2s ease-in-out infinite; } 
+    
+    .delay-100 { animation-delay: 0.1s; } .delay-200 { animation-delay: 0.2s; } .delay-400 { animation-delay: 0.4s; }
+    .delay-600 { animation-delay: 0.6s; } .delay-800 { animation-delay: 0.8s; } .delay-1000 { animation-delay: 1s; }
+    
+    .brutal-card {
+        border: 3px solid #1f2937;
+        border-radius: 0 !important; 
+        box-shadow: 8px 8px 0px 0px #14b8a6;
+        transition: all 0.2s ease;
+    }
+
+    .brutal-card:hover {
+        transform: translate(-4px, -4px); 
+        box-shadow: 12px 12px 0px 0px #14b8a6;
+    }
+    
+    .brutal-icon-circle {
+        border: 3px solid #1f2937;
+        border-radius: 0;
+        box-shadow: 4px 4px 0px 0px #1f2937;
+        transition: all 0.2s ease;
+    }
+    
+    .brutal-card:hover .brutal-icon-circle {
+        transform: translate(4px, 4px);
+        box-shadow: 2px 2px 0px 0px #1f2937;
+    }
+    
+    .brutal-step-number {
+        border: 3px solid #1f2937;
+        border-radius: 0;
+        box-shadow: 6px 6px 0px 0px #1f2937;
+        background: #14b8a6;
+        transition: all 0.2s ease;
+    }
+    .brutal-step-number:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 8px 8px 0px 0px #1f2937;
+    }
+
+    .brutal-highlight-text {
+        background-color: #14b8a6; 
+        color: white;
+        padding: 0 4px;
+        box-decoration-break: clone;
+        display: inline-block;
+    }
+
+    .brutal-stat-card {
+        border-left: 3px solid #1f2937;
+        padding-left: 1rem;
+    }
+    
+    .brutal-quote-marker {
+        color: #14b8a6; 
+        font-size: 3rem;
+        font-weight: 900;
+        line-height: 0.8;
+    }
+
+    .brutal-graphic-card {
+        position: relative;
+        background-color: #f3f4f6;
+        border: 4px solid #1f2937;
+        box-shadow: 12px 12px 0px 0px #14b8a6; 
+        overflow: hidden; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brutal-graphic-element {
+        position: absolute; 
+        border: 2px solid #1f2937;
+        background-color: #d1d5db;
+        box-shadow: 4px 4px 0px 0px #1f2937;
+    }
+    
+    .brutal-sport-icon {
+        border: 3px solid #1f2937;
+        border-radius: 0; 
+        box-shadow: 6px 6px 0px 0px #1f2937;
+        transition: all 0.2s ease;
+        padding: 0.5rem; 
+    }
+    .brutal-sport-icon.teal {
+        background-color: #14b8a6;
+        color: white;
+    }
+    .brutal-sport-icon:hover {
+        transform: translate(-3px, -3px); 
+        box-shadow: 8px 8px 0px 0px #1f2937;
+    }
+
+    .brutal-info-box {
+        position: absolute;
+        top: -8%; 
+        right: 0%; 
+        transform: translateX(200%); 
+        background-color: #1f2937; 
+        color: white;
+        padding: 0.75rem 1rem;
+        border: 3px solid #14b8a6; 
+        box-shadow: 6px 6px 0px 0px #14b8a6;
+        font-family: 'Space Mono', monospace; 
+        font-size: 0.875rem; 
+        text-transform: uppercase;
+        animation: float 4s ease-in-out infinite, pulseOutline 2s linear infinite; 
+        outline: 2px solid transparent; 
+        outline-offset: 0px;
+    }
+
+    .brutal-tagline-floating {
+        position: absolute;
+        top: -5%; 
+        left: 0;
+        transform: translateX(-40%); 
+        z-index: 10;
+        animation: float 3s ease-in-out infinite; 
+        outline: 2px solid transparent; 
+        outline-offset: 0px;
+    }
+
+    .brutal-btn-approach {
+        transition: transform 0.2s ease-out, box-shadow 0.2s ease, background-color 0s; 
+    }
+    
+    .brutal-btn-approach.teal-shadow-on-hover:hover {
+        transform: translate(4px, 4px); 
+        box-shadow: 4px 4px 0px 0px #14b8a6 !important; 
+        background-color: #14b8a6 !important; 
+    }
+
+    .brutal-btn-approach:hover:not(.teal-shadow-on-hover) {
+        transform: translate(4px, 4px); 
+        box-shadow: 4px 4px 0px 0px #1f2937 !important; 
+    }
+
+    .brutal-btn-smooth-approach {
+        transition: transform 0.18s ease-out, box-shadow 0.18s ease, background-color 0s !important;
+    }
+    .brutal-btn-smooth-approach:hover {
+        transform: translate(4px, 4px); 
+        box-shadow: 4px 4px 0px 0px #1f2937 !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .brutal-card {
+            box-shadow: 6px 6px 0px 0px #14b8a6;
+        }
+        
+        .brutal-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px 0px #14b8a6;
+        }
+        
+        .brutal-info-box {
+            transform: translateX(150%);
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .brutal-tagline-floating {
+            transform: translateX(-20%);
+        }
+    }
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<!-- Hero Section -->
+<div id="home" class="hero-minimal -mx-4 sm:-mx-6 lg:-mx-8 -mb-2 bg-gray-50 -mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24">
+        <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-start relative">
+            
+            <div class="space-y-6 sm:space-y-8 animate-slide-in-left">
+                
+                <div class="inline-flex items-center gap-2 text-xs sm:text-sm font-mono font-bold uppercase text-gray-700 border-2 border-gray-900 px-3 py-1 bg-white brutal-card brutal-tagline-floating" style="box-shadow: 4px 4px 0px 0px #1f2937;">
+                    <span class="text-teal-600">•</span>
+                    Platform Olahraga Terpadu
+                </div>
+                
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 leading-tight tracking-tighter mt-12 sm:mt-16 pt-4">
+                    <span class="block">BOOK VENUES.</span>
+                    <span class="block">HIRE COACHES.</span>
+                    <span class="brutal-highlight-text">PLAY SPORTS.</span>
+                </h1>
+                
+                <p class="text-base sm:text-lg md:text-xl font-mono text-gray-700 leading-relaxed max-w-lg">
+                    Satu platform untuk semua kebutuhan olahraga Anda. Sederhana, cepat, dan efisien. [v.2025]
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    <a href="{% url 'register' %}" class="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-teal-600 text-white font-extrabold text-base sm:text-lg rounded-none border-4 border-gray-900 brutal-card brutal-btn-approach teal-shadow-on-hover">
+                        MULAI GRATIS
+                        <i class="fas fa-arrow-right text-sm"></i>
+                    </a>
+                    
+                    <a href="{% url 'login' %}" class="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 font-extrabold text-base sm:text-lg rounded-none border-4 border-gray-900 hover:bg-gray-200 brutal-card brutal-btn-approach" style="box-shadow: 8px 8px 0px 0px #1f2937;">
+                        MASUK
+                    </a>
+                </div>
+            </div>
+            
+            <div class="relative flex flex-col items-center justify-start animate-slide-in-right">
+                
+                <div class="brutal-graphic-card w-full h-full min-h-[300px] sm:min-h-[350px] p-4 sm:p-6 md:p-8 overflow-visible">
+                    
+                    <div class="brutal-graphic-element w-full h-full bg-gray-300 transform -rotate-3 absolute" style="box-shadow: 10px 10px 0px 0px #1f2937; z-index: 1;">
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black opacity-10">
+                            ALL-AHRAGA
+                        </div>
+                    </div>
+
+                    <div class="relative grid grid-cols-2 gap-3 sm:gap-4 w-full h-full p-2 md:p-4 z-20">
+                        
+                        <div class="brutal-sport-icon teal flex flex-col items-center justify-center space-y-2 transform rotate-2 hover:rotate-0 hover:scale-105 transition-transform">
+                            <i class="fas fa-futbol text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">FUTSAL</span>
+                        </div>
+                        
+                        <div class="brutal-sport-icon bg-gray-700 text-white flex flex-col items-center justify-center space-y-2 transform -rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
+                            <i class="fas fa-basketball-ball text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">BASKET</span>
+                        </div>
+                        
+                        <div class="brutal-sport-icon bg-gray-700 text-white flex flex-col items-center justify-center space-y-2 transform -rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
+                            <i class="fas fa-table-tennis text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">PADEL</span>
+                        </div>
+                        
+                        <div class="brutal-sport-icon teal flex flex-col items-center justify-center space-y-2 transform rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
+                            <i class="fas fa-futbol text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">MINI SOCCER</span>
+                        </div>
+
+                    </div>
+                    
+                    <div class="brutal-info-box z-30 hidden sm:block">
+                        <p class="font-bold">TOTAL SPORTS: <span class="text-teal-400">12+</span></p>
+                        <p class="mt-1">VENUE RATING: <span class="text-teal-400">4.8/5</span></p>
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t-4 border-gray-900 mt-6 sm:mt-8 w-full bg-gray-50 p-3 sm:p-4 brutal-card" style="box-shadow: 8px 8px 0px 0px #1f2937;">
+                    <div class="brutal-stat-card">
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">500+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Venues</div>
+                    </div>
+                    <div class="brutal-stat-card">
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">200+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Coaches</div>
+                    </div>
+                    <div class="brutal-stat-card">
+                        <div class="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">10K+</div>
+                        <div class="text-xs sm:text-sm font-mono text-gray-700 mt-1 uppercase">Users</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div id="features" class="py-12 sm:py-16 md:py-20 mb-12 sm:mb-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12 sm:mb-16 border-b-4 border-gray-900 pb-4 animate-fade-in-up">
+            <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 tracking-tighter mb-4">
+                KENAPA ALL-AHRAGA?
+            </h2>
+            <p class="text-lg font-mono text-gray-700 max-w-2xl mx-auto">
+                SOLUSI LENGKAP DALAM SATU PLATFORM. <span class="text-red-500 font-bold"></span>
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="brutal-card bg-gray-50 p-8 text-center animate-fade-in-up">
+                <div class="brutal-icon-circle flex items-center justify-center w-16 h-16 bg-teal-600 mx-auto mb-6">
+                    <i class="fas fa-map-marker-alt text-3xl text-white"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-3 tracking-tighter">VENUE TERLENGKAP</h3>
+                <p class="text-gray-700 font-mono text-sm leading-relaxed">
+                    Akses ke ratusan venue olahraga di seluruh Indonesia dengan sistem booking real-time
+                </p>
+            </div>
+            
+            <div class="brutal-card bg-gray-50 p-8 text-center animate-fade-in-up">
+                <div class="brutal-icon-circle flex items-center justify-center w-16 h-16 bg-blue-600 mx-auto mb-6">
+                    <i class="fas fa-user-tie text-3xl text-white"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-3 tracking-tighter">COACH BERSERTIFIKAT</h3>
+                <p class="text-gray-700 font-mono text-sm leading-relaxed">
+                    Pelatih profesional terverifikasi siap membantu meningkatkan performa olahraga Anda
+                </p>
+            </div>
+            
+            <div class="brutal-card bg-gray-50 p-8 text-center animate-fade-in-up">
+                <div class="brutal-icon-circle flex items-center justify-center w-16 h-16 bg-purple-600 mx-auto mb-6">
+                    <i class="fas fa-bolt text-3xl text-white"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-3 tracking-tighter">INSTANT BOOKING</h3>
+                <p class="text-gray-700 font-mono text-sm leading-relaxed">
+                    Pesan dalam hitungan detik dengan sistem pembayaran yang aman dan terintegrasi
+                </p>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<div id="how-it-works" class="py-24 bg-gray-900 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-t-4 border-b-4 border-gray-900">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16 animate-fade-in-up">
+            <h2 class="text-5xl font-black text-white tracking-tighter mb-4">
+                ALUR KERJA
+            </h2>
+            <p class="text-lg font-mono text-teal-400 max-w-2xl mx-auto">
+                MULAI PETUALANGAN OLAHRAGA ANDA. MUDAH. CEPAT.
+            </p>
+        </div>
+        
+        <div class="relative grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8">
+            <div class="absolute top-10 left-0 w-full hidden md:flex justify-around px-[10%]">
+                <i class="fas fa-arrow-right text-4xl text-teal-600 animate-slide-in-right delay-400"></i>
+                <i class="fas fa-arrow-right text-4xl text-teal-600 animate-slide-in-right delay-600"></i>
+            </div>
+
+            <div class="relative flex flex-col items-center text-center gap-6 animate-scale-in delay-200">
+                <div class="brutal-step-number w-24 h-24 text-white text-4xl font-black flex items-center justify-center z-10 hover:bg-teal-700 transition-colors">
+                    1
+                </div>
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-2xl font-black text-white">REGISTRASI AKUN</h3>
+                    <p class="text-gray-400 font-mono leading-relaxed">
+                        Buat akun Anda. Pilih peran: Customer, Venue Owner, atau Coach.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="relative flex flex-col items-center text-center gap-6 animate-scale-in delay-400">
+                <div class="brutal-step-number w-24 h-24 text-white text-4xl font-black flex items-center justify-center z-10 hover:bg-teal-700 transition-colors">
+                    2
+                </div>
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-2xl font-black text-white">SEARCH & SELECT</h3>
+                    <p class="text-gray-400 font-mono leading-relaxed">
+                        Temukan venue atau coach. Cek jadwal, harga, dan rating.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="relative flex flex-col items-center text-center gap-6 animate-scale-in delay-600">
+                <div class="brutal-step-number w-24 h-24 text-white text-4xl font-black flex items-center justify-center z-10 hover:bg-teal-700 transition-colors">
+                    3
+                </div>
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-2xl font-black text-white">PAY & PLAY!</h3>
+                    <p class="text-gray-400 font-mono leading-relaxed">
+                        Selesaikan pembayaran. Konfirmasi instan. Waktunya berolahraga!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="testimonials" class="pt-24 pb-12 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        
+        <div class="mb-16 border-b-4 border-gray-900 pb-4 animate-slide-in-left delay-100">
+            <p class="text-xl font-mono uppercase text-gray-500 mb-2">Testimonials</p>
+            <h2 class="text-5xl md:text-6xl font-black text-gray-900 tracking-tighter">
+                Apa Kata Mereka?
+            </h2>
+        </div>
+
+        <div class="grid lg:grid-cols-4 gap-8">
+            
+            <div class="brutal-card bg-gray-50 p-6 lg:p-8 animate-fade-in-up">
+                <div class="flex items-start mb-4">
+                    <span class="brutal-quote-marker mr-4">“</span>
+                    <div class="flex-grow">
+                        <div class="flex gap-1 text-yellow-500 text-sm">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-xl font-semibold text-gray-900 mb-6 leading-relaxed">
+                    Booking lapangan futsal jadi <span class="brutal-highlight-text">gampang banget</span>. Semua jadwal *real-time*. Platform ini benar-benar <span class="brutal-highlight-text">game-changer</span>!
+                </p>
+                
+                <div class="flex items-center gap-4 border-t-2 border-gray-900 pt-4 mt-auto">
+                    <div class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-gray-900">
+                        <i class="fas fa-user text-white text-md"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base">Budi Hartono</h3>
+                        <p class="text-gray-700 text-xs font-mono">Pemain Futsal, JK</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="lg:col-span-2 brutal-card bg-gray-50 p-6 lg:p-8 animate-fade-in-up delay-400">
+                <div class="flex items-start mb-4">
+                    <span class="brutal-quote-marker mr-4">“</span>
+                    <div class="flex-grow">
+                        <div class="flex gap-1 text-yellow-500 text-sm">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-2xl font-black text-gray-900 mb-6 leading-tight">
+                    Manajemen venue saya jadi <span class="brutal-highlight-text">jauh lebih efisien</span>. Jadwal terisi otomatis dan laporan keuangan rapi.
+                </p>
+                
+                <div class="flex items-center justify-between gap-4 border-t-2 border-gray-900 pt-4 mt-auto">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-gray-900">
+                            <i class="fas fa-store text-white text-md"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 text-base">Siti Aminah</h3>
+                            <p class="text-gray-700 text-xs font-mono">Pemilik Arena Sports</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">Venue Management</span>
+                </div>
+            </div>
+
+            <div class="brutal-card bg-gray-50 p-6 lg:p-8 animate-fade-in-up delay-600">
+                <div class="flex items-start mb-4">
+                    <span class="brutal-quote-marker mr-4">“</span>
+                    <div class="flex-grow">
+                        <div class="flex gap-1 text-yellow-500 text-sm">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-xl font-semibold text-gray-900 mb-6 leading-relaxed">
+                    Mendapatkan klien baru sekarang lebih mudah. Profil saya sebagai pelatih basket bisa <span class="brutal-highlight-text">dilihat banyak orang</span>.
+                </p>
+                
+                <div class="flex items-center gap-4 border-t-2 border-gray-900 pt-4 mt-auto">
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-gray-900">
+                        <i class="fas fa-user-tie text-white text-md"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base">David Lee</h3>
+                        <p class="text-gray-700 text-xs font-mono">Pelatih Basket Certified</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="brutal-card bg-gray-50 p-6 animate-fade-in-up delay-800">
+                <div class="flex items-start mb-4">
+                    <span class="brutal-quote-marker mr-4">“</span>
+                    <div class="flex-grow">
+                        <div class="flex gap-1 text-yellow-500 text-sm">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-lg font-semibold text-gray-900 mb-4">
+                    Sistem notifikasi booking sangat membantu mencegah *double-booking*.
+                </p>
+                
+                <div class="flex items-center gap-3 border-t-2 border-gray-900 pt-4 mt-auto">
+                    <div class="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center flex-shrink-0 border border-gray-900">
+                        <i class="fas fa-wrench text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-sm">Fahmi Reza</h3>
+                        <p class="text-gray-600 text-xs">Venue Manager</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 brutal-card bg-teal-600 p-8 flex flex-col md:flex-row items-center justify-between text-white animate-fade-in-up delay-1000">
+                <div class="md:w-3/4">
+                    <p class="text-3xl font-black tracking-tight leading-snug">
+                        <i class="fas fa-arrow-right mr-3"></i>
+                        Siap menjadi bagian dari panggung utama olahraga?
+                    </p>
+                </div>
+                <a href="{% url 'register' %}" class="btn-primary mt-6 md:mt-0 px-8 py-3 bg-teal-600 text-white font-extrabold rounded-none border-4 border-white transition-colors brutal-btn-smooth-approach" style="box-shadow: 8px 8px 0px 0px #1f2937;">
+                    Mulai Sekarang!
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (function markLogoutToast(){
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('logout')) {
+      localStorage.setItem('toastData', JSON.stringify({
+        message: "Anda telah keluar dari akun",
+        type: "success",
+        duration: 3500,
+        trigger: "after_logout",
+        ts: Date.now()
+      }));
+      url.searchParams.delete('logout');
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+    }
+  })();
+
+  (function ensureToast(){
+    if (window.showToast) return; 
+    const style = document.createElement('style');
+    style.textContent = `
+      #toast-root{
+        position:fixed; bottom: 1rem; right:1rem; 
+        z-index:9999; display:flex; flex-direction:column-reverse; gap:.6rem; pointer-events:none; 
+      }
+      .toast{
+        pointer-events:auto; min-width:280px; max-width:360px;
+        border-radius:.9rem; padding:.9rem 1rem; color:#fff;
+        background:linear-gradient(90deg,#059669,#0d9488);
+        box-shadow:0 14px 30px rgba(0,0,0,.25);
+        opacity:0; transform:translateY(10px); 
+        transition:opacity .25s ease, transform .25s ease;
+        font-weight:600;
+      }
+      .toast.show{ opacity:1; transform:translateY(0); }
+    `;
+    document.head.appendChild(style);
+
+    function root(){
+      let r = document.getElementById('toast-root');
+      if (!r) { r = document.createElement('div'); r.id='toast-root'; document.body.appendChild(r); }
+      return r;
+    }
+
+    window.showToast = function(message, type='success', duration=3200){
+      const r = root();
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = message;
+      if (type === 'error') el.style.background = 'linear-gradient(90deg,#b91c1c,#dc2626)';
+      r.appendChild(el);
+      requestAnimationFrame(()=> el.classList.add('show'));
+      const t = setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 260); }, duration);
+      el.addEventListener('click', ()=>{ clearTimeout(t); el.classList.remove('show'); setTimeout(()=>el.remove(), 260); });
+    };
+  })();
+
+  (function consumeStoredToast(){
+    const raw = localStorage.getItem('toastData');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const fresh = (Date.now() - (data.ts || 0)) <= 120000; // valid 2 menit
+      if (fresh && (data.trigger === 'after_logout' || data.trigger === 'after_login_success')) {
+        localStorage.removeItem('toastData');
+        (window.showToast || function(m){ alert(m); })(
+          data.message || 'Berhasil.',
+          data.type || 'success',
+          data.duration || 3200
+        );
+      }
+    } catch {
+      localStorage.removeItem('toastData');
+    }
+  })();
+</script>
+{% endblock extra_js %}

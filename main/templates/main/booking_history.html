@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Bookingan Saya{% endblock title %}
+
+{% block extra_head %}
+<style>
+  /* ------ Toast container ------ */
+  #toast-root{
+    position:fixed; inset:1rem 1rem auto auto; z-index:9999;
+    display:flex; flex-direction:column; gap:.75rem; pointer-events:none;
+  }
+
+  /* ------ Toast card ------ */
+  .toast{
+    pointer-events:auto;
+    max-width:min(92vw, 380px);
+    border-radius:1rem;
+    padding:1rem 1.1rem 0.9rem 1.1rem;
+    background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+    border:1px solid rgba(16,185,129,.18);
+    box-shadow:0 10px 25px rgba(16,185,129,.15), 0 2px 6px rgba(0,0,0,.06);
+    backdrop-filter:blur(8px);
+    transform:translateY(.6rem) scale(.98);
+    opacity:0; transition:transform .28s ease, opacity .28s ease;
+    position:relative; overflow:hidden;
+  }
+  .toast::before{
+    content:""; position:absolute; inset:0 auto 0 0; width:6px;
+    background:linear-gradient(180deg,#34d399,#10b981);
+    opacity:.9;
+  }
+  .toast-enter{ transform:translateY(0) scale(1); opacity:1; }
+
+  .toast-progress{height:.35rem;border-radius:.35rem;overflow:hidden;background:#eef2f7;margin-top:.6rem}
+  .toast-progress > div{height:100%;transform-origin:left;animation:grow 3.6s linear forwards}
+
+  .toast[data-variant="success"]{ border-color:rgba(16,185,129,.28); }
+  .toast[data-variant="success"] .toast-progress > div{ background:#10b981; }
+  .toast[data-variant="error"]  { border-color:rgba(239,68,68,.28); }
+  .toast[data-variant="error"]  .toast-progress > div{ background:#ef4444; }
+  .toast[data-variant="warning"]{ border-color:rgba(245,158,11,.28); }
+  .toast[data-variant="warning"] .toast-progress > div{ background:#f59e0b; }
+  .toast[data-variant="info"]   { border-color:rgba(59,130,246,.28); }
+  .toast[data-variant="info"]   .toast-progress > div{ background:#3b82f6; }
+
+  .toast-title{ font-weight:700; font-size:.95rem; color:#064e3b; }
+  .toast-msg{ margin-top:.15rem; font-size:.9rem; color:#1f2937; }
+
+  .toast-close{
+    display:inline-grid; place-items:center; width:28px; height:28px;
+    border-radius:.65rem; transition:.15s; color:#065f46;
+    background:transparent;
+  }
+  .toast-close:hover{ background:rgba(16,185,129,.1); color:#065f46; }
+
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-5xl mx-auto">
+
+    <div class="relative overflow-hidden bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-700 rounded-2xl shadow-xl mb-8 transform hover:scale-[1.01] transition-transform duration-300">
+      <div class="absolute inset-0 bg-black opacity-10"></div>
+      <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
+      <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
+      <div class="relative p-8">
+        <div class="flex items-center gap-4">
+          <div class="flex-shrink-0 p-3 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl shadow-lg">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="flex-grow">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2">Riwayat Bookingan Saya</h1>
+            <p class="text-teal-50 text-base sm:text-lg">Lihat semua booking yang pernah Anda buat.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="flex-grow relative">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input type="text" id="searchBooking" placeholder="Cari nama venue atau ID booking..."
+                 class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-gray-700 placeholder-gray-400">
+        </div>
+
+        <div class="relative sm:w-56 flex-shrink-0">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          </div>
+          <select id="statusFilter" class="w-full appearance-none pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 text-gray-700 bg-white cursor-pointer">
+            <option value="">Semua Status</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="PENDING">Pending</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bookingListWrapper">
+      {% include "main/_booking_list.html" %}
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+/* ===== TOAST ENGINE ===== */
+(function(){
+  let root = document.getElementById('toast-root');
+  if(!root){ root = document.createElement('div'); root.id='toast-root'; document.body.appendChild(root); }
+
+  const el = (html)=>{ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; };
+
+  window.toast = function(message, variant='success', title){
+    const icons = {
+      success:`<svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.172 7.707 8.879a1 1 0 10-1.414 1.414L9 13l4.707-4.707z" clip-rule="evenodd"/></svg>`,
+      error:`<svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 6h2v6H9v-6zm0 8h2v2H9v-2z" clip-rule="evenodd"/></svg>`,
+      warning:`<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2V9h2v5z"/></svg>`,
+      info:`<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1010 10A10.011 10.011 0 0012 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>`
+    };
+    const titles = {success:'Berhasil', error:'Gagal', warning:'Perhatian', info:'Info'};
+
+    const node = el(`
+      <div class="toast" data-variant="${variant}">
+        <div class="flex items-start gap-3">
+          <div class="shrink-0 text-emerald-600">${icons[variant] || icons.success}</div>
+          <div class="flex-1 min-w-0">
+            <p class="toast-title">${title || titles[variant] || titles.success}</p>
+            <p class="toast-msg">${message}</p>
+          </div>
+          <button class="toast-close" aria-label="Tutup">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div class="toast-progress"><div></div></div>
+      </div>
+    `);
+
+    root.appendChild(node);
+    requestAnimationFrame(()=> node.classList.add('toast-enter'));
+    const close = ()=>{ node.classList.remove('toast-enter'); setTimeout(()=>node.remove(), 220); };
+    node.querySelector('.toast-close').addEventListener('click', close);
+    setTimeout(close, 3600);
+  };
+
+  (function(){
+    const KEY='__flash_toast__';
+    const raw=sessionStorage.getItem(KEY);
+    if(!raw) return;
+    sessionStorage.removeItem(KEY);
+    try{
+      const {msg,variant='success',title=null,until=null}=JSON.parse(raw)||{};
+      if(!until || Date.now()<=until){ window.toast(msg, variant, title); }
+    }catch(e){}
+  })();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const main = document.querySelector('main');
+    const msgWrap = main && main.querySelector(':scope > .mb-6.space-y-3');
+    if(!msgWrap) return;
+    msgWrap.querySelectorAll(':scope > div').forEach(d => {
+      const text = d.textContent.trim();
+      let variant = 'info';
+      if(d.className.includes('bg-green-100')) variant = 'success';
+      else if(d.className.includes('bg-red-100')) variant = 'error';
+      else if(d.className.includes('bg-blue-100')) variant = 'info';
+      window.toast(text, variant);
+    });
+    msgWrap.style.display = 'none';
+  });
+})();
+</script>
+
+<script>
+/* ===== AJAX FILTERING + DELETE FEEDBACK ===== */
+(function(){
+  const input   = document.getElementById('searchBooking');
+  const select  = document.getElementById('statusFilter');
+  const wrap    = document.getElementById('bookingListWrapper');
+  if(!wrap) return;
+
+  const baseUrl = window.location.pathname;
+
+  // --- CSRF helper 
+  function getCookie(name){
+    const v = document.cookie.split(';').map(c=>c.trim());
+    for(const c of v){ if(c.startsWith(name+'=')) return decodeURIComponent(c.slice(name.length+1)); }
+    return '';
+  }
+  const getCSRF = () => (document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '');
+
+  // --- debounce
+  const debounce = (fn, ms=350)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+
+  const showLoading = ()=>{ wrap.style.opacity = .6; };
+  const hideLoading = ()=>{ wrap.style.opacity = 1; };
+
+  // --- Rebind aksi dalam partial (hapus feedback via AJAX)
+  function hydrateBookingList(){
+    // intercept semua form delete review
+    wrap.querySelectorAll('form[action*="delete_review"]').forEach(form=>{
+      form.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        let message = 'Hapus feedback ini?';
+        const inline = form.getAttribute('onsubmit');
+        if(inline){
+          const m = inline.match(/'(.*)'/);
+          if(m && m[1]) message = m[1];
+        }
+        if(!confirm(message)) return;
+
+        try{
+          const res = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': getCSRF()
+            }
+          });
+          const data = await res.json().catch(()=>null);
+          if(data?.success){
+            window.toast(data.message || 'Feedback dihapus.', 'success');
+            // reload list agar card yang terkait ter-update
+            const q = input?.value?.trim() || '';
+            const status = select?.value || '';
+            fetchList({ q, status }, false);
+          }else{
+            window.toast(data?.message || 'Gagal menghapus feedback.', 'error');
+          }
+        }catch(err){
+          console.error(err);
+          window.toast('Terjadi kesalahan koneksi.', 'error');
+        }
+      }, { once:true });
+    });
+
+  }
+
+  // --- Fetch & replace partial
+  async function fetchList(params, push=true){
+    const url = new URL(baseUrl, window.location.origin);
+    if(params.q) url.searchParams.set('q', params.q);
+    if(params.status) url.searchParams.set('status', params.status);
+
+    showLoading();
+    try{
+      const res = await fetch(url, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      if(!res.ok) throw new Error('Gagal memuat data');
+      const html = await res.text();
+      wrap.innerHTML = html;
+      hideLoading();
+      hydrateBookingList();
+
+      if(push){
+        history.replaceState({q: params.q||'', status: params.status||''}, '', url.pathname + url.search);
+      }
+    }catch(err){
+      hideLoading();
+      console.error(err);
+      window.toast?.('Gagal memuat riwayat booking.', 'error');
+    }
+  }
+
+  // --- Pagination (kalau ada link page di partial)
+  wrap.addEventListener('click', (e)=>{
+    const a = e.target.closest('a');
+    if(!a) return;
+    const url = new URL(a.href, window.location.origin);
+    if(url.pathname === baseUrl){
+      e.preventDefault();
+      const q = url.searchParams.get('q') || (input?.value || '');
+      const status = url.searchParams.get('status') || (select?.value || '');
+      fetchList({ q, status }, true);
+    }
+  });
+
+  // --- Listeners search & filter
+  if(input){
+    input.addEventListener('input', debounce(()=>{
+      const q = input.value.trim();
+      const status = select ? select.value : '';
+      fetchList({ q, status }, true);
+    }));
+  }
+  if(select){
+    select.addEventListener('change', ()=>{
+      const q = input ? input.value.trim() : '';
+      const status = select.value;
+      fetchList({ q, status }, true);
+    });
+  }
+
+  // --- Init: isi dari URL (tanpa fetch ulang karena sudah include)
+  (function syncFromURL(){
+    const p = new URLSearchParams(location.search);
+    const q = p.get('q') || '';
+    const s = p.get('status') || '';
+    if(input)  input.value  = q;
+    if(select) select.value = s;
+    hydrateBookingList(); // bind aksi delete untuk render awal
+  })();
+
+  // --- Back/forward
+  window.addEventListener('popstate', (ev)=>{
+    const q = (ev.state && ev.state.q) || new URLSearchParams(location.search).get('q') || '';
+    const status = (ev.state && ev.state.status) || new URLSearchParams(location.search).get('status') || '';
+    if(input)  input.value  = q;
+    if(select) select.value = status;
+    fetchList({ q, status }, false);
+  });
+})();
+</script>
+{% endblock %}

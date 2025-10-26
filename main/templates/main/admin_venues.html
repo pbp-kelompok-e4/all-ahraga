@@ -1,0 +1,46 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Venue Management{% endblock title %}
+{% block page_title %}Venue Management{% endblock page_title %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+  <h3 class="text-xl font-semibold text-gray-900 mb-4">Semua Venue ({{ venues_page.paginator.count }})</h3>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-max text-left">
+      <thead>
+        <tr class="border-b border-gray-200">
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Nama Venue</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Pemilik</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Kategori</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Lokasi</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Harga/jam</th>
+          <th class="py-3 px-4 text-sm font-semibold text-gray-500">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for venue in venues_page %}
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="py-3 px-4 text-sm text-gray-700 font-medium">{{ venue.name }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">{{ venue.owner.username }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">{{ venue.sport_category.name }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">{{ venue.location.name }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600">Rp {{ venue.price_per_hour|floatformat:0 }}</td>
+            <td class="py-3 px-4 text-sm text-gray-600 space-x-2">
+              <button class="text-blue-600 hover:text-blue-800 text-xs py-1 px-2 rounded hover:bg-blue-100">Edit</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="py-4 px-4 text-center text-gray-500">Belum ada venue.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'main/_pagination.html' with page_obj=venues_page %}
+</div>
+{% endblock content %}

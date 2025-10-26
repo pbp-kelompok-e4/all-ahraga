@@ -1,23 +1,1059 @@
 {% extends "base.html" %}
 
-{% block title %}Halaman Utama All-Ahraga{% endblock title %}
+{% load humanize %}{% block title %}Explore Venues - All-Ahraga{% endblock title %}
 
 {% block content %}
-<div style="text-align: center; margin-top: 50px;">
-    <h1>Selamat Datang di All-Ahraga!</h1>
-    
-    {% if user.is_authenticated %}
-        <p style="font-size: 1.2em; color: green;">
-            Anda berhasil login sebagai **{{ user.username }}**.
-        </p>
-        <p>Anda telah dialihkan ke sini karena *dashboard* sedang dikembangkan.</p>
-    {% else %}
-        <p style="font-size: 1.1em; color: #555;">Silakan masuk atau daftar untuk mulai mencari lapangan.</p>
-    {% endif %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #003F3F 0%, #005757 100%);
+        padding: 2rem 1rem;
+        border-radius: 24px; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        margin: 1rem; 
+    }
 
-    <div style="margin-top: 30px;">
-        <h3 style="border-bottom: 2px solid #ccc; padding-bottom: 10px;">Daftar Lapangan</h3>
-        <p>*(belum diimplementasikan)*</p>
+    @media (min-width: 768px) {
+        .hero-section {
+            padding: 3rem 2rem;
+            margin: 1rem 2rem; 
+        }
+    }
+
+    .hero-container {
+        max-width: 900px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .filter-bar-wrapper {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem; /* Increased padding */
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem; /* Increased gap */
+        width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .filter-bar-wrapper {
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 1.5rem;
+            gap: 1.5rem; /* Consistent gap */
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .filter-bar-wrapper {
+            flex-wrap: nowrap;
+            gap: 1.5rem;
+        }
+    }
+
+    .search-input-group {
+        position: relative;
+        width: 100%;
+        min-width: 0; 
+    }
+
+    @media (min-width: 640px) {
+        .search-input-group {
+            flex: 2;
+            min-width: 250px;
+        }
+    }
+
+    /* [FIXED] Filter select groups dengan spacing yang lebih baik */
+    .filter-selects-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem; /* Increased gap */
+        width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .filter-selects-container {
+            flex-direction: row;
+            flex: 3;
+            gap: 1rem; /* Consistent gap on tablet */
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .filter-selects-container {
+            gap: 1.25rem; /* Slightly larger gap on desktop */
+        }
+    }
+
+    /* [FIXED] Individual select wrapper dengan spacing */
+    .filter-select-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .filter-select-wrapper {
+            flex: 1;
+            min-width: 160px; /* Slightly increased min-width */
+        }
+    }
+
+    .filter-input-group {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-input-group .icon {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        pointer-events: none;
+        z-index: 2;
+        font-size: 16px; /* Ensure consistent icon size */
+    }
+
+    .filter-input,
+    .filter-select {
+        width: 100%;
+        padding: 14px 20px 14px 50px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 15px;
+        transition: all 0.3s;
+        appearance: none;
+        background-color: white;
+        box-sizing: border-box;
+        text-align: left;
+        line-height: 1.5;
+    }
+
+    .filter-input.no-icon {
+        padding-left: 20px;
+    }
+
+    .filter-input:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: #005757;
+        box-shadow: 0 0 0 3px rgba(0, 87, 87, 0.1);
+    }
+
+    /* [FIXED] Custom dropdown arrow dengan positioning yang lebih baik */
+    .filter-select-wrapper::after {
+        content: '▼';
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        pointer-events: none;
+        font-size: 10px;
+        z-index: 1;
+    }
+
+    /* [FIXED] Reset button dengan spacing yang lebih baik */
+    .reset-btn {
+        background: transparent;
+        border: 2px solid #005757;
+        color: #003F3F;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 50px;
+        white-space: nowrap;
+    }
+
+    @media (min-width: 640px) {
+        .reset-btn {
+            width: auto;
+            flex: 0 0 auto;
+            min-width: 120px; /* Ensure minimum width */
+        }
+    }
+
+    .reset-btn:hover {
+        background: #f0f9f9;
+    }
+
+    /* [IMPROVED] Mobile-specific adjustments */
+    @media (max-width: 639px) {
+        .filter-input,
+        .filter-select {
+            padding: 16px 20px 16px 50px;
+            font-size: 16px;
+            min-height: 54px; /* Better touch targets */
+        }
+        
+        .reset-btn {
+            padding: 16px 20px;
+            font-size: 16px;
+            min-height: 54px;
+        }
+        
+        .filter-input-group .icon {
+            left: 20px; /* Slightly adjust icon position */
+        }
+    }
+
+    /* [IMPROVED] Very small mobile devices */
+    @media (max-width: 380px) {
+        .hero-section {
+            padding: 1.5rem 1rem;
+            margin: 0.5rem;
+            border-radius: 20px;
+        }
+        
+        .filter-bar-wrapper {
+            padding: 1rem;
+            gap: 1rem;
+        }
+        
+        .filter-selects-container {
+            gap: 1rem;
+        }
+    }
+
+    .venue-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 1rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    @media (min-width: 480px) {
+        .venue-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .venue-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            padding: 2rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .venue-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .venue-grid {
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2.5rem;
+        }
+    }
+
+    @media (min-width: 1536px) {
+        .venue-grid {
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        }
+    }
+
+    /* [IMPROVED] Venue card dengan hover animation yang bekerja */
+    .venue-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease-in-out;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(0);
+        will-change: transform;
+    }
+
+    .venue-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+    }
+
+    /* [NEW] Touch devices - reduce hover effect */
+    @media (hover: none) and (pointer: coarse) {
+        .venue-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+    }
+
+    .venue-image-wrapper {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    }
+
+    @media (min-width: 768px) {
+        .venue-image-wrapper {
+            height: 220px;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .venue-image-wrapper {
+            height: 240px;
+        }
+    }
+
+    .venue-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .venue-rating {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(4px);
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #1f2937;
+    }
+
+    .venue-content {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @media (min-width: 768px) {
+        .venue-content {
+            padding: 1.75rem;
+        }
+    }
+
+    .venue-header {
+        margin-bottom: 0.75rem;
+    }
+
+    .venue-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+        line-height: 1.3;
+        word-wrap: break-word;
+    }
+
+    @media (min-width: 768px) {
+        .venue-title {
+            font-size: 1.3rem;
+        }
+    }
+
+    .venue-location {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .venue-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .venue-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #4b5563;
+        background-color: #f3f4f6;
+        padding: 4px 10px;
+        border-radius: 8px;
+    }
+
+    .venue-description {
+        color: #4b5563;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 1.25rem;
+        flex-grow: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .venue-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .venue-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #00897B;
+    }
+
+    .venue-price small {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 400;
+    }
+
+    /* Loading & Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        max-width: 500px;
+        margin: 0 auto;
+        grid-column: 1 / -1;
+    }
+
+    @media (min-width: 768px) {
+        .empty-state {
+            padding: 4rem 2rem;
+        }
+    }
+
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        color: #d1d5db;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+        }
+    }
+
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        width: 100%;
+        grid-column: 1 / -1;
+    }
+
+    .loading-spinner.active {
+        display: block;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+        border: 3px solid #e5e7eb;
+        border-top-color: #005757;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    /* [IMPROVED] Mobile header adjustments */
+    @media (max-width: 639px) {
+        .hero-container h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        
+        .hero-container p {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+    }
+
+    /* [NEW] Extra small devices */
+    @media (max-width: 380px) {
+        .hero-container h1 {
+            font-size: 1.75rem;
+        }
+        
+        .hero-container p {
+            font-size: 0.9rem;
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pagination-btn {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 87, 87, 0.3);
+    }
+
+    #pagination-container {
+        margin-top: 3rem;
+        padding: 0 1rem;
+    }
+
+    @media (min-width: 640px) {
+        #pagination-container {
+            padding: 0 2rem;
+        }
+    }
+
+    /* [NEW] Improved pagination for mobile */
+    @media (max-width: 639px) {
+        #pagination-container .inline-flex {
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        #pagination-container .inline-flex > * {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 639px) {
+        #pagination-container .inline-flex {
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        #pagination-container .inline-flex > * {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    #page-toast{
+      position:fixed;
+      bottom: 1rem;
+      right:1rem;
+      z-index:60;
+      min-width:280px; max-width:360px;
+      padding:.9rem 1rem; border-radius:.9rem; color:#fff;
+      background:linear-gradient(90deg,#059669,#0d9488);
+      box-shadow:0 14px 30px rgba(0,0,0,.25);
+      opacity:0; transform:translateY(10px);
+      transition:opacity .25s ease, transform .25s ease;
+      font-weight:600;
+    }
+    #page-toast.show{ opacity:1; transform:translateY(0); }
+</style>
+
+<div class="hero-section">
+    <div class="hero-container">
+        <h1 style="color: white; font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem;">
+            🏟️ Temukan Lapangan Olahraga
+        </h1>
+        <p style="color: rgba(255,255,255,0.9); margin-bottom: 2rem; font-size: 1.1rem;">
+            Cari dan booking lapangan favorit Anda dengan mudah
+        </p>
+
+        <div class="filter-bar-wrapper">
+            <!-- Search Input -->
+            <div class="search-input-group">
+                <input type="text" 
+                       id="searchInput" 
+                       class="filter-input no-icon" 
+                       placeholder="Cari lapangan berdasarkan nama..."
+                       autocomplete="off"
+                       style="text-align: left;">    
+            </div>
+
+            <!-- Filter Selects Container -->
+            <div class="filter-selects-container">
+                <!-- Location Filter -->
+                <div class="filter-select-wrapper">
+                    <div class="filter-input-group">
+                        <span class="icon">📍</span>
+                        <select id="locationFilter" class="filter-select">
+                            <option value="">Semua Lokasi</option>
+                            {% for location in locations %}
+                            <option value="{{ location.id }}">{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Sport Filter -->
+                <div class="filter-select-wrapper">
+                    <div class="filter-input-group">
+                        <span class="icon">⚽</span>
+                        <select id="sportFilter" class="filter-select">
+                            <option value="">Semua Olahraga</option>
+                            {% for sport in sports %}
+                            <option value="{{ sport.id }}">{{ sport.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <button class="reset-btn" onclick="resetFilters()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Reset
+            </button>
+        </div>
     </div>
 </div>
+
+<div class="venue-grid" id="venueGrid">
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <p>Memuat data...</p>
+    </div>
+
+    {% for venue in venues %}
+    <div class="venue-card" onclick="window.location.href='{% url 'create_booking' venue.id %}'">
+        <div class="venue-image-wrapper">
+            {% if venue.main_image %}
+            <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="venue-image">
+            {% else %}
+            <div class="venue-image" style="display: flex; align-items: center; justify-content: center; font-size: 60px;">
+                🏟️
+            </div>
+            {% endif %}
+            <div class="venue-rating">
+                ⭐ 5.0
+            </div>
+        </div>
+        
+        <div class="venue-content">
+            <div class="venue-header">
+                <h3 class="venue-title">{{ venue.name }}</h3>
+                <span class="venue-location">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ venue.location.name|default:"-" }}
+                </span>
+            </div>
+
+            <div class="venue-meta">
+                <span class="venue-badge">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
+                    </svg>
+                    {{ venue.sport_category.name }}
+                </span>
+            </div>
+
+            <p class="venue-description">
+                {{ venue.description|truncatewords:15 }}
+            </p>
+
+            <div class="venue-footer">
+                <div class="venue-price">
+                    Rp {{ venue.price_per_hour|floatformat:0|intcomma }}
+                    <small>/jam</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <h3 style="color: #1f2937; font-size: 1.5rem; margin-bottom: 0.5rem;">Tidak Ada Lapangan</h3>
+        <p style="color: #6b7280;">Belum ada lapangan yang tersedia saat ini</p>
+    </div>
+    {% endfor %}
+</div>
+
 {% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function(){
+  function ensureToastEl(){
+    let t = document.getElementById('page-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'page-toast';
+      t.setAttribute('role','status');
+      t.setAttribute('aria-live','polite');
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+
+  function showToast(msg, type='success', duration=3200){
+    const t = ensureToastEl();
+    t.textContent = msg || '';
+    t.style.background = (type==='error')
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#059669,#0d9488)';
+    requestAnimationFrame(()=>{
+      t.classList.add('show');
+    });
+    clearTimeout(t._to);
+    t._to = setTimeout(()=> t.classList.remove('show'), duration);
+  }
+
+  (function consumeLoginToast(){
+    const raw = localStorage.getItem('toastData');
+    if(!raw) return;
+    try{
+      const data = JSON.parse(raw);
+      const fresh = (Date.now() - (data.ts||0)) <= 120000; // valid 2 menit
+      if(fresh && data.trigger === 'after_login_success'){
+        localStorage.removeItem('toastData'); // hapus dulu biar gak dobel
+        showToast(data.message || 'Berhasil.', data.type || 'success', data.duration || 3200);
+      }
+    }catch(e){
+      localStorage.removeItem('toastData');
+    }
+  })();
+
+  (function messagesToToast(){
+    const main = document.querySelector('main');
+    const wrap = main && main.querySelector(':scope > .mb-6.space-y-3');
+    if(!wrap) return;
+    wrap.querySelectorAll(':scope > div').forEach(d=>{
+      const text = (d.textContent || '').trim();
+      if(!text) return;
+      const cls = d.className || '';
+      let variant = 'info';
+      if(cls.includes('bg-green-100')) variant='success';
+      else if(cls.includes('bg-red-100')) variant='error';
+      showToast(text, variant, 3200);
+    });
+  })();
+})();
+</script>
+
+<script>
+    let debounceTimer;
+    let currentPage = 1;
+    let currentFilters = {
+        search: '',
+        location: '',
+        sport: ''
+    };
+
+    function filterVenues(page = 1) {
+        const search = document.getElementById('searchInput').value;
+        const location = document.getElementById('locationFilter').value;
+        const sport = document.getElementById('sportFilter').value;
+
+        currentFilters = { search, location, sport };
+        currentPage = page;
+
+        document.getElementById('loadingSpinner').classList.add('active');
+        const venueGrid = document.getElementById('venueGrid');
+        
+        // Sembunyikan semua kecuali loading spinner
+        Array.from(venueGrid.children).forEach(child => {
+            if (!child.classList.contains('loading-spinner')) {
+                child.style.display = 'none';
+            }
+        });
+
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (location) params.append('location', location);
+        if (sport) params.append('sport', sport);
+        params.append('page', page);
+        params.append('_', Date.now());
+
+        fetch(`{% url 'filter_venues_ajax' %}?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                displayVenues(data.venues);
+                displayPagination(data);
+            } else {
+                throw new Error(data.message || 'Failed to fetch venues');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            displayVenues([]);
+            displayPagination({
+                has_next: false,
+                has_previous: false,
+                current_page: 1,
+                total_pages: 0,
+                total_count: 0
+            });
+        })
+        .finally(() => {
+            document.getElementById('loadingSpinner').classList.remove('active');
+        });
+    }
+
+    function displayPagination(data) {
+        const grid = document.getElementById('venueGrid');
+        
+        // Hapus pagination lama jika ada
+        const oldPagination = document.getElementById('pagination-container');
+        if (oldPagination) {
+            oldPagination.remove();
+        }
+        
+        // Jika hanya 1 halaman atau tidak ada data, tidak perlu pagination
+        if (data.total_pages <= 1 || data.total_count === 0) {
+            return;
+        }
+        
+        // Buat pagination container
+        const paginationContainer = document.createElement('div');
+        paginationContainer.id = 'pagination-container';
+        paginationContainer.className = 'mt-12 flex justify-center';
+        paginationContainer.style.gridColumn = '1 / -1';
+        paginationContainer.setAttribute('role', 'navigation');
+        paginationContainer.setAttribute('aria-label', 'Pagination');
+        
+        paginationContainer.innerHTML = `
+            <div class="inline-flex items-center gap-3 bg-white px-6 py-4 rounded-xl shadow-xl border border-gray-200">
+                ${data.has_previous ? `
+                    <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" onclick="filterVenues(${data.current_page - 1})" aria-label="Previous page">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Sebelumnya
+                    </button>
+                ` : `
+                    <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Sebelumnya
+                    </span>
+                `}
+
+                <span class="px-5 py-2.5 bg-teal-50 text-teal-800 rounded-lg font-bold border border-teal-200 text-sm">
+                    Halaman ${data.current_page} dari ${data.total_pages}
+                </span>
+
+                ${data.has_next ? `
+                    <button type="button" class="pagination-btn inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors shadow-md" onclick="filterVenues(${data.current_page + 1})" aria-label="Next page">
+                        Berikutnya
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                ` : `
+                    <span class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed">
+                        Berikutnya
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </span>
+                `}
+            </div>
+        `;
+        
+        grid.appendChild(paginationContainer);
+    }
+
+    function displayVenues(venues) {
+        const grid = document.getElementById('venueGrid');
+        
+        // Hapus semua elemen kecuali loading spinner
+        Array.from(grid.children).forEach(child => {
+            if (!child.classList.contains('loading-spinner')) {
+                child.remove();
+            }
+        });
+
+        if (!venues || venues.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.style.gridColumn = '1 / -1';
+            emptyState.innerHTML = `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 120px; height: 120px; color: #d1d5db; margin: 0 auto 1.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 style="color: #1f2937; font-size: 1.5rem; margin-bottom: 0.5rem;">Tidak Ditemukan</h3>
+                <p style="color: #6b7280;">Tidak ada lapangan yang sesuai dengan pencarian Anda</p>
+            `;
+            grid.appendChild(emptyState);
+            return;
+        }
+
+        // Render venues
+        venues.forEach((venue, index) => { 
+            const venueCard = document.createElement('div');
+            venueCard.className = 'venue-card';
+            venueCard.onclick = () => {
+                window.location.href = `{% url 'create_booking' 0 %}`.replace('/0/', `/${venue.id}/`);
+            };
+
+            venueCard.style.opacity = '0';
+            venueCard.style.animation = `fadeInUp 0.5s ease-out forwards`;
+            venueCard.style.animationDelay = `${index * 100}ms`;
+
+            venueCard.addEventListener('animationend', () => {
+                // Hapus style animasi agar tidak lagi mengontrol 'transform'
+                venueCard.style.animation = 'none'; 
+                // Pastikan opacity tetap 1
+                venueCard.style.opacity = '1'; 
+            }, { once: true });
+
+            venueCard.innerHTML = `
+                <div class="venue-image-wrapper">
+                    ${venue.image ? 
+                        `<img src="${venue.image}" alt="${venue.name}" class="venue-image">` :
+                        `<div class="venue-image" style="display: flex; align-items: center; justify-content: center; font-size: 60px;">🏟️</div>`
+                    }
+                    <div class="venue-rating">
+                        ⭐ ${venue.rating || '5.0'}
+                    </div>
+                </div>
+                
+                <div class="venue-content">
+                    <div class="venue-header">
+                        <h3 class="venue-title">${venue.name}</h3>
+                        <span class="venue-location">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                            </svg>
+                            ${venue.location || '-'}
+                        </span>
+                    </div>
+
+                    <div class="venue-meta">
+                        <span class="venue-badge">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z"/>
+                            </svg>
+                            ${venue.sport || '-'}
+                        </span>
+                    </div>
+
+                    <p class="venue-description">
+                        ${venue.description || 'Tidak ada deskripsi'}
+                    </p>
+
+                    <div class="venue-footer">
+                        <div class="venue-price">
+                            Rp ${new Intl.NumberFormat('id-ID').format(venue.price || 0)}
+                            <small>/jam</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            grid.appendChild(venueCard);
+        });
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('locationFilter').value = '';
+        document.getElementById('sportFilter').value = '';
+        currentPage = 1;  
+        filterVenues(1);  
+    }
+
+    // Event listeners
+    function initializeEventListeners() {
+        const searchInput = document.getElementById('searchInput');
+        const locationFilter = document.getElementById('locationFilter');
+        const sportFilter = document.getElementById('sportFilter');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => filterVenues(1), 500);
+            });
+        }
+
+        if (locationFilter) {
+            locationFilter.addEventListener('change', () => filterVenues(1));
+        }
+
+        if (sportFilter) {
+            sportFilter.addEventListener('change', () => filterVenues(1));
+        }
+    }
+
+    // Initialize ketika DOM siap
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeEventListeners();
+        
+        // Animasikan Hero Section
+        const heroSection = document.querySelector('.hero-section');
+        if (heroSection) {
+            heroSection.style.opacity = '0';
+            heroSection.style.animation = `fadeInUp 0.6s ease-out forwards`;
+        }
+
+        // Load initial data
+        filterVenues(1);
+    });
+
+    // Fallback initialization
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeEventListeners);
+    } else {
+        initializeEventListeners();
+    }
+
+    // Mobile-friendly touch improvements
+    document.addEventListener('touchstart', function() {}, { passive: true });
+</script>
+{% endblock extra_js %}
