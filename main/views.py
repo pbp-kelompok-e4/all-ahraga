@@ -1001,7 +1001,7 @@ def coach_list_view(request):
     if area_filter:
         coaches_list = coaches_list.filter(service_areas__id=area_filter)
     
-    paginator = Paginator(coaches_list, 6)  
+    paginator = Paginator(coaches_list, 8)  
     page_number = request.GET.get('page')
     
     try:
@@ -1077,7 +1077,7 @@ def filter_coaches_ajax(request):
     if area_filter:
         coaches_list = coaches_list.filter(service_areas__id=area_filter)
     
-    paginator = Paginator(coaches_list, 6)
+    paginator = Paginator(coaches_list, 8)
     page_number = request.GET.get('page')
     
     try:
@@ -1820,8 +1820,7 @@ def filter_venues_ajax(request):
     if sport_id:
         venues = venues.filter(sport_category_id=sport_id)
     
-    # Pagination dengan 9 item per halaman
-    venues = venues.order_by('pk')
+    # Pagination dengan 6 item per halaman
     paginator = Paginator(venues, 6)
     try:
         venues_page = paginator.page(page)
@@ -1856,3 +1855,9 @@ def filter_venues_ajax(request):
         'total_pages': paginator.num_pages,
         'total_count': paginator.count,
     })
+
+def landing_page_view(request):
+    """
+    Selalu menampilkan landing page, tidak peduli status login.
+    """
+    return render(request, 'main/landing.html')

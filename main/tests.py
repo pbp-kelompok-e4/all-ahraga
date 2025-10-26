@@ -1401,3 +1401,358 @@ class BookingTestCase(TestCase):
         """Cleanup setelah setiap test"""
         # Django akan otomatis rollback database
         pass
+
+class CoachTestCase(TestCase):
+    """Test case untuk fungsionalitas Coach"""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Setup data yang tidak berubah"""
+        # PERBAIKAN: Gunakan get_or_create untuk data yang sudah ada dari migrasi
+        cls.location, _ = LocationArea.objects.get_or_create(name='Jakarta Timur')
+        cls.sport, _ = SportCategory.objects.get_or_create(name='Tenis')
+        
+        # Data untuk revenue test
+        cls.location_revenue, _ = LocationArea.objects.get_or_create(name='Jakarta Barat')
+        cls.sport_revenue, _ = SportCategory.objects.get_or_create(name='Futsal')
+
+    def setUp(self):
+        """Setup untuk setiap test method"""
+        # 1. Main Coach User (punya profile)
+        self.coach_user = User.objects.create_user(
+            username='coach_main',
+            password='testpass123',
+            email='coach@main.com'
+        )
+        UserProfile.objects.create(user=self.coach_user, is_coach=True)
+        self.coach_profile = CoachProfile.objects.create(
+            user=self.coach_user,
+            age=30,
+            experience_desc='5 tahun pengalaman',
+            rate_per_hour=Decimal('150000.00'),
+            main_sport_trained=self.sport
+        )
+        self.coach_profile.service_areas.add(self.location)
+
+        # 2. Customer User (untuk tes permission)
+        self.customer_user = User.objects.create_user(
+            username='customer_for_coach',
+            password='testpass123',
+            email='customer@coach.com'
+        )
+        UserProfile.objects.create(user=self.customer_user, is_customer=True)
+        
+        # 3. Coach User (tanpa profile, untuk tes create)
+        self.coach_no_profile_user = User.objects.create_user(
+            username='coach_no_profile',
+            password='testpass123',
+            email='coach@noprofile.com'
+        )
+        UserProfile.objects.create(user=self.coach_no_profile_user, is_coach=True)
+
+        self.client = Client()
+
+    # ==================== PERMISSION TESTS ====================
+
+    def test_01_coach_profile_access_by_coach(self):
+        """Test: Coach dapat akses halaman profilnya"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.get(reverse('coach_profile'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'main/coach_profile.html')
+
+    def test_02_coach_profile_access_denied_customer(self):
+        """Test: Customer tidak bisa akses halaman profil coach"""
+        self.client.login(username='customer_for_coach', password='testpass123')
+        response = self.client.get(reverse('coach_profile'))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('home'))
+
+    def test_03_coach_profile_access_denied_anonymous(self):
+        """Test: Anonymous tidak bisa akses halaman profil coach"""
+        response = self.client.get(reverse('coach_profile'))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, f"{reverse('login')}?next={reverse('coach_profile')}")
+
+    # ==================== PROFILE MANAGEMENT (AJAX) ====================
+
+    def test_04_get_coach_profile_form_ajax(self):
+        """Test: AJAX GET form untuk edit profil"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.get(
+            reverse('get_coach_profile_form_ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'main/coach_profile_form.html')
+
+    def test_05_save_coach_profile_ajax_update(self):
+        """Test: AJAX POST untuk update profil yang ada"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.post(
+            reverse('save_coach_profile_ajax'),
+            {
+                'age': 32,
+                'experience_desc': 'Update 6 tahun pengalaman',
+                'rate_per_hour': '200000',
+                'main_sport_trained': self.sport.id,
+                'service_areas': [self.location.id],
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        
+        self.coach_profile.refresh_from_db()
+        self.assertEqual(self.coach_profile.age, 32)
+        self.assertEqual(self.coach_profile.rate_per_hour, Decimal('200000.00'))
+
+    def test_06_save_coach_profile_ajax_create(self):
+        """Test: AJAX POST untuk create profil baru"""
+        self.client.login(username='coach_no_profile', password='testpass123')
+        response = self.client.post(
+            reverse('save_coach_profile_ajax'),
+            {
+                'age': 25,
+                'experience_desc': 'Coach baru',
+                'rate_per_hour': '100000',
+                'main_sport_trained': self.sport.id,
+                'service_areas': [self.location.id],
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        self.assertTrue(CoachProfile.objects.filter(user=self.coach_no_profile_user).exists())
+
+    def test_07_save_coach_profile_invalid_data(self):
+        """Test: AJAX POST profil dengan data invalid"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.post(
+            reverse('save_coach_profile_ajax'),
+            {
+                'age': 'abc', # Invalid
+                'rate_per_hour': '-100', # Invalid
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('errors', data)
+
+    def test_08_delete_coach_profile_ajax(self):
+        """Test: AJAX POST untuk delete profil"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.post(
+            reverse('delete_coach_profile_ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        self.assertFalse(CoachProfile.objects.filter(user=self.coach_user).exists())
+
+    # ==================== SCHEDULE MANAGEMENT (AJAX) ====================
+    
+    def test_09_coach_schedule_page_access(self):
+        """Test: Coach dapat akses halaman schedule"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.get(reverse('coach_schedule'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'main/coach_schedule.html')
+
+    def test_10_coach_schedule_create_ajax(self):
+        """Test: AJAX POST untuk create schedule (range)"""
+        self.client.login(username='coach_main', password='testpass123')
+        tomorrow = date.today() + timedelta(days=1)
+        
+        response = self.client.post(
+            reverse('coach_schedule'),
+            {
+                'date': tomorrow.strftime('%Y-%m-%d'),
+                'start_time': '09:00',
+                'end_time_global': '11:00', # Harusnya create 2 slot: 9-10, 10-11
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        
+        schedules = CoachSchedule.objects.filter(
+            coach=self.coach_profile,
+            date=tomorrow
+        )
+        self.assertEqual(schedules.count(), 2)
+
+    def test_11_coach_schedule_create_invalid_time(self):
+        """Test: AJAX POST create schedule dengan end time < start time"""
+        self.client.login(username='coach_main', password='testpass123')
+        tomorrow = date.today() + timedelta(days=1)
+        
+        response = self.client.post(
+            reverse('coach_schedule'),
+            {
+                'date': tomorrow.strftime('%Y-%m-%d'),
+                'start_time': '12:00',
+                'end_time_global': '10:00', # Invalid
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_12_coach_schedule_delete_ajax(self):
+        """Test: AJAX POST untuk delete schedule"""
+        tomorrow = date.today() + timedelta(days=1)
+        schedule = CoachSchedule.objects.create(
+            coach=self.coach_profile,
+            date=tomorrow,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+            is_booked=False
+        )
+        
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.post(
+            reverse('coach_schedule_delete'),
+            json.dumps({'selected_schedules': [schedule.id]}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CoachSchedule.objects.filter(id=schedule.id).exists())
+
+    def test_13_coach_schedule_cannot_delete_booked(self):
+        """Test: Tidak bisa delete schedule yang sudah booked"""
+        tomorrow = date.today() + timedelta(days=1)
+        schedule = CoachSchedule.objects.create(
+            coach=self.coach_profile,
+            date=tomorrow,
+            start_time=time(15, 0),
+            end_time=time(16, 0),
+            is_booked=True # SUDAH DIBOOKING
+        )
+        
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.post(
+            reverse('coach_schedule_delete'),
+            json.dumps({'selected_schedules': [schedule.id]}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        # Schedule harusnya masih ada
+        self.assertTrue(CoachSchedule.objects.filter(id=schedule.id).exists())
+
+    # ==================== REVENUE REPORT ====================
+
+    def test_14_coach_revenue_report_access(self):
+        """Test: Coach dapat akses halaman revenue report"""
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.get(reverse('coach_revenue_report'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'main/coach_revenue_report.html')
+        self.assertIn('total_revenue', response.context)
+
+    def test_15_coach_revenue_calculation(self):
+        """Test: Revenue coach dihitung dengan benar"""
+        # Setup kompleks: Buat Venue, Schedule, Booking, Transaction
+        owner = User.objects.create_user(username='owner_for_coach_test', password='testpass123')
+        UserProfile.objects.create(user=owner, is_venue_owner=True)
+        
+        venue = Venue.objects.create(
+            name='Venue Futsal',
+            owner=owner,
+            location=self.location_revenue,
+            sport_category=self.sport_revenue,
+            price_per_hour=Decimal('100000.00')
+        )
+        
+        tomorrow = date.today() + timedelta(days=1)
+        
+        venue_schedule = VenueSchedule.objects.create(
+            venue=venue, date=tomorrow, start_time=time(10, 0), end_time=time(11, 0)
+        )
+        
+        # Buat coach schedule yang MATCHING
+        coach_schedule = CoachSchedule.objects.create(
+            coach=self.coach_profile,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0)
+        )
+        
+        booking = Booking.objects.create(
+            customer=self.customer_user,
+            venue_schedule=venue_schedule,
+            coach_schedule=coach_schedule,
+            total_price=Decimal('250000.00') # 100k venue + 150k coach
+        )
+        
+        Transaction.objects.create(
+            booking=booking,
+            status='CONFIRMED',
+            payment_method='CASH',
+            revenue_venue=Decimal('100000.00'),
+            revenue_coach=Decimal('150000.00') # Revenue coach
+        )
+
+        # Login sebagai coach dan cek revenue
+        self.client.login(username='coach_main', password='testpass123')
+        response = self.client.get(reverse('coach_revenue_report'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_revenue'], Decimal('150000.00'))
+
+    # ==================== PUBLIC VIEWS ====================
+
+    def test_16_coach_list_view_public(self):
+        """Test: Public dapat melihat halaman daftar coach"""
+        response = self.client.get(reverse('coach_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'main/coach_list.html')
+        self.assertIn('coaches', response.context)
+
+    def test_17_coach_detail_public_view(self):
+        """Test: Public dapat melihat halaman detail coach"""
+        # Versi ini tidak menguji logika 'Review'
+        response = self.client.get(
+            reverse('coach_detail_public', args=[self.coach_profile.id])
+        )
+        
+        # 1. Cek halaman-nya ada
+        self.assertEqual(response.status_code, 200)
+        
+        # 2. Cek template-nya benar
+        self.assertTemplateUsed(response, 'main/coach_detail.html')
+        
+        # 3. Cek data coach-nya ada di context
+        self.assertEqual(response.context['coach'], self.coach_profile)
+        
+        # 4. Cek nama coach (username) ada di HTML
+        self.assertContains(response, self.coach_profile.user.username)
+
+    def test_18_filter_coaches_ajax(self):
+        """Test: AJAX filter di halaman daftar coach"""
+        response = self.client.get(
+            reverse('filter_coaches_ajax'),
+            {
+                'q': 'coach',
+                'sport': self.sport.id,
+                'area': self.location.id,
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('html', data)
+
+    def tearDown(self):
+        """Cleanup setelah setiap test"""
+        # Django akan otomatis rollback database
+        pass
