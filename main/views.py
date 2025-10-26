@@ -1370,6 +1370,17 @@ def customer_payment(request, booking_id):
                     transaction.save()
                     raise IntegrityError("Maaf, jadwal ini baru saja dikonfirmasi oleh pengguna lain.")
                 
+                booking_equipments = BookingEquipment.objects.filter(booking=booking).select_related('equipment')
+                
+                for be in booking_equipments:
+                    equipment = Equipment.objects.select_for_update().get(id=be.equipment.id)
+                    
+                    if equipment.stock_quantity < be.quantity:
+                        raise IntegrityError(f"Maaf, stok untuk {equipment.name} tidak mencukupi (tersisa {equipment.stock_quantity}).")
+                    
+                    equipment.stock_quantity -= be.quantity
+                    equipment.save()
+                
                 venue_schedule.is_booked = True
                 venue_schedule.is_available = False
                 venue_schedule.save()
