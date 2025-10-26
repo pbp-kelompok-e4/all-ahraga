@@ -559,6 +559,34 @@
             justify-content: center;
         }
     }
+
+    @media (max-width: 639px) {
+        #pagination-container .inline-flex {
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        #pagination-container .inline-flex > * {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    #page-toast{
+      position:fixed;
+      top:calc(4rem + .75rem);
+      right:1rem;
+      z-index:60;
+      min-width:280px; max-width:360px;
+      padding:.9rem 1rem; border-radius:.9rem; color:#fff;
+      background:linear-gradient(90deg,#059669,#0d9488);
+      box-shadow:0 14px 30px rgba(0,0,0,.25);
+      opacity:0; transform:translateY(-10px);
+      transition:opacity .25s ease, transform .25s ease;
+      font-weight:600;
+    }
+    #page-toast.show{ opacity:1; transform:translateY(0); }
 </style>
 
 <div class="hero-section">
@@ -689,6 +717,65 @@
 
 {% block extra_js %}
 {{ block.super }}
+<script>
+(function(){
+  function ensureToastEl(){
+    let t = document.getElementById('page-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'page-toast';
+      t.setAttribute('role','status');
+      t.setAttribute('aria-live','polite');
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+
+  function showToast(msg, type='success', duration=3200){
+    const t = ensureToastEl();
+    t.textContent = msg || '';
+    t.style.background = (type==='error')
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#059669,#0d9488)';
+    requestAnimationFrame(()=>{
+      t.classList.add('show');
+    });
+    clearTimeout(t._to);
+    t._to = setTimeout(()=> t.classList.remove('show'), duration);
+  }
+
+  (function consumeLoginToast(){
+    const raw = localStorage.getItem('toastData');
+    if(!raw) return;
+    try{
+      const data = JSON.parse(raw);
+      const fresh = (Date.now() - (data.ts||0)) <= 120000; // valid 2 menit
+      if(fresh && data.trigger === 'after_login_success'){
+        localStorage.removeItem('toastData'); // hapus dulu biar gak dobel
+        showToast(data.message || 'Berhasil.', data.type || 'success', data.duration || 3200);
+      }
+    }catch(e){
+      localStorage.removeItem('toastData');
+    }
+  })();
+
+  (function messagesToToast(){
+    const main = document.querySelector('main');
+    const wrap = main && main.querySelector(':scope > .mb-6.space-y-3');
+    if(!wrap) return;
+    wrap.querySelectorAll(':scope > div').forEach(d=>{
+      const text = (d.textContent || '').trim();
+      if(!text) return;
+      const cls = d.className || '';
+      let variant = 'info';
+      if(cls.includes('bg-green-100')) variant='success';
+      else if(cls.includes('bg-red-100')) variant='error';
+      showToast(text, variant, 3200);
+    });
+  })();
+})();
+</script>
+
 <script>
     let debounceTimer;
     let currentPage = 1;

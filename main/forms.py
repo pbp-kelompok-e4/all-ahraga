@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User 
 from .models import UserProfile, Venue, VenueSchedule, Equipment, LocationArea, SportCategory, CoachProfile, CoachSchedule
 from django.forms.widgets import DateInput, TextInput
+from .models import Review
 
 ROLE_CHOICES = [
     ('CUSTOMER', 'Customer'),
@@ -217,3 +218,15 @@ class CoachScheduleForm(forms.ModelForm):
         self.fields['is_available'].label = "Tersedia"
         self.fields['date'].help_text = "Pilih tanggal sesi"
         self.fields['start_time'].help_text = "Format 24 jam (mis. 08:00)"
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ["rating", "comment"]
+        widgets = {
+            "comment": forms.Textarea(attrs={
+                "rows": 4,
+                "placeholder": "Tulis komentar kamu..."
+            })
+        }
+    

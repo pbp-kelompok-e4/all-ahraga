@@ -539,3 +539,83 @@
 </div>
 
 {% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (function markLogoutToast(){
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('logout')) {
+      localStorage.setItem('toastData', JSON.stringify({
+        message: "Anda telah keluar dari akun",
+        type: "success",
+        duration: 3500,
+        trigger: "after_logout",
+        ts: Date.now()
+      }));
+      url.searchParams.delete('logout');
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+    }
+  })();
+
+  (function ensureToast(){
+    if (window.showToast) return; 
+    const style = document.createElement('style');
+    style.textContent = `
+      :root { --header-h: 4rem; } /* sesuai header h-16 di base */
+      #toast-root{
+        position:fixed; top:calc(var(--header-h) + .75rem); right:1rem;
+        z-index:9999; display:flex; flex-direction:column; gap:.6rem; pointer-events:none;
+      }
+      .toast{
+        pointer-events:auto; min-width:280px; max-width:360px;
+        border-radius:.9rem; padding:.9rem 1rem; color:#fff;
+        background:linear-gradient(90deg,#059669,#0d9488);
+        box-shadow:0 14px 30px rgba(0,0,0,.25);
+        opacity:0; transform:translateY(-10px);
+        transition:opacity .25s ease, transform .25s ease;
+        font-weight:600;
+      }
+      .toast.show{ opacity:1; transform:translateY(0); }
+    `;
+    document.head.appendChild(style);
+
+    function root(){
+      let r = document.getElementById('toast-root');
+      if (!r) { r = document.createElement('div'); r.id='toast-root'; document.body.appendChild(r); }
+      return r;
+    }
+
+    window.showToast = function(message, type='success', duration=3200){
+      const r = root();
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = message;
+      if (type === 'error') el.style.background = 'linear-gradient(90deg,#b91c1c,#dc2626)';
+      r.appendChild(el);
+      requestAnimationFrame(()=> el.classList.add('show'));
+      const t = setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 260); }, duration);
+      el.addEventListener('click', ()=>{ clearTimeout(t); el.classList.remove('show'); setTimeout(()=>el.remove(), 260); });
+    };
+  })();
+
+  (function consumeStoredToast(){
+    const raw = localStorage.getItem('toastData');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const fresh = (Date.now() - (data.ts || 0)) <= 120000; // valid 2 menit
+      if (fresh && (data.trigger === 'after_logout' || data.trigger === 'after_login_success')) {
+        localStorage.removeItem('toastData');
+        (window.showToast || function(m){ alert(m); })(
+          data.message || 'Berhasil.',
+          data.type || 'success',
+          data.duration || 3200
+        );
+      }
+    } catch {
+      localStorage.removeItem('toastData');
+    }
+  })();
+</script>
+{% endblock extra_js %}

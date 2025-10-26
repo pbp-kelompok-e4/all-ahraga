@@ -8,7 +8,6 @@
 
 {% block extra_head %}
 <style>
-    /* Animasi (Hanya perlu definisi keyframes) */
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
@@ -25,6 +24,24 @@
     .animate-slideInRight {
       animation: slideInRight 0.4s ease forwards;
     }
+
+    :root { --header-h: 4rem; } 
+    #page-toast{
+      position:fixed;
+      top:calc(var(--header-h) + .75rem);
+      right:1.25rem;
+      z-index:10000;
+      min-width:280px; max-width:360px;
+      padding:.9rem 1rem;
+      border-radius:.9rem;
+      color:#fff;
+      background:linear-gradient(90deg,#059669,#0d9488);
+      box-shadow:0 14px 30px rgba(0,0,0,.25);
+      opacity:0; transform:translateY(-10px);
+      transition:opacity .25s ease, transform .25s ease;
+      font-weight:600;
+    }
+    #page-toast.show{ opacity:1; transform:translateY(0); }
 </style>
 {% endblock extra_head %}
 
@@ -316,47 +333,51 @@ document.addEventListener('DOMContentLoaded', function() {
     totalVenueCount.textContent = increment ? currentCount + 1 : currentCount - 1;
   }
 
-  function showToast(title, message, type = 'success') {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    const toastIcon = document.getElementById('toastIcon');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastMessage = document.getElementById('toastMessage');
-    
-    toastTitle.textContent = title;
-    toastMessage.textContent = message;
-    
-    // Set classes based on type
-    let bgClass = '';
-    let iconContent = '';
-    
-    if (type === 'success') {
-      bgClass = 'bg-gradient-to-r from-green-600 to-green-800';
-      iconContent = '✅';
-    } else if (type === 'error') {
-      bgClass = 'bg-gradient-to-r from-red-600 to-red-800';
-      iconContent = '❌';
-    } else {
-        bgClass = 'bg-gradient-to-r from-blue-600 to-blue-800'; // Default to info
-        iconContent = 'ℹ️';
+  function ensureToastEl(){
+    let t = document.getElementById('page-toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'page-toast';
+      t.setAttribute('role','status');
+      t.setAttribute('aria-live','polite');
+      document.body.appendChild(t);
+      const style = document.createElement('style');
+      style.textContent = `
+        :root { --header-h: 4rem; }
+        #page-toast{
+          position:fixed;
+          top:calc(var(--header-h) + .75rem);
+          right:1.25rem;
+          z-index:10000;
+          min-width:280px; max-width:360px;
+          padding:.9rem 1rem;
+          border-radius:.9rem;
+          color:#fff;
+          background:linear-gradient(90deg,#059669,#0d9488);
+          box-shadow:0 14px 30px rgba(0,0,0,.25);
+          opacity:0; transform:translateY(-10px);
+          transition:opacity .25s ease, transform .25s ease;
+          font-weight:600;
+        }
+        #page-toast.show{ opacity:1; transform:translateY(0); }
+      `;
+      document.head.appendChild(style);
     }
+    return t;
+  }
 
-    // Apply classes for styling and animation
-    toast.className = 'fixed bottom-6 right-6 z-[10000] min-w-[300px] rounded-xl p-4 text-white shadow-2xl transition-all duration-300 ' + bgClass;
-    toastIcon.textContent = iconContent;
-    
-    toast.classList.remove('hidden');
-    toast.classList.add('animate-slideInRight'); // Ensure animation class is added
-    toast.style.opacity = '1'; // Make sure it's visible
-    
-    // Hide after timeout
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => {
-            toast.classList.add('hidden');
-            toast.classList.remove('animate-slideInRight'); // Reset animation class
-        }, 400); // Wait for fade out
-    }, 3000);
+  function showToast(title, message, type = 'success') {
+    const toast = ensureToastEl();
+    const msg = (title ? title + ' — ' : '') + (message || '');
+    toast.textContent = msg;
+
+    toast.style.background = (type === 'error')
+      ? 'linear-gradient(90deg,#b91c1c,#dc2626)'
+      : 'linear-gradient(90deg,#059669,#0d9488)';
+
+    toast.classList.add('show');
+    clearTimeout(toast._to);
+    toast._to = setTimeout(()=> toast.classList.remove('show'), 3200);
   }
 
   function showModal() { modal.classList.remove('hidden'); modal.classList.add('flex'); }
@@ -438,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <div class="flex items-center gap-2">
               <a href="${data.venue.manage_url}" class="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-xs font-semibold rounded-md hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-md">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path> </svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path> </svg>
                 Kelola
               </a>
               <button class="delete-venue inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-semibold rounded-md hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md" data-id="${data.venue.id}" data-name="${data.venue.name}">
@@ -518,6 +539,23 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   deleteButtons.forEach(b => b.addEventListener('click', deleteVenueHandler));
+
+  (function(){
+    const raw = localStorage.getItem('toastData');
+    if (!raw) return;
+    try{
+      const obj = JSON.parse(raw);
+      const tooOld = Date.now() - (obj.ts || 0) > 120000; 
+      if (obj && obj.trigger === 'after_login_success' && !tooOld){
+        showToast('Login berhasil! Selamat datang 👋');
+        localStorage.removeItem('toastData');
+      } else if (tooOld){
+        localStorage.removeItem('toastData');
+      }
+    }catch(e){
+      localStorage.removeItem('toastData');
+    }
+  })();
 });
 </script>
 {% endblock extra_js %}
