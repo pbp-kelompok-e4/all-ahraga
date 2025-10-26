@@ -1847,3 +1847,9 @@ def filter_venues_ajax(request):
         'total_pages': paginator.num_pages,
         'total_count': paginator.count,
     })
+
+def landing_page_view(request):
+    """
+    Selalu menampilkan landing page, tidak peduli status login.
+    """
+    return render(request, 'main/landing.html')
