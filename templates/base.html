@@ -33,6 +33,10 @@
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         background-clip: text;
     }
+    
+    html {
+      scroll-behavior: smooth;
+    }
   </style>
 
   {% block extra_head %}{% endblock extra_head %}
@@ -43,7 +47,6 @@
 <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40" x-data="{ openMenu: false }">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     
-    {# ✅ MENGGUNAKAN GRID 3 KOLOM UNTUK ALIGNMENT #}
     <div class="grid grid-cols-3 items-center h-16">
 
       <div class="justify-self-start">
@@ -58,28 +61,26 @@
       <nav class="hidden md:flex justify-self-center space-x-6 text-sm font-medium text-gray-600">
         {% if user.is_authenticated and user.profile %}
           {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
-             <a href="{% url 'dashboard_redirect' %}" class="hover:text-teal-600 transition whitespace-nowrap">Ke Dashboard</a> {# Tambah whitespace-nowrap #}
+             <a href="{% url 'dashboard_redirect' %}" class="hover:text-teal-600 transition whitespace-nowrap">Ke Dashboard</a>
           {% endif %}
           {% if user.profile.is_customer %}
             <a href="{% url 'my_bookings' %}" class="hover:text-teal-600 transition whitespace-nowrap">Bookingan Saya</a>
             <a href="{% url 'booking_history' %}" class="hover:text-teal-600 transition whitespace-nowrap">Riwayat Booking</a>
           {% endif %}
         {% endif %}
-        {# Link Visitor dipindah ke kolom 3 #}
       </nav>
-      {# Placeholder untuk kolom tengah di mobile agar grid tetap 3 kolom #}
-      <div class="md:hidden justify-self-center"></div> 
+      <div class="md:hidden justify-self-center"></div>
 
       <div class="flex items-center space-x-3 justify-self-end">
 
         {% if user.is_authenticated %}
           <div class="relative" x-data="{ openUser: false }">
             <button @click="openUser = !openUser" class="flex items-center space-x-2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-               <span class="w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-500 rounded-full flex items-center justify-center"><span class="text-white font-semibold text-xs">{{ user.username|slice:":2"|upper }}</span></span>
+               <span class="w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0"><span class="text-white font-semibold text-xs">{{ user.username|slice:":2"|upper }}</span></span>
                <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ user.username }}</span>
-               <i class="fa-solid fa-chevron-down w-3 h-3 text-gray-400 hidden sm:inline"></i>
+               <i class="fa-solid fa-chevron-down text-xs text-gray-400 hidden sm:inline"></i>
             </button>
-            <div x-show="openUser" @click.away="openUser = false" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5" style="display: none;">
+            <div x-show="openUser" @click.away="openUser = false" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5" style="display: none;" x-cloak>
               <div class="px-4 py-2 text-sm text-gray-500 border-b">Masuk sebagai <strong class="text-gray-900">{{ user.username }}</strong></div>
               <a href="{% url 'logout' %}" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition"><i class="fa-solid fa-right-from-bracket w-4 mr-2"></i> Keluar</a>
             </div>
@@ -99,7 +100,7 @@
       </div>
     </div>
 
-    <div x-show="openMenu" x-transition @click.away="openMenu = false" class="md:hidden absolute top-16 left-0 right-0 z-30 bg-white shadow-lg rounded-b-lg border-t border-gray-100 p-4" x-cloak>
+    <div x-show="openMenu" x-transition @click.away="openMenu = false" class="md:hidden absolute top-16 left-0 right-0 z-30 bg-white shadow-lg rounded-b-lg border-t border-gray-100 p-4" style="display: none;" x-cloak>
       <nav class="flex flex-col space-y-3 text-base text-gray-700 font-medium">
         {% if user.is_authenticated and user.profile %}
           {% if user.is_superuser or user.is_staff or user.profile.is_venue_owner or user.profile.is_coach %}
@@ -110,7 +111,6 @@
             <a href="{% url 'booking_history' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Riwayat Booking</a>
           {% endif %}
         {% else %}
-          {# Link visitor di mobile #}
           <a href="{% url 'register' %}" class="block px-3 py-2 rounded hover:bg-gray-100 hover:text-teal-600 transition">Daftar</a>
           <a href="{% url 'login' %}" class="block px-3 py-2 rounded bg-teal-50 text-teal-700 font-semibold hover:bg-teal-100 transition">Masuk</a>
         {% endif %}
@@ -120,17 +120,54 @@
 </header>
 
 <main class="flex-grow container mx-auto px-4 py-8 sm:px-6 lg:px-8"> 
-  {% if messages %} <div class="mb-6 space-y-3"> {% for message in messages %} <div class="p-4 rounded-lg shadow-sm border text-sm {% if message.tags == 'success' %}bg-green-100 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border-red-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">{{ message }}</div> {% endfor %} </div> {% endif %}
+  {% if messages %} 
+    <div class="mb-6 space-y-3"> 
+      {% for message in messages %} 
+        <div class="p-4 rounded-lg shadow-sm border text-sm sm:text-base {% if message.tags == 'success' %}bg-green-100 text-green-800 border-green-200{% elif message.tags == 'error' %}bg-red-100 text-red-800 border-red-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">
+          {{ message }}
+        </div> 
+      {% endfor %} 
+    </div> 
+  {% endif %}
   {% block content %}{% endblock content %}
 </main>
 
-<footer class="bg-white text-gray-600 py-8 mt-12 border-t border-gray-100"> 
-  <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
-    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Tentang All-Ahraga</h3> <p class="text-gray-500 text-sm leading-relaxed"> Platform pemesanan lapangan dan pelatih olahraga modern, menghubungkan Anda dengan penyedia jasa terbaik. </p> </div>
-    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Navigasi</h3> <ul class="space-y-1.5 text-sm text-gray-500"> <li><a href="{% url 'index' %}" class="hover:text-teal-600 transition">Beranda</a></li> <li><a href="#" class="hover:text-teal-600 transition">Tentang Kami</a></li> <li><a href="#" class="hover:text-teal-600 transition">Kontak</a></li> <li><a href="#" class="hover:text-teal-600 transition">Kebijakan Privasi</a></li> </ul> </div>
-    <div> <h3 class="text-base font-semibold mb-3 text-gray-800">Ikuti Kami</h3> <div class="flex justify-center sm:justify-start space-x-4 text-gray-500"> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-facebook text-lg"></i></a> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-twitter text-lg"></i></a> <a href="#" class="hover:text-teal-600 transition"><i class="fa-brands fa-instagram text-lg"></i></a> </div> </div>
+<footer class="bg-white text-gray-600 py-8 sm:py-10 mt-12 border-t border-gray-100"> 
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
+    
+    <!-- About Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Tentang All-Ahraga</h3> 
+      <p class="text-gray-500 text-sm leading-relaxed"> 
+        Platform pemesanan lapangan dan pelatih olahraga modern, menghubungkan Anda dengan penyedia jasa terbaik. 
+      </p> 
+    </div>
+    
+    <!-- Navigation Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Navigasi</h3> 
+      <ul class="space-y-1.5 text-sm text-gray-500"> 
+        <li><a href="{% url 'landing' %}" class="hover:text-teal-600 transition">Beranda</a></li>
+        <li><a href="{% url 'landing' %}#features" class="hover:text-teal-600 transition">Fitur</a></li>
+        <li><a href="{% url 'landing' %}#how-it-works" class="hover:text-teal-600 transition">Cara Kerja</a></li> 
+        <li><a href="{% url 'landing' %}#testimonials" class="hover:text-teal-600 transition">Testimoni</a></li>
+      </ul> 
+    </div>
+    
+    <!-- Social Media Section -->
+    <div> 
+      <h3 class="text-base sm:text-lg font-semibold mb-3 text-gray-800">Ikuti Kami</h3> 
+      <div class="flex justify-center sm:justify-start space-x-4 text-gray-500"> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Facebook"><i class="fa-brands fa-facebook text-lg sm:text-xl"></i></a> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Twitter"><i class="fa-brands fa-twitter text-lg sm:text-xl"></i></a> 
+        <a href="#" class="hover:text-teal-600 transition" aria-label="Instagram"><i class="fa-brands fa-instagram text-lg sm:text-xl"></i></a> 
+      </div> 
+    </div>
   </div>
-  <div class="mt-8 border-t border-gray-200 pt-5 text-center text-sm text-gray-500"> &copy; {% now "Y" %} All-Ahraga. All rights reserved. </div>
+  
+  <div class="mt-8 border-t border-gray-200 pt-5 text-center text-sm text-gray-500"> 
+    &copy; {% now "Y" %} All-Ahraga. All rights reserved. 
+  </div>
 </footer>
 
 {% block extra_js %}{% endblock extra_js %}
