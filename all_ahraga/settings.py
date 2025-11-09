@@ -30,7 +30,7 @@ PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "muhammad-razka41-allahraga.pbp.cs.ui.ac.id"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "muhammad-razka41-allahraga.pbp.cs.ui.ac.id", "mafaza-ananda-allahraga.pbp.cs.ui.ac.id"]
 
 CSRF_TRUSTED_ORIGINS = ["https://muhammad-razka41-allahraga.pbp.cs.ui.ac.id"]
 
