@@ -91,7 +91,7 @@ def register_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return get_user_dashboard(request.user) # Tetap panggil ini
+        return get_user_dashboard(request.user)
 
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -100,12 +100,9 @@ def login_view(request):
             login(request, user)
 
             is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-            
-            # --- PERBAIKAN LOGIKA REDIRECT ---
-            # Gunakan helper baru untuk menentukan URL
+        
             redirect_url_name = get_dashboard_redirect_url_name(user)
             final_redirect_url = reverse(redirect_url_name)
-            # --- AKHIR PERBAIKAN ---
 
             if is_ajax:
                 return JsonResponse({'ok': True, 'redirect': final_redirect_url})
