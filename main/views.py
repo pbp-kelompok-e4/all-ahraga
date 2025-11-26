@@ -1347,13 +1347,6 @@ def create_booking(request, venue_id):
     }
     return render(request, 'main/create_booking.html', context)
 
-
-# Pastikan impor ini ada di bagian atas file views.py Anda
-from django.http import JsonResponse
-from django.urls import reverse
-from django.contrib import messages
-# ... (impor Anda lainnya)
-
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_payment(request, booking_id):
@@ -1459,16 +1452,15 @@ def customer_payment(request, booking_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def booking_history(request):
-    bookings = (
-        Booking.objects.filter(customer=request.user)
-        .select_related(
-            'venue_schedule__venue',
-            'transaction',
-            'coach_schedule__coach__user'
-        )
-        .prefetch_related('equipment_details__equipment')
-        .order_by('-venue_schedule__date')
-    )
+    bookings = Booking.objects.filter(
+        customer=request.user
+    ).select_related(
+        'venue_schedule__venue__location',
+        'coach_schedule__coach__user__profile',
+        'transaction'
+    ).prefetch_related(
+        'equipment_details__equipment'
+    ).order_by('-venue_schedule__date')
 
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
@@ -1482,8 +1474,95 @@ def booking_history(request):
     if status:
         bookings = bookings.filter(transaction__status=status)
 
-    user_reviews = Review.objects.filter(customer=request.user).select_related('target_venue', 'target_coach')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('Accept') == 'application/json':
+        bookings_data = []
+        
+        user_reviews = Review.objects.filter(customer=request.user).select_related('target_venue', 'target_coach')
+        venue_review_map, coach_review_map = {}, {}
+        
+        for r in user_reviews:
+            if r.target_venue_id:
+                prev = venue_review_map.get(r.target_venue_id)
+                if prev is None or r.created_at > prev.created_at:
+                    venue_review_map[r.target_venue_id] = r
+            if r.target_coach_id:
+                prev = coach_review_map.get(r.target_coach_id)
+                if prev is None or r.created_at > prev.created_at:
+                    coach_review_map[r.target_coach_id] = r
+        
+        for booking in bookings:
+            equipment_list = []
+            for eq_detail in booking.equipment_details.all():
+                equipment_list.append({
+                    'id': eq_detail.equipment.id,
+                    'name': eq_detail.equipment.name,
+                    'quantity': eq_detail.quantity,
+                    'price': str(eq_detail.equipment.rental_price)
+                })
 
+            booking_data = {
+                'id': booking.id,
+                'venue': {
+                    'id': booking.venue_schedule.venue.id,
+                    'name': booking.venue_schedule.venue.name,
+                    'location': booking.venue_schedule.venue.location.name if booking.venue_schedule.venue.location else None
+                },
+                'schedule': {
+                    'date': booking.venue_schedule.date.strftime('%Y-%m-%d'),
+                    'date_display': booking.venue_schedule.date.strftime('%A, %d %B %Y'),
+                    'start_time': booking.venue_schedule.start_time.strftime('%H:%M'),
+                    'end_time': booking.venue_schedule.end_time.strftime('%H:%M')
+                },
+                'coach': None,
+                'equipment': equipment_list,
+                'total_price': str(booking.total_price),
+                'transaction': {
+                    'payment_method': booking.transaction.payment_method,
+                    'status': booking.transaction.status,
+                    'status_display': booking.transaction.get_status_display()
+                },
+                'venue_review': None,
+                'coach_review': None,
+                'booking_time': booking.booking_time.isoformat() if hasattr(booking, 'booking_time') else None
+            }
+
+            if booking.coach_schedule:
+                booking_data['coach'] = {
+                    'id': booking.coach_schedule.coach.id,
+                    'name': booking.coach_schedule.coach.user.get_full_name() or booking.coach_schedule.coach.user.username,
+                    'phone_number': booking.coach_schedule.coach.user.profile.phone_number if hasattr(booking.coach_schedule.coach.user, 'profile') else None
+                }
+
+            v_id = booking.venue_schedule.venue_id
+            c_id = booking.coach_schedule.coach_id if booking.coach_schedule else None
+            
+            if v_id and v_id in venue_review_map:
+                review = venue_review_map[v_id]
+                booking_data['venue_review'] = {
+                    'id': review.id,
+                    'rating': review.rating,
+                    'comment': review.comment,
+                    'created_at': review.created_at.isoformat()
+                }
+            
+            if c_id and c_id in coach_review_map:
+                review = coach_review_map[c_id]
+                booking_data['coach_review'] = {
+                    'id': review.id,
+                    'rating': review.rating,
+                    'comment': review.comment,
+                    'created_at': review.created_at.isoformat()
+                }
+
+            bookings_data.append(booking_data)
+
+        return JsonResponse({
+            'success': True,
+            'bookings': bookings_data,
+            'total': len(bookings_data)
+        })
+    
+    user_reviews = Review.objects.filter(customer=request.user).select_related('target_venue', 'target_coach')
     venue_review_map, coach_review_map = {}, {}
     for r in user_reviews:
         if r.target_venue_id:
@@ -1534,14 +1613,16 @@ def my_bookings(request):
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return render(request, 'main/_my_booking_list.html', context)
+        html = render_to_string('main/_my_booking_list.html', context, request=request)
+        return JsonResponse({'success': True, 'html': html})
+
     
     return render(request, 'main/my_bookings.html', context)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def delete_booking(request, booking_id):
-    if request.method != 'POST':
+    if request.method != 'DELETE':
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'Metode tidak diizinkan.'}, status=405)
         messages.error(request, "Metode tidak valid.")
@@ -1600,7 +1681,7 @@ def delete_booking(request, booking_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def update_booking(request, booking_id):
-    if request.method != 'POST':
+    if request.method not in ['PUT', 'PATCH']:
         return JsonResponse({
             'success': False, 
             'message': 'Metode tidak diizinkan.'
@@ -1609,6 +1690,9 @@ def update_booking(request, booking_id):
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     
     try:
+        import json
+        data = json.loads(request.body)
+        
         booking = get_object_or_404(
             Booking.objects.select_related(
                 'transaction', 
@@ -1626,10 +1710,10 @@ def update_booking(request, booking_id):
             messages.error(request, error_msg)
             return redirect('my_bookings')
         
-        new_schedule_id = request.POST.get('schedule_id')
-        new_coach_id = request.POST.get('coach_id')  
-        equipment_ids = request.POST.getlist('equipment')  
-        new_payment_method = request.POST.get('payment_method', 'CASH') 
+        new_schedule_id = data.get('schedule_id')
+        new_coach_id = data.get('coach_id')  
+        equipment_ids = data.get('equipment', [])  
+        new_payment_method = data.get('payment_method', 'CASH')
         
         if not new_schedule_id:
             return JsonResponse({
@@ -1644,27 +1728,22 @@ def update_booking(request, booking_id):
             current_time = now.time()
             
             try:
-            # 1. Temukan jadwalnya dulu tanpa lock
                 schedule_query = Q(id=new_schedule_id, venue=venue, date__gte=today)
                 schedule_query &= (Q(is_booked=False) | Q(booking=booking))
                 
                 target_schedule = VenueSchedule.objects.get(schedule_query)
                 
-                # 2. Cek apakah sudah lewat
                 if target_schedule.date == today and target_schedule.start_time < current_time:
                     raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
 
-                # 3. Kunci jadwal berdasarkan ID (query sederhana, aman untuk FOR UPDATE)
                 new_schedule = VenueSchedule.objects.select_for_update().get(id=target_schedule.id)
 
-                # 4. Cek ulang status setelah dikunci (mencegah race condition)
                 if new_schedule.is_booked:
                     try:
-                        existing_booking = new_schedule.booking  # OneToOne reverse access
+                        existing_booking = new_schedule.booking
                         if existing_booking != booking:
                             raise IntegrityError("Jadwal ini baru saja dibooking oleh orang lain.")
                     except Booking.DoesNotExist:
-                        # Jadwal marked as booked tapi belum ada booking object
                         pass
 
             except VenueSchedule.DoesNotExist:
@@ -1701,11 +1780,10 @@ def update_booking(request, booking_id):
                     
                     if new_coach_schedule_obj.is_booked:
                         try:
-                            existing_booking = new_coach_schedule_obj.booking  # OneToOne reverse access
+                            existing_booking = new_coach_schedule_obj.booking
                             if existing_booking != booking:
                                 raise IntegrityError("Jadwal coach ini baru saja dibooking oleh orang lain.")
                         except Booking.DoesNotExist:
-                            # Coach schedule marked as booked tapi belum ada booking object
                             pass
 
                     coach_revenue = coach_obj.rate_per_hour or 0 
@@ -1725,9 +1803,9 @@ def update_booking(request, booking_id):
                 equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
                 booking_equipment_list = []
                 for eq in equipment_queryset:
-                    quantity_str = request.POST.get(f'quantity_{eq.id}', '1')
+                    quantity = data.get(f'quantity_{eq.id}', 1)
                     try:
-                        quantity = int(quantity_str)
+                        quantity = int(quantity)
                         if quantity <= 0: quantity = 1
                     except (ValueError, TypeError):
                         quantity = 1
