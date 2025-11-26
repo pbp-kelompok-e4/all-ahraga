@@ -67,17 +67,13 @@
     color:#7f1d1d;border-radius:.85rem;padding:.7rem .9rem;font-size:.9rem;
   }
 
-  :root { --header-h: 4rem; }
   #toast{
     position:fixed;
-    top:calc(var(--header-h) + .75rem);
-    right:1.25rem;
+    bottom: 1.25rem; /* <-- Diubah dari 'top' */
+    right: 1.25rem;
     z-index:60;
-    min-width:280px; max-width:360px;
-    padding:.9rem 1rem; border-radius:.9rem; color:#fff;
-    background:linear-gradient(90deg,#059669,#0d9488);
-    box-shadow:0 14px 30px rgba(0,0,0,.25);
-    opacity:0; transform:translateY(-10px);
+    /* ... */
+    opacity:0; transform:translateY(10px); /* <-- Animasi dari bawah */
     transition:opacity .25s ease, transform .25s ease;
     font-weight:600;
   }

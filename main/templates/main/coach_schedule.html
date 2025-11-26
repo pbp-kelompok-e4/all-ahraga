@@ -221,7 +221,6 @@ input.datepicker:focus, input.timepicker:focus {
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 // --- UTILITIES (getCookie, showToast) ---
-// Pastikan fungsi ini ada dan benar
 function getCookie(name) { let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)'); return v ? v[2] : null; }
 function showToast(message, type = 'success') {
     const toast = document.getElementById('custom-toast');
@@ -238,7 +237,6 @@ function showToast(message, type = 'success') {
 }
 
 // --- HELPERS (createSlotHtml, createGroupCardHtmlForAjax) ---
-// Pastikan fungsi ini ada dan menghasilkan HTML yang benar sesuai struktur baru
 function createSlotHtml(slot) { 
     return `
     <label class="relative inline-flex items-center slot-label">
@@ -298,29 +296,30 @@ document.addEventListener('DOMContentLoaded', function(){
                 body: formData,
                 headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
             });
-            // Selalu parse JSON, bahkan jika error, untuk mendapatkan pesan error dari server
             const data = await response.json(); 
 
-            if (!response.ok) { // Cek status HTTP
+            if (!response.ok) {
                  throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`));
             }
             
-            // Jika response OK dan success=true
             showToast(data.message || 'Jadwal ditambahkan!', 'success');
             if (data.new_slots && data.new_slots.length > 0) {
                 const noScheduleMsg = document.getElementById('no-schedule-message');
                 if (noScheduleMsg) noScheduleMsg.remove();
                 
-                // Logic grouping dan insert/update (diasumsikan sudah benar)
-                const slotsByDate = data.new_slots.reduce((acc, slot) => { /*...*/ acc[slot.date_str_iso] = acc[slot.date_str_iso] || []; acc[slot.date_str_iso].push(slot); return acc; }, {});
-                for (const dateISO in slotsByDate) { /*...*/ } // Sisipkan logic update DOM di sini
-
-                 // --- CONTOH LOGIC UPDATE DOM ---
+                 const slotsByDate = data.new_slots.reduce((acc, slot) => {
+                    const date = slot.date_str_iso;
+                    if (!acc[date]) acc[date] = [];
+                    acc[date].push(slot);
+                    return acc;
+                 }, {});
+                
                  for (const dateISO in slotsByDate) {
                      const slotsForThisDate = slotsByDate[dateISO];
                      if (slotsForThisDate.length === 0) continue;
                      const firstSlot = slotsForThisDate[0];
                      let groupCard = scheduleListContainer.querySelector(`.group[data-date="${dateISO}"]`);
+                     
                      if (groupCard) { // Update existing group
                          const slotContainer = groupCard.querySelector('.slot-container');
                          if (slotContainer) {
@@ -346,11 +345,10 @@ document.addEventListener('DOMContentLoaded', function(){
                          if (!inserted) scheduleListContainer.appendChild(newGroupCard);
                      }
                  }
-                 // --- AKHIR CONTOH LOGIC UPDATE DOM ---
             }
             addScheduleForm.reset();
             document.querySelectorAll('.datepicker, .timepicker').forEach(fpInput => { if (fpInput._flatpickr) fpInput._flatpickr.clear(); });
-        } catch (error) { // Tangkap error dari fetch atau throw new Error di atas
+        } catch (error) { 
             console.error('Add Schedule Error:', error);
             showToast(error.message || 'Gagal menambahkan jadwal.', 'error');
         } finally {
@@ -368,16 +366,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const idsToDelete = checkedCheckboxes.map(ch => ch.dataset.id);
 
-        fetch(bulkForm.action, { // Pastikan bulkForm.action sudah benar
+        fetch(bulkForm.action, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'},
             body: JSON.stringify({ selected_schedules: idsToDelete })
         })
-        .then(res => res.ok ? res.json() : res.json().then(err => { throw err; })) // Lebih baik dalam error handling
+        .then(res => res.ok ? res.json() : res.json().then(err => { throw err; })) 
         .then(data => {
             if (data.success) {
                 showToast(data.message || 'Jadwal dihapus!', 'success');
-                // Logic hapus elemen dari DOM (diasumsikan sudah benar)
                 idsToDelete.forEach(id => {
                     const checkbox = scheduleListContainer.querySelector(`.delete-checkbox[data-id="${id}"]`);
                     const label = checkbox?.closest('label.slot-label');
@@ -392,17 +389,17 @@ document.addEventListener('DOMContentLoaded', function(){
                     }
                 });
                 if (scheduleListContainer.querySelectorAll('.group[data-date]').length === 0 && !document.getElementById('no-schedule-message')) {
-                    scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message"><svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg><h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tambahkan jadwal ketersediaan Anda.</p></div>`;
+                    scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message"><svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tambahkan jadwal ketersediaan Anda.</p></div>`;
                 }
             } else {
-                throw new Error(data.message || 'Gagal menghapus jadwal.'); // Throw error jika success=false
+                throw new Error(data.message || 'Gagal menghapus jadwal.');
             }
         })
-        .catch(error => { // Tangkap error dari fetch atau throw
+        .catch(error => { 
              console.error("Delete Error:", error);
              showToast(error.message || 'Kesalahan koneksi saat menghapus.', 'error');
         })
-        .finally(exitSelectionMode); // Selalu keluar mode seleksi
+        .finally(exitSelectionMode); 
     });
 
     // --- Filter Logic ---
@@ -416,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
         const noScheduleMsg = document.getElementById('no-schedule-message');
         if (visibleCount === 0 && !noScheduleMsg) {
-             scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message"><svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg><h3 class="text-lg font-medium text-slate-900">Tidak ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tidak ada jadwal ditemukan untuk tanggal ini.</p></div>`;
+             scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message"><svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><h3 class="text-lg font-medium text-slate-900">Tidak ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tidak ada jadwal ditemukan untuk tanggal ini.</p></div>`;
         } else if (visibleCount > 0 && noScheduleMsg) {
              noScheduleMsg.remove();
         }
@@ -425,17 +422,10 @@ document.addEventListener('DOMContentLoaded', function(){
     clearBtn?.addEventListener('click', function(){ filter.value=''; if(filter._flatpickr) filter._flatpickr.clear(); applyFilterValue(''); clearBtn?.classList.add('hidden'); const noMsg = document.getElementById('no-schedule-message'); if(noMsg && scheduleListContainer.querySelectorAll('.group[data-date]').length > 0) noMsg.remove(); });
 
     // --- Selection Mode Logic ---
-    function enterSelectionMode() { /* ... (fungsi enterSelectionMode Anda, pastikan deleteToggleText ada) ... */ }
-    function exitSelectionMode() { /* ... (fungsi exitSelectionMode Anda, pastikan deleteToggleText ada) ... */ }
-    function onCheckboxChange(e) { /* ... (fungsi onCheckboxChange Anda) ... */ }
-    cancelBtn?.addEventListener('click', exitSelectionMode);
-    selectAllBtn?.addEventListener('click', function(){ /* ... (fungsi selectAllBtn Anda) ... */ });
-
-     // --- Panggil ulang fungsi enter/exit/onCheckboxChange ---
      function enterSelectionMode() {
         selectionActive = true;
         bodyEl.classList.add('selection-active');
-        if(deleteToggleText) deleteToggleText.textContent = 'Konfirmasi Hapus';
+        if(deleteToggleText) deleteToggleText.textContent = 'Hapus';
         deleteToggleBtn?.classList.remove('bg-red-600','hover:bg-red-700');
         deleteToggleBtn?.classList.add('bg-blue-600','hover:bg-blue-700');
         deleteControlsContainer?.classList.remove('hidden');
@@ -455,29 +445,171 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
     function onCheckboxChange(e) { e.target.closest('label')?.querySelector('.slot-card')?.classList.toggle('selected', e.target.checked); }
+    
+    cancelBtn?.addEventListener('click', exitSelectionMode);
+    
+    selectAllBtn?.addEventListener('click', function(){
+        const visibleCheckboxes = Array.from(scheduleListContainer.querySelectorAll('.delete-checkbox:not(:disabled)')).filter(c => c.closest('.group[data-date]')?.style.display !== 'none'); 
+        const shouldSelectAll = !visibleCheckboxes.every(c => c.checked); 
+        visibleCheckboxes.forEach(c => { 
+            if(c.checked !== shouldSelectAll) { 
+                c.checked = shouldSelectAll; 
+                c.dispatchEvent(new Event('change')); 
+            } 
+        });
+    });
 
 
     // Initial state
     exitSelectionMode();
 
-    // --- Profile Modal Logic (if needed) ---
     {% if not has_profile %}
     const profileModal = document.getElementById('profileModal');
     const profileFormContainer = document.getElementById('profileFormContainer');
-    // Pastikan fungsi show/hide/load/attach/displayErrors ada dan dipanggil dengan benar
-    window.showProfileModal = function() { /* ... */ }
-    window.hideProfileModal = function() { /* ... */ }
-    function loadProfileForm() { /* ... (fetch ke get_coach_profile_form_ajax) ... */ }
-    function attachProfileFormHandler() { /* ... (fetch ke save_coach_profile_ajax) ... */ }
-    function displayProfileFormErrors(errors) { /* ... */ }
-    if (profileModal) profileModal.addEventListener('click', function(e){ if (e.target === profileModal) hideProfileModal(); });
-    // --- Pastikan SEMUA fungsi terkait profile modal dari coach_profile.js disalin ke sini ---
+
+    window.showProfileModal = function() {
+      if(profileModal) profileModal.classList.add('modal-open');
+      document.body.style.overflow = 'hidden';
+      loadProfileForm();
+    }
+
+    window.hideProfileModal = function() {
+      if(profileModal) profileModal.classList.remove('modal-open');
+      document.body.style.overflow = 'auto';
+    }
+
+    function loadProfileForm() {
+        if (!profileFormContainer) return;
+        
+        // Tampilkan spinner loading (sesuai HTML baru)
+        profileFormContainer.innerHTML = '<div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
+
+        fetch("{% url 'get_coach_profile_form_ajax' %}")
+            .then(response => response.text())
+            .then(html => {
+                profileFormContainer.innerHTML = html;
+                attachProfileFormHandler();
+            })
+            .catch(error => {
+                console.error("Error loading profile form:", error);
+                // Tampilkan pesan error (sesuai HTML baru)
+                profileFormContainer.innerHTML = '<div class="text-center text-red-600 p-8">' +
+                    '<div class="text-4xl mb-3"><i class="fa-solid fa-circle-exclamation"></i></div>' +
+                    '<p class="font-semibold">Gagal memuat formulir.</p>' +
+                    '<p class="text-sm">Silakan coba lagi.</p>' +
+                    '<button onclick="loadProfileForm()" class="mt-4 px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition">Coba Lagi</button>' +
+                    '</div>';
+            });
+    }
+
+    function attachProfileFormHandler() {
+        const form = document.getElementById('coachProfileForm');
+        if (!form) return;
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn'); // Asumsi ID tombol submit di form
+            if(!submitBtn) return;
+            
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin h-5 w-5 mr-2"></i> Menyimpan...';
+            
+            // Hapus error lama
+            document.querySelectorAll('.form-field-error').forEach(el => {
+                el.style.display = 'none';
+                el.textContent = '';
+            });
+            const formErrors = document.getElementById('formErrors'); // Asumsi ada di form
+            if (formErrors) formErrors.style.display = 'none';
+            
+            const formData = new FormData(form);
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch("{% url 'save_coach_profile_ajax' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest' // Penting jika view Anda mengecek ini
+                },
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    hideProfileModal();
+                    // Gunakan toast global yang sudah ada
+                    showToast(data.message || 'Profil berhasil disimpan!', 'success');
+                    
+                    // Reload page setelah 1.5 detik untuk menampilkan halaman jadwal
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    displayProfileFormErrors(data.errors);
+                    // Gunakan toast global
+                    showToast(data.message || 'Gagal menyimpan, periksa error.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving profile:', error);
+                showToast('Terjadi kesalahan saat menyimpan profil', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+    }
+
+    function displayProfileFormErrors(errors) {
+        const errorSummary = document.getElementById('formErrors'); // Asumsi dari form
+        const errorList = document.getElementById('errorList'); // Asumsi dari form
+        
+        if (errorList) errorList.innerHTML = '';
+        
+        for (const [field, messages] of Object.entries(errors)) {
+             messages.forEach(msg => {
+                if (errorList) {
+                    const li = document.createElement('li');
+                    li.textContent = msg;
+                    errorList.appendChild(li);
+                }
+            });
+            
+            const fieldInput = document.getElementById('id_' + field);
+            if (fieldInput) {
+                const formGroup = fieldInput.closest('div'); // Div terdekat
+                if (formGroup) {
+                    let errorSpan = formGroup.querySelector('.form-field-error');
+                    if (!errorSpan) {
+                        errorSpan = document.createElement('div');
+                        // Beri class error Tailwind
+                        errorSpan.className = 'form-field-error text-red-500 text-sm mt-1'; 
+                        fieldInput.parentNode.appendChild(errorSpan);
+                    }
+                    errorSpan.textContent = messages.join(', ');
+                    errorSpan.style.display = 'block';
+                }
+            }
+        }
+        
+        if (errorSummary && errorList && errorList.children.length > 0) {
+            errorSummary.style.display = 'block';
+        }
+    }
+
+    if (profileModal) {
+        profileModal.addEventListener('click', function(e){ 
+            if (e.target === profileModal) hideProfileModal(); 
+        });
+    }
     {% endif %}
 
 });
-
-// --- Pastikan getCookie, showToast, createSlotHtml, createGroupCardHtmlForAjax 
-//     dan fungsi profile modal (jika ada) sudah didefinisikan di atas ---
 
 </script>
 {% endblock extra_js %}

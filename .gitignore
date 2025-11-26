@@ -4,7 +4,6 @@
 *.pyc
 **pycache**
 db.sqlite3
-media
 # Backup files
 *.bak
 # If you are using PyCharm

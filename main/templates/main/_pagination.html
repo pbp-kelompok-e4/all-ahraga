@@ -1,0 +1,35 @@
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-between mt-6">
+  <span class="text-sm text-gray-500">
+    Halaman <span class="font-semibold text-gray-700">{{ page_obj.number }}</span> dari <span class="font-semibold text-gray-700">{{ page_obj.paginator.num_pages }}</span>
+  </span>
+  
+  <div class="flex items-center space-x-2">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition-colors">
+        <i class="fa-solid fa-chevron-left -ml-1 mr-2 text-xs"></i>
+        Prev
+      </a>
+    {% else %}
+      <span class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-md cursor-not-allowed">
+        <i class="fa-solid fa-chevron-left -ml-1 mr-2 text-xs"></i>
+        Prev
+      </span>
+    {% endif %}
+    
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-100 transition-colors">
+        Next
+        <i class="fa-solid fa-chevron-right -mr-1 ml-2 text-xs"></i>
+      </a>
+    {% else %}
+      <span class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-md cursor-not-allowed">
+        Next
+        <i class="fa-solid fa-chevron-right -mr-1 ml-2 text-xs"></i>
+      </span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

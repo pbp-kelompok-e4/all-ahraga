@@ -250,14 +250,14 @@
                             <span class="text-xs font-mono font-bold uppercase">BASKET</span>
                         </div>
                         
-                        <div class="brutal-sport-icon bg-gray-100 flex flex-col items-center justify-center space-y-2 transform -rotate-2 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-tennis-ball text-2xl sm:text-3xl text-teal-800"></i>
-                            <span class="text-xs font-mono font-bold uppercase">TENNIS</span>
+                        <div class="brutal-sport-icon bg-gray-700 text-white flex flex-col items-center justify-center space-y-2 transform -rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
+                            <i class="fas fa-table-tennis text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">PADEL</span>
                         </div>
                         
                         <div class="brutal-sport-icon teal flex flex-col items-center justify-center space-y-2 transform rotate-1 hover:rotate-0 hover:scale-105 transition-transform">
-                            <i class="fas fa-volleyball-ball text-2xl sm:text-3xl"></i>
-                            <span class="text-xs font-mono font-bold uppercase">VOLLEY</span>
+                            <i class="fas fa-futbol text-2xl sm:text-3xl"></i>
+                            <span class="text-xs font-mono font-bold uppercase">MINI SOCCER</span>
                         </div>
 
                     </div>
@@ -562,17 +562,16 @@
     if (window.showToast) return; 
     const style = document.createElement('style');
     style.textContent = `
-      :root { --header-h: 4rem; } /* sesuai header h-16 di base */
       #toast-root{
-        position:fixed; top:calc(var(--header-h) + .75rem); right:1rem;
-        z-index:9999; display:flex; flex-direction:column; gap:.6rem; pointer-events:none;
+        position:fixed; bottom: 1rem; right:1rem; 
+        z-index:9999; display:flex; flex-direction:column-reverse; gap:.6rem; pointer-events:none; 
       }
       .toast{
         pointer-events:auto; min-width:280px; max-width:360px;
         border-radius:.9rem; padding:.9rem 1rem; color:#fff;
         background:linear-gradient(90deg,#059669,#0d9488);
         box-shadow:0 14px 30px rgba(0,0,0,.25);
-        opacity:0; transform:translateY(-10px);
+        opacity:0; transform:translateY(10px); 
         transition:opacity .25s ease, transform .25s ease;
         font-weight:600;
       }

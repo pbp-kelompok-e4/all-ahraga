@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     // --- LOGIC SELEKSI ---
     function enterSelectionMode() {
-        selectionActive = true; bodyEl.classList.add('selection-active'); if(deleteToggleText) deleteToggleText.textContent = 'Konfirmasi Hapus'; deleteToggleBtn?.classList.remove('bg-red-600','hover:bg-red-700'); deleteToggleBtn?.classList.add('bg-blue-600','hover:bg-blue-700'); deleteControlsContainer?.classList.remove('hidden'); scheduleListContainer.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => cb.addEventListener('change', onCheckboxChange));
+        selectionActive = true; bodyEl.classList.add('selection-active'); if(deleteToggleText) deleteToggleText.textContent = 'Hapus'; deleteToggleBtn?.classList.remove('bg-red-600','hover:bg-red-700'); deleteToggleBtn?.classList.add('bg-blue-600','hover:bg-blue-700'); deleteControlsContainer?.classList.remove('hidden'); scheduleListContainer.querySelectorAll('.delete-checkbox:not(:disabled)').forEach(cb => cb.addEventListener('change', onCheckboxChange));
     }
     function exitSelectionMode() {
         selectionActive = false; bodyEl.classList.remove('selection-active'); if(deleteToggleText) deleteToggleText.textContent = 'Hapus Jadwal'; deleteToggleBtn?.classList.add('bg-red-600','hover:bg-red-700'); deleteToggleBtn?.classList.remove('bg-blue-600','hover:bg-blue-700'); deleteControlsContainer?.classList.add('hidden'); scheduleListContainer.querySelectorAll('.delete-checkbox').forEach(cb => { cb.checked = false; cb.removeEventListener('change', onCheckboxChange); cb.closest('label')?.querySelector('.slot-card')?.classList.remove('selected'); });
