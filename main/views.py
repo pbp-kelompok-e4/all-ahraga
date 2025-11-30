@@ -21,6 +21,8 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Avg
 import pytz
 from django.contrib.auth.models import User 
+from django.http import HttpResponse
+from django.core import serializers
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -2459,3 +2461,32 @@ def admin_toggle_coach_verification_view(request, coach_id):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+def show_json(request):
+    if request.user.is_authenticated:
+        booking_list = Booking.objects.filter(customer=request.user)
+    else:
+        booking_list = Booking.objects.none()
+    
+    json_data = serializers.serialize("json", booking_list)
+    return HttpResponse(json_data, content_type="application/json")
+
+def show_my_bookings_json(request):
+    if request.user.is_authenticated:
+        bookings = Booking.objects.filter(
+            customer=request.user,
+            status='PENDING'  
+        )
+    else:
+        bookings = Booking.objects.none()
+    return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
+
+def show_booking_history_json(request):
+    if request.user.is_authenticated:
+        bookings = Booking.objects.filter(
+            customer=request.user,
+            status='CONFIRMED'  
+        )
+    else:
+        bookings = Booking.objects.none()
+    return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
