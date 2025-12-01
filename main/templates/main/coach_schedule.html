@@ -10,11 +10,11 @@
 {{ block.super }}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-/* Styling Checkbox Delete (Tetap diperlukan) */
+/* Styling Checkbox Delete */
 .delete-checkbox { display: none; margin-right: 0.5rem; width: auto !important; vertical-align: middle;}
 .selection-active .delete-checkbox { display: inline-block; }
 
-/* Styling Slot Terpilih (Tetap diperlukan) */
+/* Styling Slot Terpilih */
 .slot-card.selected {
   border-color: #ef4444 !important;      /* red-500 */
   background-color: #fef2f2 !important;  /* red-50 */
@@ -25,11 +25,11 @@
     background-color: #f0fdfa; /* teal-50 */
 }
 
-/* Styling Toast (Tetap diperlukan) */
+/* Styling Toast */
 #custom-toast {
     position: fixed; bottom: 20px; right: 20px;
-    min-width: 280px; padding: 12px 18px; border-radius: 0.75rem; /* rounded-xl */
-    color: white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); /* shadow-lg */
+    min-width: 280px; padding: 12px 18px; border-radius: 0.75rem;
+    color: white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
     z-index: 10000; transition: all 0.3s ease-out;
     transform: translateX(120%); opacity: 0;
     display: flex; align-items: center; gap: 10px;
@@ -39,38 +39,31 @@
     opacity: 1 !important;
 }
 
-/* Styling Input Flatpickr agar Konsisten */
+/* Styling Input Flatpickr */
 input.datepicker, input.timepicker {
-    background-color: #f9fafb; /* gray-50 */
-    border: 1px solid #d1d5db; /* gray-300 */
-    color: #1f2937; /* gray-800 */
-    border-radius: 0.5rem; /* rounded-lg */
-    padding: 0.5rem 0.75rem; /* px-3 py-2 */
-    font-size: 0.875rem; /* text-sm */
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+    background-color: #f9fafb; border: 1px solid #d1d5db; color: #1f2937;
+    border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    width: auto; /* Agar tidak full width by default */
-    min-width: 150px; /* Lebar minimum */
+    width: auto; min-width: 150px;
 }
 input.datepicker:focus, input.timepicker:focus {
-    outline: none;
-    border-color: #14b8a6; /* teal-500 */
-    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2); /* Ring teal */
+    outline: none; border-color: #14b8a6; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
 }
 
-/* Styling Modal Overlay (jika profile modal digunakan) */
+/* Styling Modal Profile (Khusus Profile) */
 .modal-overlay { display: none; }
 .modal-open { display: flex !important; animation: fadeIn 0.3s ease forwards; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } /* Animasi Modal */
-.animate-slideUp { animation: slideUp 0.3s ease forwards; } /* Class untuk modal content */
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slideUp { animation: slideUp 0.3s ease forwards; }
 </style>
 {% endblock extra_head %}
 
 
 {% block content %}
-{# Container luar dan Hero section dihapus #}
 
+{# --- KONDISI 1: PROFIL BELUM LENGKAP --- #}
 {% if not has_profile %}
   <div class="bg-white rounded-xl shadow-lg p-8 sm:p-12 text-center max-w-3xl mx-auto border border-gray-100">
     <div class="text-6xl mb-6 text-teal-500"><i class="fa-solid fa-clipboard-question"></i></div>
@@ -84,6 +77,8 @@ input.datepicker:focus, input.timepicker:focus {
       <p class="text-sm text-gray-500"><i class="fa-solid fa-lightbulb mr-1 text-yellow-500"></i> Setelah melengkapi profil, Anda dapat mengatur jadwal di halaman ini.</p>
     </div>
   </div>
+
+{# --- KONDISI 2: PROFIL SUDAH LENGKAP (TAMPILKAN JADWAL) --- #}
 {% else %}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2 space-y-6">
@@ -96,6 +91,7 @@ input.datepicker:focus, input.timepicker:focus {
             <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Semua</button>
           </div>
 
+          {# Form ini digunakan URL-nya untuk fetch delete #}
           <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="flex-shrink-0">
             {% csrf_token %}
             <div class="flex items-center gap-3">
@@ -155,7 +151,7 @@ input.datepicker:focus, input.timepicker:focus {
     </div>
 
     <aside class="lg:col-span-1">
-      <div class="sticky top-24 bg-white border-t-4 border-teal-700 rounded-xl shadow-lg"> {# Ubah top sedikit #}
+      <div class="sticky top-24 bg-white border-t-4 border-teal-700 rounded-xl shadow-lg">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-slate-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-calendar-plus text-teal-600"></i> Tambah Jadwal Baru</h3>
           <p class="text-sm text-gray-500 mb-5">Pilih tanggal dan rentang waktu. Slot akan dibuat per jam.</p>
@@ -163,7 +159,6 @@ input.datepicker:focus, input.timepicker:focus {
           <form method="post" class="space-y-4" id="add-schedule-form" action="{% url 'coach_schedule' %}">
             {% csrf_token %}
             
-            {# Render form fields (dengan asumsi widget sudah di-style di forms.py atau global) #}
             <div>
               <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.date.label }}</label>
               {{ form.date }} 
@@ -191,8 +186,44 @@ input.datepicker:focus, input.timepicker:focus {
       </div>
     </aside>
   </div>
-{% endif %} {# Akhir dari 'if not has_profile' #}
 
+  {# --- MODAL KONFIRMASI DELETE (Hanya render jika ada profil) --- #}
+  <div id="delete-modal" class="relative z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm"></div>
+    <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-gray-200">
+          <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
+              </div>
+              <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                <h3 class="text-base font-semibold leading-6 text-gray-900" id="modal-title">Hapus Jadwal</h3>
+                <div class="mt-2">
+                  <p class="text-sm text-gray-500" id="modal-message">
+                    Apakah Anda yakin ingin menghapus jadwal yang dipilih? Tindakan ini tidak dapat dibatalkan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+            <button type="button" id="confirm-delete-btn" class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto transition">
+              Ya, Hapus
+            </button>
+            <button type="button" id="cancel-modal-btn" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition">
+              Batal
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endif %} {# Akhir if not has_profile #}
+
+{# --- ELEMEN GLOBAL (TOAST & PROFILE MODAL) --- #}
 <div id="custom-toast" role="status" aria-live="polite">
     <span id="toast-icon"></span>
     <span id="toast-message" class="ml-2"></span>
@@ -200,7 +231,6 @@ input.datepicker:focus, input.timepicker:focus {
 
 {% if not has_profile %}
 <div id="profileModal" class="modal-overlay fixed inset-0 z-[9999] items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-  {# Menggunakan class animate-slideUp untuk animasi #}
   <div class="modal-content bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-slideUp"> 
     <button class="modal-close absolute top-3 right-3 z-10 p-2 rounded-full text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors" onclick="hideProfileModal()"><i class="fa-solid fa-xmark text-xl"></i></button>
     <div class="modal-header bg-gradient-to-r from-teal-700 to-teal-800 p-6 text-center flex items-center justify-center gap-3">
@@ -271,19 +301,29 @@ document.addEventListener('DOMContentLoaded', function(){
     const applyBtn = document.getElementById('apply-filter');
     const clearBtn = document.getElementById('clear-filter');
     const bodyEl = document.body;
+    
+    // Delete & Modal Elements
     const deleteToggleBtn = document.getElementById('delete-toggle-btn');
     const deleteToggleText = document.getElementById('delete-toggle-text'); 
     const cancelBtn = document.getElementById('cancel-delete-btn');
     const selectAllBtn = document.getElementById('select-all');
     const bulkForm = document.getElementById('bulk-delete-form');
-    const addScheduleForm = document.getElementById('add-schedule-form');
     const deleteControlsContainer = document.getElementById('delete-controls-container');
     const scheduleListContainer = document.getElementById('schedules-list-container');
+    
+    // Add Form
+    const addScheduleForm = document.getElementById('add-schedule-form');
+
+    // Modal Delete Elements
+    const deleteModal = document.getElementById('delete-modal');
+    const modalMessage = document.getElementById('modal-message');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelModalBtn = document.getElementById('cancel-modal-btn');
 
     let selectionActive = false;
-    let filterTimeout; // Untuk debounce
+    let idsToDeletePending = []; // Menyimpan ID sementara
 
-    // --- AJAX: Add Schedule ---
+    // --- AJAX: Add Schedule (TETAP POST) ---
     addScheduleForm?.addEventListener('submit', async function(e){
         e.preventDefault();
         const formData = new FormData(this);
@@ -356,41 +396,71 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
 
-    // --- AJAX: Delete Schedule ---
+    // --- FUNCTION: MODAL DELETE ---
+    function showDeleteModal(count) {
+        if(modalMessage) modalMessage.textContent = `Apakah Anda yakin ingin menghapus ${count} jadwal yang dipilih? Tindakan ini tidak dapat dibatalkan.`;
+        if(deleteModal) deleteModal.classList.remove('hidden');
+    }
+    function hideDeleteModal() {
+        if(deleteModal) deleteModal.classList.add('hidden');
+        idsToDeletePending = [];
+    }
+    if(cancelModalBtn) cancelModalBtn.addEventListener('click', hideDeleteModal);
+
+    // --- STEP 1: TOMBOL HAPUS (BUKA MODAL) ---
     deleteToggleBtn?.addEventListener('click', function(){
         if (!selectionActive) { enterSelectionMode(); return; }
 
         const checkedCheckboxes = Array.from(scheduleListContainer.querySelectorAll('.delete-checkbox:checked:not(:disabled)'));
         if (checkedCheckboxes.length === 0) { showToast('Pilih jadwal untuk dihapus.', 'warning'); return; }
-        if (!confirm(`Hapus ${checkedCheckboxes.length} jadwal terpilih?`)) return;
+        
+        // Simpan ID sementara
+        idsToDeletePending = checkedCheckboxes.map(ch => ch.dataset.id);
+        
+        // Buka Modal
+        showDeleteModal(checkedCheckboxes.length);
+    });
 
-        const idsToDelete = checkedCheckboxes.map(ch => ch.dataset.id);
+    // --- STEP 2: TOMBOL YA HAPUS (EKSEKUSI DELETE) ---
+    confirmDeleteBtn?.addEventListener('click', function() {
+        // UI Feedback
+        const originalText = confirmDeleteBtn.textContent;
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.textContent = 'Menghapus...';
 
         fetch(bulkForm.action, {
-            method: 'POST',
+            method: 'DELETE', // <-- GANTI JADI DELETE
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'},
-            body: JSON.stringify({ selected_schedules: idsToDelete })
+            body: JSON.stringify({ selected_schedules: idsToDeletePending })
         })
         .then(res => res.ok ? res.json() : res.json().then(err => { throw err; })) 
         .then(data => {
             if (data.success) {
                 showToast(data.message || 'Jadwal dihapus!', 'success');
-                idsToDelete.forEach(id => {
+                
+                // Update DOM
+                idsToDeletePending.forEach(id => {
                     const checkbox = scheduleListContainer.querySelector(`.delete-checkbox[data-id="${id}"]`);
                     const label = checkbox?.closest('label.slot-label');
                     const groupContainer = label?.parentElement;
                     const card = groupContainer?.closest('.group[data-date]');
                     label?.remove();
-                    if (card && groupContainer?.children.length === 0) { card.remove(); }
-                    else if (card) { // Update count
+                    
+                    if (card && groupContainer?.children.length === 0) { 
+                        card.remove(); 
+                    } else if (card) { // Update count
                         const countEl = card.querySelector('.slot-count');
                         const newCount = groupContainer.children.length;
                         if(countEl) countEl.textContent = `${newCount} ${newCount !== 1 ? 'slots' : 'slot'}`;
                     }
                 });
+
                 if (scheduleListContainer.querySelectorAll('.group[data-date]').length === 0 && !document.getElementById('no-schedule-message')) {
                     scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message"><svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tambahkan jadwal ketersediaan Anda.</p></div>`;
                 }
+
+                hideDeleteModal();
+                exitSelectionMode();
             } else {
                 throw new Error(data.message || 'Gagal menghapus jadwal.');
             }
@@ -398,8 +468,12 @@ document.addEventListener('DOMContentLoaded', function(){
         .catch(error => { 
              console.error("Delete Error:", error);
              showToast(error.message || 'Kesalahan koneksi saat menghapus.', 'error');
+             hideDeleteModal();
         })
-        .finally(exitSelectionMode); 
+        .finally(() => {
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.textContent = originalText;
+        });
     });
 
     // --- Filter Logic ---
@@ -463,6 +537,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // Initial state
     exitSelectionMode();
 
+    // --- PROFILE MODAL LOGIC (TETAP ADA) ---
     {% if not has_profile %}
     const profileModal = document.getElementById('profileModal');
     const profileFormContainer = document.getElementById('profileFormContainer');
@@ -480,8 +555,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function loadProfileForm() {
         if (!profileFormContainer) return;
-        
-        // Tampilkan spinner loading (sesuai HTML baru)
         profileFormContainer.innerHTML = '<div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
 
         fetch("{% url 'get_coach_profile_form_ajax' %}")
@@ -492,7 +565,6 @@ document.addEventListener('DOMContentLoaded', function(){
             })
             .catch(error => {
                 console.error("Error loading profile form:", error);
-                // Tampilkan pesan error (sesuai HTML baru)
                 profileFormContainer.innerHTML = '<div class="text-center text-red-600 p-8">' +
                     '<div class="text-4xl mb-3"><i class="fa-solid fa-circle-exclamation"></i></div>' +
                     '<p class="font-semibold">Gagal memuat formulir.</p>' +
@@ -508,21 +580,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn'); // Asumsi ID tombol submit di form
+            const submitBtn = document.getElementById('submitBtn');
             if(!submitBtn) return;
             
             const originalText = submitBtn.innerHTML;
-            
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin h-5 w-5 mr-2"></i> Menyimpan...';
             
-            // Hapus error lama
-            document.querySelectorAll('.form-field-error').forEach(el => {
-                el.style.display = 'none';
-                el.textContent = '';
-            });
-            const formErrors = document.getElementById('formErrors'); // Asumsi ada di form
+            document.querySelectorAll('.form-field-error').forEach(el => { el.style.display = 'none'; el.textContent = ''; });
+            const formErrors = document.getElementById('formErrors');
             if (formErrors) formErrors.style.display = 'none';
             
             const formData = new FormData(form);
@@ -530,10 +596,7 @@ document.addEventListener('DOMContentLoaded', function(){
             
             fetch("{% url 'save_coach_profile_ajax' %}", {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrftoken,
-                    'X-Requested-With': 'XMLHttpRequest' // Penting jika view Anda mengecek ini
-                },
+                headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest' },
                 body: formData,
                 credentials: 'same-origin'
             })
@@ -541,16 +604,10 @@ document.addEventListener('DOMContentLoaded', function(){
             .then(data => {
                 if (data.success) {
                     hideProfileModal();
-                    // Gunakan toast global yang sudah ada
                     showToast(data.message || 'Profil berhasil disimpan!', 'success');
-                    
-                    // Reload page setelah 1.5 detik untuk menampilkan halaman jadwal
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                    setTimeout(() => { window.location.reload(); }, 1500);
                 } else {
                     displayProfileFormErrors(data.errors);
-                    // Gunakan toast global
                     showToast(data.message || 'Gagal menyimpan, periksa error.', 'error');
                 }
             })
@@ -566,28 +623,23 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function displayProfileFormErrors(errors) {
-        const errorSummary = document.getElementById('formErrors'); // Asumsi dari form
-        const errorList = document.getElementById('errorList'); // Asumsi dari form
-        
+        const errorSummary = document.getElementById('formErrors'); 
+        const errorList = document.getElementById('errorList'); 
         if (errorList) errorList.innerHTML = '';
         
         for (const [field, messages] of Object.entries(errors)) {
              messages.forEach(msg => {
                 if (errorList) {
-                    const li = document.createElement('li');
-                    li.textContent = msg;
-                    errorList.appendChild(li);
+                    const li = document.createElement('li'); li.textContent = msg; errorList.appendChild(li);
                 }
             });
-            
             const fieldInput = document.getElementById('id_' + field);
             if (fieldInput) {
-                const formGroup = fieldInput.closest('div'); // Div terdekat
+                const formGroup = fieldInput.closest('div');
                 if (formGroup) {
                     let errorSpan = formGroup.querySelector('.form-field-error');
                     if (!errorSpan) {
                         errorSpan = document.createElement('div');
-                        // Beri class error Tailwind
                         errorSpan.className = 'form-field-error text-red-500 text-sm mt-1'; 
                         fieldInput.parentNode.appendChild(errorSpan);
                     }
@@ -596,20 +648,14 @@ document.addEventListener('DOMContentLoaded', function(){
                 }
             }
         }
-        
-        if (errorSummary && errorList && errorList.children.length > 0) {
-            errorSummary.style.display = 'block';
-        }
+        if (errorSummary && errorList && errorList.children.length > 0) { errorSummary.style.display = 'block'; }
     }
 
     if (profileModal) {
-        profileModal.addEventListener('click', function(e){ 
-            if (e.target === profileModal) hideProfileModal(); 
-        });
+        profileModal.addEventListener('click', function(e){ if (e.target === profileModal) hideProfileModal(); });
     }
     {% endif %}
 
 });
-
 </script>
 {% endblock extra_js %}
