@@ -23,6 +23,7 @@ import pytz
 from django.contrib.auth.models import User 
 from django.http import HttpResponse
 from django.core import serializers
+from django.views.decorators.csrf import csrf_exempt
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -458,20 +459,27 @@ def venue_manage_view(request, venue_id):
     }
     return render(request, 'main/venue_manage.html', context)
 
-
+@csrf_exempt  # PENTING: Agar Flutter bisa POST tanpa error 403 Forbidden
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_manage_schedule_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
     
     if request.method == 'POST':
-        # --- LOGIKA AJAX DIMULAI DI SINI ---
-        schedule_form = VenueScheduleForm(request.POST)
-        
-        if schedule_form.is_valid():
-            # Ambil end_time_global dari form yang valid
-            end_time_global_str = schedule_form.cleaned_data.get('end_time_global')
+        # --- PERUBAHAN UNTUK FLUTTER ---
+        try:
+            # 1. Baca data dari JSON body, bukan request.POST
+            data = json.loads(request.body)
+            
+            # 2. Masukkan data JSON ke dalam Form untuk validasi
+            schedule_form = VenueScheduleForm(data)
+        except json.JSONDecodeError:
+            # Fallback jika ternyata requestnya bukan JSON (misal dari Postman Form-Data)
+            schedule_form = VenueScheduleForm(request.POST)
 
+        if schedule_form.is_valid():
+            # ... (KODE DI BAWAH INI SAMA PERSIS DENGAN KODEMU SEBELUMNYA) ...
+            end_time_global_str = schedule_form.cleaned_data.get('end_time_global')
             cd = schedule_form.cleaned_data
             schedule_date = cd['date']
             start_time = cd['start_time']
@@ -479,17 +487,16 @@ def venue_manage_schedule_view(request, venue_id):
 
             try:
                 start_dt = datetime.combine(schedule_date, start_time)
-                # Ubah end_time_global_str menjadi objek datetime
                 end_dt_time = datetime.strptime(end_time_global_str, '%H:%M').time()
                 end_dt = datetime.combine(schedule_date, end_dt_time)
             except (ValueError, TypeError):
-                return JsonResponse({"success": False, "message": "Format jam atau tanggal tidak valid."}, status=400)
+                return JsonResponse({"success": False, "message": "Format jam/tanggal salah."}, status=400)
 
             if end_dt <= start_dt:
-                return JsonResponse({"success": False, "message": "Waktu selesai harus setelah waktu mulai."}, status=400)
+                return JsonResponse({"success": False, "message": "Waktu selesai harus setelah mulai."}, status=400)
 
             created = 0
-            new_slots_data = [] # List untuk data slot baru
+            new_slots_data = [] 
 
             current = start_dt
             while current < end_dt:
@@ -497,7 +504,6 @@ def venue_manage_schedule_view(request, venue_id):
                 next_dt = current + timedelta(hours=1)
                 slot_end = next_dt.time()
                 
-                # Handle jika slot terakhir > end_dt
                 if next_dt > end_dt:
                     slot_end = end_dt.time()
 
@@ -514,11 +520,10 @@ def venue_manage_schedule_view(request, venue_id):
                         is_available=is_available
                     )
                     created += 1
-                    # Tambahkan data untuk dikirim kembali ke frontend
                     new_slots_data.append({
                         'id': new_schedule.id,
                         'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
-                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'), # Format: "l, d M Y"
+                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'),
                         'start_time': new_schedule.start_time.strftime('%H:%M'),
                         'end_time': new_schedule.end_time.strftime('%H:%M'),
                         'is_booked': False,
@@ -526,7 +531,6 @@ def venue_manage_schedule_view(request, venue_id):
                 
                 current = next_dt
             
-            # Kirim respons JSON
             return JsonResponse({
                 "success": True, 
                 "message": f"{created} slot jadwal berhasil ditambahkan.",
@@ -534,13 +538,15 @@ def venue_manage_schedule_view(request, venue_id):
             }, status=200)
 
         else:
-            # Form tidak valid
-            return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": schedule_form.errors}, status=400)
+            return JsonResponse({"success": False, "message": "Data tidak valid.", "errors": schedule_form.errors}, status=400)
             
-    # --- LOGIKA GET (Menampilkan halaman) ---
+    # --- LOGIKA GET ---
+    # Jika Flutter melakukan GET, biasanya kita return JSON list jadwalnya saja
+    # Tapi kalau view ini dipakai hybrid (Web & Mobile), biarkan return render html
+    # Untuk Flutter, sebaiknya buat logic: if request.headers.get('Accept') == 'application/json' return JsonResponse(...)
+    
     schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
-
     context = {
         'venue': venue,
         'schedule_form': schedule_form,
@@ -548,19 +554,22 @@ def venue_manage_schedule_view(request, venue_id):
     }
     return render(request, 'main/venue_manage_schedule.html', context)
 
+@csrf_exempt # Tetap diperlukan agar Flutter tidak kena 403 Forbidden
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_schedule_delete(request, venue_id):
+    # 1. Cek Method harus DELETE
+    if request.method != 'DELETE':
+        return JsonResponse({"success": False, "message": "Metode tidak diizinkan. Gunakan DELETE."}, status=405)
+
     venue = get_object_or_404(Venue, id=venue_id)
 
-    # Cek kepemilikan
+    # 2. Cek kepemilikan
     if venue.owner != request.user:
         return JsonResponse({"success": False, "message": "Anda tidak memiliki izin."}, status=403)
 
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
-
-    # --- LOGIKA AJAX DELETE ---
+    # 3. Parsing JSON Body
+    # DELETE request membawa data (list ID yang mau dihapus) di dalam body
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -570,13 +579,16 @@ def venue_schedule_delete(request, venue_id):
     if not ids:
         return JsonResponse({"success": False, "message": "Tidak ada jadwal yang dipilih."}, status=400)
 
+    # 4. Filter dan Hapus
+    # Pastikan hanya menghapus jadwal milik venue ini dan yang belum dibooking
     deletable_qs = VenueSchedule.objects.filter(id__in=ids, venue_id=venue.id, is_booked=False)
     count = deletable_qs.count()
     
     if count == 0:
-         return JsonResponse({"success": True, "message": "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking)."})
+         return JsonResponse({"success": True, "message": "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking atau ID salah)."})
 
     deletable_qs.delete()
+    
     return JsonResponse({"success": True, "message": f"{count} jadwal berhasil dihapus."})
 
 @login_required(login_url='login')
