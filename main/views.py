@@ -466,7 +466,6 @@ def venue_manage_schedule_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
     
     if request.method == 'POST':
-        # --- LOGIKA AJAX DIMULAI DI SINI ---
         schedule_form = VenueScheduleForm(request.POST)
         
         if schedule_form.is_valid():
@@ -538,7 +537,6 @@ def venue_manage_schedule_view(request, venue_id):
             # Form tidak valid
             return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": schedule_form.errors}, status=400)
             
-    # --- LOGIKA GET (Menampilkan halaman) ---
     schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
 
@@ -561,7 +559,6 @@ def venue_schedule_delete(request, venue_id):
     if request.method != 'POST':
         return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
 
-    # --- LOGIKA AJAX DELETE ---
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -839,26 +836,19 @@ def coach_schedule(request):
     coach_profile = None
     schedules = CoachSchedule.objects.none() # Default: queryset kosong
 
-    # --- Pengambilan Profil (Aman untuk GET & POST) ---
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
-        # Jika GET, ambil jadwal yang ada
         if request.method == 'GET':
             schedules = coach_profile.schedules.all().order_by('date', 'start_time')
     except CoachProfile.DoesNotExist:
         if request.method == 'POST':
-            # Untuk POST (AJAX), kembalikan error JSON jika profil tidak ada
             return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil Anda terlebih dahulu."}, status=400)
         else:
-            # Untuk GET, beri pesan warning tapi biarkan halaman render
-            pass # Lanjutkan ke rendering template dengan coach_profile=None
+            pass 
 
-    # --- Inisialisasi Form ---
-    # Gunakan request.POST hanya jika metodenya POST, jika tidak None
     form_data = request.POST if request.method == 'POST' else None
     form = CoachScheduleForm(form_data)
 
-    # --- Logika Penambahan Jadwal (AJAX POST) ---
     if request.method == 'POST':
         # Pastikan profil ada sebelum memproses POST (double check)
         if not coach_profile:
@@ -930,8 +920,6 @@ def coach_schedule(request):
             # Jika form POST tidak valid
             return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": form.errors}, status=400)
 
-    # --- Logika Menampilkan Halaman (GET Request) ---
-    # Form sudah diinisialisasi di atas (kosong karena bukan POST)
     user_has_profile = coach_profile is not None
     context = {
         'coach_profile': coach_profile, # Bisa None
@@ -947,7 +935,6 @@ def coach_schedule_delete(request):
     if request.method != 'POST':
         return JsonResponse({"message": "Metode tidak diizinkan."}, status=405)
 
-    # ... (Logic validasi profil dan mendapatkan data JSON) ...
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
@@ -976,7 +963,6 @@ def coach_schedule_delete(request):
     if warning_count > 0:
         message += f" ({warning_count} slot dibatalkan karena sudah dibooking)."
 
-    # FINAL FIX: GANTI REDIRECT DENGAN JSON RESPONSE
     return JsonResponse({"success": True, "message": message}, status=200)
 
 def coach_list_view(request):
