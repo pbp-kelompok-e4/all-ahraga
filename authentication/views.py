@@ -4,8 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-from main.models import UserProfile  # 🔹 import profil yang kamu punya
-
+from main.models import UserProfile
 
 ROLE_CUSTOMER = "CUSTOMER"
 ROLE_VENUE_OWNER = "VENUE_OWNER"
