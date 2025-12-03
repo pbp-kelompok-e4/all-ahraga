@@ -2488,7 +2488,7 @@ def show_my_bookings_json(request):
     if request.user.is_authenticated:
         bookings = Booking.objects.filter(
             customer=request.user,
-            status='PENDING'  
+            transaction__status='PENDING'  
         )
     else:
         bookings = Booking.objects.none()
@@ -2498,7 +2498,7 @@ def show_booking_history_json(request):
     if request.user.is_authenticated:
         bookings = Booking.objects.filter(
             customer=request.user,
-            status='CONFIRMED'  
+            transaction__status='CONFIRMED'  
         )
     else:
         bookings = Booking.objects.none()
