@@ -45,4 +45,7 @@ urlpatterns = [
     path('dashboard/admin/bookings/', views.admin_booking_management_view, name='admin_bookings'),
     path('dashboard/admin/coaches/', views.admin_coach_management_view, name='admin_coaches'),
     path('dashboard/admin/coaches/toggle-verify/<int:coach_id>/', views.admin_toggle_coach_verification_view, name='admin_toggle_coach_verify'),
+    path('json/', views.show_json, name="show_json"),
+    path('my-bookings/json/', views.show_my_bookings_json, name='my_bookings_json'), 
+    path('booking-history/json/', views.show_booking_history_json, name='booking_history_json'),
 ]

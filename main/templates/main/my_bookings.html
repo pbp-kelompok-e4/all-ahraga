@@ -460,10 +460,24 @@ async function fetchMyBookings() {
 
     try {
         bookingListWrapper.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-center"><i class="fa-solid fa-spinner fa-spin text-4xl text-teal-600 mb-4"></i><p class="text-gray-500 font-medium">Memuat bookingan Anda...</p></div>`;
-        const response = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+        
+        const response = await fetch(url.toString(), { 
+            headers: { 
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'  
+            } 
+        });
+        
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const html = await response.text();
-        bookingListWrapper.innerHTML = html;
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            bookingListWrapper.innerHTML = data.html;  
+        } else {
+            throw new Error(data.message || 'Gagal memuat data');
+        }
+        
         window.history.replaceState({}, '', url.toString());
     } catch (error) {
         console.error('Error fetching my bookings:', error);
@@ -490,15 +504,16 @@ document.addEventListener('submit', async function(e) {
     if (e.target.classList.contains('delete-booking-form')) {
         e.preventDefault();
         
-        currentDeleteForm = e.target;
-        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
-        const venueName = bookingItem.querySelector('.text-orange-600').textContent.trim();
+        const form = e.target;
+        const bookingId = form.dataset.bookingId;
+        const venueName = form.dataset.venueName;
         
-        // Set nama venue di modal
-        deleteVenueNameSpan.textContent = venueName;
+        // Set data untuk modal konfirmasi
+        if (deleteVenueNameSpan) deleteVenueNameSpan.textContent = venueName;
+        currentDeleteForm = form;
         
-        // Tampilkan modal
-        deleteModal.classList.remove('hidden');
+        // Buka modal konfirmasi
+        if (deleteModal) deleteModal.classList.remove('hidden');
     }
 });
 
@@ -507,49 +522,42 @@ if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', async function() {
         if (!currentDeleteForm) return;
         
-        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
+        const bookingId = currentDeleteForm.dataset.bookingId;
+        const deleteUrl = currentDeleteForm.action;
         
-        // Disable button saat loading
-        const originalText = confirmDeleteBtn.innerHTML;
         confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<svg class="w-5 h-5 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+        confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menghapus...';
         
         try {
-            const response = await fetch(currentDeleteForm.action, {
-                method: 'POST',
-                body: new FormData(currentDeleteForm),
+            const response = await fetch(deleteUrl, {
+                method: 'DELETE',  // Ubah dari POST ke DELETE
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
             
             const data = await response.json();
             
-            // Tutup modal terlebih dahulu
-            closeDeleteModal();
-            
             if (data.success) {
-                showUserToast(data.message || 'Booking berhasil dibatalkan.', 'success');
+                showUserToast(data.message, 'success');
+                closeDeleteModal();
                 
-                // Animasi fade out item yang dihapus
-                bookingItem.style.transition = 'opacity 0.3s, transform 0.3s';
-                bookingItem.style.opacity = '0';
-                bookingItem.style.transform = 'translateX(-20px)';
-                
-                // Refresh list setelah animasi
+                // Refresh list booking
                 setTimeout(() => {
                     fetchMyBookings();
-                }, 400);
+                }, 500);
             } else {
-                throw new Error(data.message || 'Gagal membatalkan booking.');
+                throw new Error(data.message || 'Gagal menghapus booking.');
             }
+            
         } catch (error) {
-            console.error('Error:', error);
-            showUserToast(error.message || 'Terjadi kesalahan saat membatalkan booking.', 'error');
+            console.error('Error deleting booking:', error);
+            showUserToast(error.message, 'error');
         } finally {
-            // Restore button
             confirmDeleteBtn.disabled = false;
-            confirmDeleteBtn.innerHTML = originalText;
+            confirmDeleteBtn.innerHTML = 'Ya, Batalkan';
+            currentDeleteForm = null;
         }
     });
 }
