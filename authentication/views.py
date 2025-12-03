@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
+from main.models import UserProfile
 
 
 @csrf_exempt
@@ -38,6 +39,9 @@ def register(request):
         username = data['username']
         password1 = data['password1']
         password2 = data['password2']
+        
+        # Ambil role_type, default ke 'CUSTOMER' jika tidak ada
+        role_type = data.get('role_type', 'CUSTOMER')
 
         # Check if the passwords match
         if password1 != password2:
@@ -56,6 +60,15 @@ def register(request):
         # Create the new user
         user = User.objects.create_user(username=username, password=password1)
         user.save()
+        
+        # Buat UserProfile sesuai role
+        UserProfile.objects.create(
+            user=user,
+            phone_number=data.get('phone_number', ''),
+            is_customer=(role_type == 'CUSTOMER'),
+            is_venue_owner=(role_type == 'VENUE_OWNER'),
+            is_coach=(role_type == 'COACH'),
+        )
         
         return JsonResponse({
             "username": user.username,
