@@ -52,4 +52,7 @@ urlpatterns = [
     path('api/booking/<int:venue_id>/form/', views.api_booking_form_data, name='api_booking_form_data'),
     path('api/booking/<int:venue_id>/create/', views.api_create_booking, name='api_create_booking'),
     path('api/schedule/<int:schedule_id>/coaches/', views.api_get_coaches_for_schedule, name='api_get_coaches_for_schedule'),
+    path('api/booking/<int:booking_id>/cancel/', views.api_cancel_booking, name='api_cancel_booking'),
+    path('api/booking/<int:booking_id>/update/', views.api_update_booking, name='api_update_booking'),
+    path('api/booking/<int:booking_id>/detail/', views.api_booking_detail, name='api_booking_detail'),
 ]

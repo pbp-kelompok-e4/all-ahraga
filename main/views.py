@@ -2709,3 +2709,95 @@ def api_get_coaches_for_schedule(request, schedule_id):
         'success': True,
         'coaches': coaches_data
     })
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_cancel_booking(request, booking_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        if hasattr(booking, 'transaction') and booking.transaction.status != 'PENDING':
+            return JsonResponse({
+                'success': False, 
+                'message': 'Booking yang sudah dibayar tidak bisa dibatalkan'
+            })
+        
+        booking.delete()
+        return JsonResponse({'success': True, 'message': 'Booking berhasil dibatalkan'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_update_booking(request, booking_id):
+    """Update booking via API untuk Flutter"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        if hasattr(booking, 'transaction') and booking.transaction.status != 'PENDING':
+            return JsonResponse({
+                'success': False, 
+                'message': 'Booking yang sudah dibayar tidak bisa diedit'
+            })
+        
+        if 'schedule_id' in data:
+            schedule = get_object_or_404(VenueSchedule, pk=data['schedule_id'])
+            booking.schedule = schedule
+        
+        if 'coach_schedule_id' in data:
+            if data['coach_schedule_id']:
+                coach_schedule = get_object_or_404(CoachSchedule, pk=data['coach_schedule_id'])
+                booking.coach_schedule = coach_schedule
+            else:
+                booking.coach_schedule = None
+        
+        if 'payment_method' in data:
+            booking.transaction.payment_method = data['payment_method']
+            booking.transaction.save()
+        
+        booking.save()
+        
+        if 'equipments' in data:
+            BookingEquipment.objects.filter(booking=booking).delete()
+            for eq in data['equipments']:
+                equipment = get_object_or_404(Equipment, pk=eq['id'])
+                BookingEquipment.objects.create(
+                    booking=booking,
+                    equipment=equipment,
+                    quantity=eq['quantity']
+                )
+        
+        return JsonResponse({'success': True, 'message': 'Booking berhasil diupdate'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_booking_detail(request, booking_id):
+    try:
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        data = {
+            'success': True,
+            'booking': {
+                'id': booking.pk,
+                'schedule_id': booking.schedule.pk if booking.schedule else None,
+                'coach_schedule_id': booking.coach_schedule.pk if booking.coach_schedule else None,
+                'payment_method': booking.transaction.payment_method if hasattr(booking, 'transaction') else 'CASH',
+                'equipments': [
+                    {'id': be.equipment.pk, 'name': be.equipment.name, 'quantity': be.quantity}
+                    for be in booking.bookingequipment_set.all()
+                ]
+            }
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
