@@ -48,4 +48,8 @@ urlpatterns = [
     path('json/', views.show_json, name="show_json"),
     path('my-bookings/json/', views.show_my_bookings_json, name='my_bookings_json'), 
     path('booking-history/json/', views.show_booking_history_json, name='booking_history_json'),
+    path('api/venues/', views.api_filter_venues, name='api_filter_venues'),
+    path('api/booking/<int:venue_id>/form/', views.api_booking_form_data, name='api_booking_form_data'),
+    path('api/booking/<int:venue_id>/create/', views.api_create_booking, name='api_create_booking'),
+    path('api/schedule/<int:schedule_id>/coaches/', views.api_get_coaches_for_schedule, name='api_get_coaches_for_schedule'),
 ]
