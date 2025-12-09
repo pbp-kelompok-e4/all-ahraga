@@ -48,4 +48,9 @@ urlpatterns = [
     path('json/', views.show_json, name="show_json"),
     path('my-bookings/json/', views.show_my_bookings_json, name='my_bookings_json'), 
     path('booking-history/json/', views.show_booking_history_json, name='booking_history_json'),
+    path('api/venue/dashboard/', views.api_venue_dashboard, name='api_venue_dashboard'),
+    path('api/venue/add/', views.api_venue_add, name='api_venue_add'),
+    path('api/venue/revenue/', views.api_venue_revenue, name='api_venue_revenue'),
+    path('api/venue/<int:venue_id>/manage/', views.api_venue_manage, name='api_venue_manage'),
+    path('api/venue/<int:venue_id>/delete/', views.api_venue_delete, name='api_venue_delete'),
 ]
