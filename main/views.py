@@ -2505,6 +2505,302 @@ def show_booking_history_json(request):
     return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
 
 @csrf_exempt
+def api_create_booking(request, venue_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        
+        schedule_id = data.get('schedule_id')
+        coach_schedule_id = data.get('coach_schedule_id')  
+        equipment_ids = data.get('equipment', [])  
+        quantities = data.get('quantities', {})  
+        payment_method = data.get('payment_method', 'CASH')
+        
+        if not schedule_id:
+            return JsonResponse({'success': False, 'message': 'Pilih jadwal terlebih dahulu'}, status=400)
+        
+        try:
+            venue_schedule = VenueSchedule.objects.get(pk=schedule_id, is_booked=False)
+        except VenueSchedule.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Jadwal tidak tersedia'}, status=400)
+        
+        venue = venue_schedule.venue
+        
+        total_price = float(venue.price_per_hour or 0)
+        
+        coach_schedule = None
+        if coach_schedule_id:
+            try:
+                coach_schedule = CoachSchedule.objects.get(pk=coach_schedule_id, is_booked=False)
+                total_price += float(coach_schedule.coach.rate_per_hour or 0)
+            except CoachSchedule.DoesNotExist:
+                pass
+        
+        equipment_list = []
+        for eq_id in equipment_ids:
+            try:
+                eq = Equipment.objects.get(pk=eq_id)
+                qty = int(quantities.get(str(eq_id), 1))
+                equipment_list.append({'equipment': eq, 'quantity': qty})
+                total_price += float(eq.rental_price or 0) * qty
+            except Equipment.DoesNotExist:
+                pass
+        
+        with db_transaction.atomic():
+            booking = Booking.objects.create(
+                customer=request.user,
+                venue_schedule=venue_schedule,
+                coach_schedule=coach_schedule,
+                total_price=total_price,
+            )
+            
+            for item in equipment_list:
+                BookingEquipment.objects.create(
+                    booking=booking,
+                    equipment=item['equipment'],
+                    quantity=item['quantity']
+                )
+            
+            venue_schedule.is_booked = True
+            venue_schedule.save()
+            
+            if coach_schedule:
+                coach_schedule.is_booked = True
+                coach_schedule.save()
+            
+            Transaction.objects.create(
+                booking=booking,
+                amount=total_price,
+                payment_method=payment_method,
+                status='PENDING'
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Booking berhasil dibuat!',
+            'booking_id': booking.id,
+            'total_price': total_price
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+@csrf_exempt
+def api_filter_venues(request):
+    """API untuk list venues dengan filter (Flutter)"""
+    search = request.GET.get('search', '')
+    sport = request.GET.get('sport', '')
+    location = request.GET.get('location', '')
+    
+    venues = Venue.objects.all()
+    
+    if search:
+        venues = venues.filter(name__icontains=search)
+    if sport:
+        venues = venues.filter(sport_category__name__icontains=sport)
+    if location:
+        venues = venues.filter(location__name__icontains=location)
+    
+    venues_data = []
+    for v in venues:
+        venues_data.append({
+            'id': v.id,
+            'name': v.name,
+            'location': v.location.name if v.location else None,
+            'sport_category': v.sport_category.name if v.sport_category else None,
+            'description': v.description,
+            'price_per_hour': float(v.price_per_hour or 0),
+            'rating': float(v.rating or 5.0),
+            'image': v.main_image.url if v.main_image else None,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'venues': venues_data
+    })
+
+
+@csrf_exempt
+def api_booking_form_data(request, venue_id):
+    try:
+        venue = Venue.objects.get(pk=venue_id)
+    except Venue.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Venue tidak ditemukan'}, status=404)
+    
+    schedules = VenueSchedule.objects.filter(
+        venue=venue,
+        is_booked=False,
+        date__gte=timezone.now().date()
+    ).order_by('date', 'start_time')
+    
+    schedules_data = []
+    for s in schedules:
+        schedules_data.append({
+            'id': s.id,
+            'date': s.date.strftime('%Y-%m-%d'),
+            'date_display': s.date.strftime('%a, %d %b %Y'),
+            'start_time': s.start_time.strftime('%H:%M'),
+            'end_time': s.end_time.strftime('%H:%M'),
+            'is_booked': s.is_booked,
+        })
+    
+    equipments = Equipment.objects.filter(venue=venue, stock_quantity__gt=0)
+    equipments_data = []
+    for eq in equipments:
+        equipments_data.append({
+            'id': eq.id,
+            'name': eq.name,
+            'rental_price': float(eq.rental_price or 0),
+            'stock_quantity': eq.stock_quantity,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'venue': {
+            'id': venue.id,
+            'name': venue.name,
+            'sport_category': venue.sport_category.name if venue.sport_category else None,
+            'location': venue.location.name if venue.location else None,
+            'price_per_hour': float(venue.price_per_hour or 0),
+            'description': venue.description,
+            'image': venue.main_image.url if venue.main_image else None,
+        },
+        'schedules': schedules_data,
+        'equipments': equipments_data,
+    })
+
+
+@csrf_exempt
+def api_get_coaches_for_schedule(request, schedule_id):
+    try:
+        venue_schedule = VenueSchedule.objects.get(pk=schedule_id)
+    except VenueSchedule.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Schedule tidak ditemukan'}, status=404)
+    
+    # Get coaches yang available di waktu tersebut
+    coach_schedules = CoachSchedule.objects.filter(
+        date=venue_schedule.date,
+        start_time__lte=venue_schedule.start_time,
+        end_time__gte=venue_schedule.end_time,
+        is_booked=False
+    ).select_related('coach', 'coach__user')
+    
+    coaches_data = []
+    for cs in coach_schedules:
+        coach = cs.coach
+        coaches_data.append({
+            'id': coach.id,
+            'coach_schedule_id': cs.id,
+            'name': coach.user.get_full_name() or coach.user.username,
+            'rate_per_hour': float(coach.rate_per_hour or 0),
+            'sport': coach.sport_category.name if coach.sport_category else None,
+            'experience_desc': coach.experience_description,
+            'profile_picture': coach.profile_picture.url if coach.profile_picture else None,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'coaches': coaches_data
+    })
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_cancel_booking(request, booking_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        if hasattr(booking, 'transaction') and booking.transaction.status != 'PENDING':
+            return JsonResponse({
+                'success': False, 
+                'message': 'Booking yang sudah dibayar tidak bisa dibatalkan'
+            })
+        
+        booking.delete()
+        return JsonResponse({'success': True, 'message': 'Booking berhasil dibatalkan'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_update_booking(request, booking_id):
+    """Update booking via API untuk Flutter"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        if hasattr(booking, 'transaction') and booking.transaction.status != 'PENDING':
+            return JsonResponse({
+                'success': False, 
+                'message': 'Booking yang sudah dibayar tidak bisa diedit'
+            })
+        
+        if 'schedule_id' in data:
+            schedule = get_object_or_404(VenueSchedule, pk=data['schedule_id'])
+            booking.schedule = schedule
+        
+        if 'coach_schedule_id' in data:
+            if data['coach_schedule_id']:
+                coach_schedule = get_object_or_404(CoachSchedule, pk=data['coach_schedule_id'])
+                booking.coach_schedule = coach_schedule
+            else:
+                booking.coach_schedule = None
+        
+        if 'payment_method' in data:
+            booking.transaction.payment_method = data['payment_method']
+            booking.transaction.save()
+        
+        booking.save()
+        
+        if 'equipments' in data:
+            BookingEquipment.objects.filter(booking=booking).delete()
+            for eq in data['equipments']:
+                equipment = get_object_or_404(Equipment, pk=eq['id'])
+                BookingEquipment.objects.create(
+                    booking=booking,
+                    equipment=equipment,
+                    quantity=eq['quantity']
+                )
+        
+        return JsonResponse({'success': True, 'message': 'Booking berhasil diupdate'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_booking_detail(request, booking_id):
+    try:
+        booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        
+        data = {
+            'success': True,
+            'booking': {
+                'id': booking.pk,
+                'schedule_id': booking.schedule.pk if booking.schedule else None,
+                'coach_schedule_id': booking.coach_schedule.pk if booking.coach_schedule else None,
+                'payment_method': booking.transaction.payment_method if hasattr(booking, 'transaction') else 'CASH',
+                'equipments': [
+                    {'id': be.equipment.pk, 'name': be.equipment.name, 'quantity': be.quantity}
+                    for be in booking.bookingequipment_set.all()
+                ]
+            }
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 @login_required(login_url='login')
 def api_venue_dashboard(request):
     """Flutter API: Get venue dashboard data"""
