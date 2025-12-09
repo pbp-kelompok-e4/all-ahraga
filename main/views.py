@@ -2955,25 +2955,31 @@ def api_venue_revenue(request):
         venue_revenue_data = []
         
         for venue in venues:
-            # Ambil booking yang sudah confirmed
             bookings = Booking.objects.filter(
                 venue_schedule__venue=venue,
                 transaction__status='CONFIRMED'
-            ).select_related('transaction', 'venue_schedule')
+            ).select_related('transaction', 'venue_schedule', 'customer', 'coach_schedule__coach__user').order_by('-venue_schedule__date')
             
             venue_revenue = 0
             bookings_data = []
             
             for booking in bookings:
-                amount = float(booking.transaction.total_amount)
+                amount = float(booking.transaction.revenue_venue or 0)
                 venue_revenue += amount
                 
+                # Mengambil nama coach jika ada
+                coach_name = None
+                if booking.coach_schedule:
+                    coach_name = booking.coach_schedule.coach.user.username
+
                 bookings_data.append({
                     'id': booking.id,
-                    'date': booking.booking_date.strftime('%Y-%m-%d'),
-                    'time': f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}",
-                    'customer': booking.customer.get_full_name() or booking.customer.username,
-                    'amount': amount
+                    'date': booking.venue_schedule.date.strftime('%a, %d %b %Y'),
+                    'start_time': booking.venue_schedule.start_time.strftime('%H:%M'),
+                    'end_time': booking.venue_schedule.end_time.strftime('%H:%M'),
+                    'customer_username': booking.customer.username,
+                    'revenue': amount,
+                    'coach': coach_name, 
                 })
             
             total_revenue += venue_revenue
@@ -2989,7 +2995,6 @@ def api_venue_revenue(request):
         return JsonResponse({
             'success': True,
             'total_revenue': total_revenue,
-            'venue_count': venues.count(),
             'venue_revenue_data': venue_revenue_data
         })
     
