@@ -14,11 +14,23 @@ def login(request):
     if user is not None:
         if user.is_active:
             auth_login(request, user)
+            # Mengambil role dari UserProfile
+            try:
+                user_profile = UserProfile.objects.get(user=user)
+                if user_profile.is_venue_owner:
+                    role_type = 'VENUE_OWNER'
+                elif user_profile.is_coach:
+                    role_type = 'COACH'
+                else:
+                    role_type = 'CUSTOMER'
+            except UserProfile.DoesNotExist:
+                role_type = 'CUSTOMER'  # Default fallback
             # Login status successful.
             return JsonResponse({
                 "username": user.username,
                 "status": True,
-                "message": "Login successful!"
+                "message": "Login successful!",
+                "role_type": role_type  # Mengirimkan role ke Flutter
             }, status=200)
         else:
             return JsonResponse({

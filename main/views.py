@@ -2801,3 +2801,412 @@ def api_booking_detail(request, booking_id):
         return JsonResponse(data)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+@login_required(login_url='login')
+def api_venue_dashboard(request):
+    """Flutter API: Get venue dashboard data"""
+    # Cek apakah user adalah venue owner
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
+        return JsonResponse({
+            'success': False,
+            'message': 'Hanya venue owner yang dapat mengakses dashboard venue'
+        }, status=403)
+    
+    if request.method == 'GET':
+        venues = Venue.objects.filter(owner=request.user)
+        venues_data = []
+        for venue in venues:
+            venues_data.append({
+                'id': venue.id,
+                'name': venue.name,
+                'category': venue.sport_category.name,
+                'location': venue.location.name,
+                'description': venue.description or '',
+                'price_per_hour': float(venue.price_per_hour or 0),
+                'image_url': request.build_absolute_uri(venue.main_image.url) if venue.main_image else None,
+            })
+        return JsonResponse({'success': True, 'venues': venues_data})
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_venue_add(request):
+    """Flutter API: Add new venue & Get master data"""
+    # Cek apakah user adalah venue owner
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
+        return JsonResponse({
+            'success': False,
+            'message': 'Hanya venue owner yang dapat menambah lapangan'
+        }, status=403)
+    
+    # GET - Return master data (locations & sports)
+    if request.method == 'GET':
+        locations = LocationArea.objects.all()
+        sports = SportCategory.objects.all()
+        
+        locations_data = [
+            {'id': loc.id, 'name': loc.name}
+            for loc in locations
+        ]
+        
+        sports_data = [
+            {'id': sport.id, 'name': sport.name}
+            for sport in sports
+        ]
+        
+        return JsonResponse({
+            'success': True,
+            'locations': locations_data,
+            'sports': sports_data
+        })
+    
+    # POST - Add new venue
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Validate required fields
+            required_fields = ['name', 'sport_category', 'location', 'price_per_hour']
+            for field in required_fields:
+                if field not in data:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Field {field} wajib diisi'
+                    }, status=400)
+            
+            # Validasi sport_category dan location exist
+            try:
+                sport_category = SportCategory.objects.get(id=data['sport_category'])
+            except SportCategory.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Kategori olahraga tidak valid'
+                }, status=400)
+            
+            try:
+                location = LocationArea.objects.get(id=data['location'])
+            except LocationArea.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Lokasi tidak valid'
+                }, status=400)
+            
+            # Create venue
+            venue = Venue.objects.create(
+                owner=request.user,
+                name=data['name'],
+                sport_category=sport_category,
+                location=location,
+                price_per_hour=data['price_per_hour'],
+                description=data.get('description', '')
+            )
+            
+            # Handle image if provided (base64)
+            if 'image' in data and data['image']:
+                import base64
+                from django.core.files.base import ContentFile
+                
+                try:
+                    format, imgstr = data['image'].split(';base64,')
+                    ext = format.split('/')[-1]
+                    image_data = ContentFile(base64.b64decode(imgstr), name=f'venue_{venue.id}.{ext}')
+                    venue.main_image = image_data
+                    venue.save()
+                except Exception as e:
+                    pass  # Image is optional
+            
+            return JsonResponse({
+                'success': True,
+                'message': f"Lapangan '{venue.name}' berhasil ditambahkan.",
+                'venue': {
+                    'id': venue.id,
+                    'name': venue.name,
+                    'category': venue.sport_category.name,
+                    'location': venue.location.name,
+                    'price_per_hour': float(venue.price_per_hour),
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_venue_revenue(request):
+    """Flutter API: Get venue revenue report"""
+    # Cek apakah user adalah venue owner
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
+        return JsonResponse({
+            'success': False,
+            'message': 'Hanya venue owner yang dapat melihat laporan pendapatan'
+        }, status=403)
+    
+    if request.method == 'GET':
+        venues = Venue.objects.filter(owner=request.user)
+        
+        total_revenue = 0
+        venue_revenue_data = []
+        
+        for venue in venues:
+            # Ambil booking yang sudah confirmed
+            bookings = Booking.objects.filter(
+                venue_schedule__venue=venue,
+                transaction__status='CONFIRMED'
+            ).select_related('transaction', 'venue_schedule')
+            
+            venue_revenue = 0
+            bookings_data = []
+            
+            for booking in bookings:
+                amount = float(booking.transaction.total_amount)
+                venue_revenue += amount
+                
+                bookings_data.append({
+                    'id': booking.id,
+                    'date': booking.booking_date.strftime('%Y-%m-%d'),
+                    'time': f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}",
+                    'customer': booking.customer.get_full_name() or booking.customer.username,
+                    'amount': amount
+                })
+            
+            total_revenue += venue_revenue
+            
+            venue_revenue_data.append({
+                'venue_id': venue.id,
+                'venue_name': venue.name,
+                'total_revenue': venue_revenue,
+                'booking_count': bookings.count(),
+                'bookings': bookings_data
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'total_revenue': total_revenue,
+            'venue_count': venues.count(),
+            'venue_revenue_data': venue_revenue_data
+        })
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_venue_manage(request, venue_id):
+    """Flutter API: Manage venue (GET data, POST edit/add/delete equipment)"""
+    # Cek apakah user adalah venue owner
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
+        return JsonResponse({
+            'success': False,
+            'message': 'Hanya venue owner yang dapat mengelola venue'
+        }, status=403)
+    
+    try:
+        venue = Venue.objects.get(id=venue_id, owner=request.user)
+    except Venue.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Venue tidak ditemukan atau bukan milik Anda'
+        }, status=404)
+    
+    # GET - Ambil data venue dan equipment
+    if request.method == 'GET':
+        locations = LocationArea.objects.all()
+        categories = SportCategory.objects.all()
+        equipments = Equipment.objects.filter(venue=venue)
+        
+        venue_data = {
+            'id': venue.id,
+            'name': venue.name,
+            'description': venue.description or '',
+            'price_per_hour': float(venue.price_per_hour or 0),
+            'location_id': venue.location.id,
+            'sport_category_id': venue.sport_category.id,
+            'payment_options': venue.payment_options,
+        }
+        
+        locations_data = [{'id': loc.id, 'name': loc.name} for loc in locations]
+        categories_data = [{'id': cat.id, 'name': cat.name} for cat in categories]
+        equipments_data = [{
+            'id': eq.id,
+            'name': eq.name,
+            'stock': eq.stock_quantity,
+            'price': float(eq.rental_price)
+        } for eq in equipments]
+        
+        return JsonResponse({
+            'success': True,
+            'venue': venue_data,
+            'locations': locations_data,
+            'categories': categories_data,
+            'equipments': equipments_data
+        })
+    
+    # POST - Edit venue atau manage equipment
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            action = data.get('action')
+            
+            # Edit venue
+            if action == 'edit_venue':
+                venue.name = data.get('name', venue.name)
+                venue.description = data.get('description', venue.description)
+                venue.price_per_hour = data.get('price_per_hour', venue.price_per_hour)
+                venue.payment_options = data.get('payment_options', venue.payment_options)
+                
+                # Update location
+                if 'location' in data:
+                    try:
+                        location = LocationArea.objects.get(id=data['location'])
+                        venue.location = location
+                    except LocationArea.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'Lokasi tidak valid'
+                        }, status=400)
+                
+                # Update sport category
+                if 'sport_category' in data:
+                    try:
+                        category = SportCategory.objects.get(id=data['sport_category'])
+                        venue.sport_category = category
+                    except SportCategory.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'Kategori olahraga tidak valid'
+                        }, status=400)
+                
+                venue.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Venue berhasil diperbarui'
+                })
+            
+            # Add equipment
+            elif action == 'add_equipment':
+                equipment = Equipment.objects.create(
+                    venue=venue,
+                    name=data.get('name'),
+                    stock_quantity=data.get('stock_quantity', 0),
+                    rental_price=data.get('rental_price', 0)
+                )
+                
+                equipments = Equipment.objects.filter(venue=venue)
+                equipments_data = [{
+                    'id': eq.id,
+                    'name': eq.name,
+                    'stock': eq.stock_quantity,
+                    'price': float(eq.rental_price)
+                } for eq in equipments]
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Equipment berhasil ditambahkan',
+                    'equipments': equipments_data
+                })
+            
+            # Edit equipment
+            elif action == 'edit_equipment':
+                equipment_id = data.get('equipment_id')
+                try:
+                    equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                    equipment.name = data.get('name', equipment.name)
+                    equipment.stock_quantity = data.get('stock_quantity', equipment.stock_quantity)
+                    equipment.rental_price = data.get('rental_price', equipment.rental_price)
+                    equipment.save()
+                    
+                    equipments = Equipment.objects.filter(venue=venue)
+                    equipments_data = [{
+                        'id': eq.id,
+                        'name': eq.name,
+                        'stock': eq.stock_quantity,
+                        'price': float(eq.rental_price)
+                    } for eq in equipments]
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Equipment berhasil diperbarui',
+                        'equipments': equipments_data
+                    })
+                except Equipment.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan'
+                    }, status=404)
+            
+            # Delete equipment
+            elif action == 'delete_equipment':
+                equipment_id = data.get('equipment_id')
+                try:
+                    equipment = Equipment.objects.get(id=equipment_id, venue=venue)
+                    equipment.delete()
+                    
+                    equipments = Equipment.objects.filter(venue=venue)
+                    equipments_data = [{
+                        'id': eq.id,
+                        'name': eq.name,
+                        'stock': eq.stock_quantity,
+                        'price': float(eq.rental_price)
+                    } for eq in equipments]
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Equipment berhasil dihapus',
+                        'equipments': equipments_data
+                    })
+                except Equipment.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Equipment tidak ditemukan'
+                    }, status=404)
+            
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Action tidak valid'
+                }, status=400)
+                
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+@login_required(login_url='login')
+def api_venue_delete(request, venue_id):
+    """Flutter API: Delete venue"""
+    # Cek apakah user adalah venue owner
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
+        return JsonResponse({
+            'success': False,
+            'message': 'Hanya venue owner yang dapat menghapus venue'
+        }, status=403)
+    
+    if request.method == 'POST' or request.method == 'DELETE':
+        try:
+            venue = Venue.objects.get(id=venue_id, owner=request.user)
+            venue_name = venue.name
+            venue.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f"Venue '{venue_name}' berhasil dihapus"
+            })
+        except Venue.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Venue tidak ditemukan atau bukan milik Anda'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
