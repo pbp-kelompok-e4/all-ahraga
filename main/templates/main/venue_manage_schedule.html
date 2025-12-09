@@ -216,17 +216,17 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('custom-toast'); if (!toast) return; const msgEl = document.getElementById('toast-message'); const iconEl = document.getElementById('toast-icon'); let color = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f97316'); let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️'); toast.style.backgroundColor = color; msgEl.textContent = message; iconEl.textContent = icon; toast.classList.remove('hidden'); toast.classList.add('show-toast'); setTimeout(() => { toast.classList.remove('show-toast'); setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
 }
 
-// --- FUNGSI HELPER UNTUK DOM ---
 function createSlotHtml(slot) {
     return `
     <label class="relative inline-flex items-center slot-label">
         <input type="checkbox" class="delete-checkbox form-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500" data-id="${slot.id}" />
-        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-700 hover:bg-teal-50 shadow-sm transition-colors duration-150">
-            <svg class="h-4 w-4 icon text-teal-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-600 hover:bg-teal-50 shadow-sm transition-colors duration-150">
+            <i class="fa-solid fa-check h-4 w-4 icon text-teal-600"></i>
             <span class="text-sm font-medium">${slot.start_time} - ${slot.end_time}</span>
         </span>
     </label>`;
 }
+
 function createGroupCardHtmlForAjax(firstSlot, allSlots) {
     let slotsHtml = allSlots.map(createSlotHtml).join(''); const count = allSlots.length; const slotText = count !== 1 ? 'slots' : 'slot';
     return `
@@ -271,14 +271,43 @@ document.addEventListener('DOMContentLoaded',function(){
     let selectionActive = false;
     let idsToDeletePending = []; // Menyimpan ID sementara saat modal terbuka
 
-    // --- AJAX TAMBAH JADWAL (Tetap POST) ---
     addScheduleForm?.addEventListener('submit', async function(e){
-        e.preventDefault(); const formData = new FormData(this); const submitButton = this.querySelector('button[type="submit"]'); submitButton.disabled = true;
+        e.preventDefault(); 
+        
+        // 1. Ambil data form
+        const formData = new FormData(this);
+        const dataObj = {};
+        
+        // 2. Konversi FormData ke JSON Object
+        formData.forEach((value, key) => {
+            dataObj[key] = value;
+        });
+
+        const submitButton = this.querySelector('button[type="submit"]'); 
+        submitButton.disabled = true;
+        
         try {
-            const response = await fetch(this.action, { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') } });
+            // 4. Kirim sebagai JSON (Content-Type: application/json)
+            const response = await fetch(this.action, { 
+                method: 'POST', 
+                body: JSON.stringify(dataObj), // UBAH KE JSON STRING
+                headers: {
+                    'Content-Type': 'application/json', // HEADER WAJIB
+                    'X-Requested-With': 'XMLHttpRequest', 
+                    'X-CSRFToken': getCookie('csrftoken') 
+                } 
+            });
+            
+            // Backend sekarang akan mendeteksi JSON dan me-return JsonResponse
             const data = await response.json();
-            if (!response.ok) { throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`)); }
+            
+            if (!data.success) { // Sesuaikan cek success (backend return success: true/false)
+                throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`)); 
+            }
+            
             showToast(data.message || 'Jadwal berhasil ditambahkan!', 'success');
+            
+            // ... (Kode update DOM di bawah ini SAMA SAJA, tidak berubah) ...
             if (data.new_slots && data.new_slots.length > 0) {
                 const noScheduleMsg = document.getElementById('no-schedule-message'); if (noScheduleMsg) noScheduleMsg.remove();
                 const slotsByDate = data.new_slots.reduce((acc, slot) => { const date = slot.date_str_iso; if (!acc[date]) acc[date] = []; acc[date].push(slot); return acc; }, {});
@@ -289,8 +318,13 @@ document.addEventListener('DOMContentLoaded',function(){
                 }
             }
             addScheduleForm.reset(); document.querySelectorAll('.datepicker, .timepicker').forEach(fpInput => { if (fpInput._flatpickr) fpInput._flatpickr.clear(); });
-        } catch (error) { console.error('AJAX Error:', error); showToast(error.message || 'Terjadi kesalahan.', 'error'); }
-        finally { submitButton.disabled = false; }
+        
+        } catch (error) { 
+            console.error('AJAX Error:', error); 
+            showToast(error.message || 'Terjadi kesalahan.', 'error'); 
+        } finally { 
+            submitButton.disabled = false; 
+        }
     });
 
     // --- FUNGSI MODAL ---

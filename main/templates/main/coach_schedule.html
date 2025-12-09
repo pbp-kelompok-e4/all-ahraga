@@ -323,26 +323,42 @@ document.addEventListener('DOMContentLoaded', function(){
     let selectionActive = false;
     let idsToDeletePending = []; // Menyimpan ID sementara
 
-    // --- AJAX: Add Schedule (TETAP POST) ---
+    // --- AJAX: Add Schedule (UPDATE: Kirim JSON agar Backend return JSON) ---
     addScheduleForm?.addEventListener('submit', async function(e){
         e.preventDefault();
+        
+        // 1. Ubah FormData menjadi JSON Object
         const formData = new FormData(this);
+        const dataObj = {};
+        formData.forEach((value, key) => {
+            dataObj[key] = value;
+        });
+
         const submitButton = this.querySelector('button[type="submit"]');
         if (submitButton) submitButton.disabled = true;
 
         try {
+            // 2. Kirim sebagai JSON String
             const response = await fetch(this.action, {
                 method: 'POST',
-                body: formData,
-                headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
+                body: JSON.stringify(dataObj), // <-- UBAH KE JSON
+                headers: {
+                    'Content-Type': 'application/json', // <-- HEADER WAJIB
+                    'X-Requested-With': 'XMLHttpRequest', 
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
             });
+            
+            // Backend sekarang akan mendeteksi JSON body dan me-return JsonResponse
             const data = await response.json(); 
 
-            if (!response.ok) {
+            if (!data.success) { // Sesuaikan pengecekan success
                  throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`));
             }
             
             showToast(data.message || 'Jadwal ditambahkan!', 'success');
+            
+            // --- Update UI DOM (Kode di bawah ini SAMA, tidak perlu diubah) ---
             if (data.new_slots && data.new_slots.length > 0) {
                 const noScheduleMsg = document.getElementById('no-schedule-message');
                 if (noScheduleMsg) noScheduleMsg.remove();
