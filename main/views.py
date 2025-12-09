@@ -460,30 +460,29 @@ def venue_manage_view(request, venue_id):
     }
     return render(request, 'main/venue_manage.html', context)
 
-@csrf_exempt  # PENTING: Agar Flutter bisa POST tanpa error 403 Forbidden
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_manage_schedule_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
     
+    # === 1. LOGIKA POST (Menambah Data) ===
     if request.method == 'POST':
-        # --- PERUBAHAN UNTUK FLUTTER ---
+        # Cek apakah data dari Flutter (JSON Body) atau Web (Form Data)
         try:
-            # 1. Baca data dari JSON body, bukan request.POST
             data = json.loads(request.body)
-            
-            # 2. Masukkan data JSON ke dalam Form untuk validasi
             schedule_form = VenueScheduleForm(data)
+            is_flutter = True # Penanda request dari Flutter
         except json.JSONDecodeError:
-            # Fallback jika ternyata requestnya bukan JSON (misal dari Postman Form-Data)
             schedule_form = VenueScheduleForm(request.POST)
+            is_flutter = False # Penanda request dari Web
 
         if schedule_form.is_valid():
-            # ... (KODE DI BAWAH INI SAMA PERSIS DENGAN KODEMU SEBELUMNYA) ...
-            end_time_global_str = schedule_form.cleaned_data.get('end_time_global')
+            # ... (Logika validasi waktu & save kamu tetap sama di sini) ...
             cd = schedule_form.cleaned_data
             schedule_date = cd['date']
             start_time = cd['start_time']
+            end_time_global_str = cd.get('end_time_global')
             is_available = cd.get('is_available', True)
 
             try:
@@ -491,61 +490,84 @@ def venue_manage_schedule_view(request, venue_id):
                 end_dt_time = datetime.strptime(end_time_global_str, '%H:%M').time()
                 end_dt = datetime.combine(schedule_date, end_dt_time)
             except (ValueError, TypeError):
-                return JsonResponse({"success": False, "message": "Format jam/tanggal salah."}, status=400)
+                msg = "Format jam/tanggal salah."
+                return JsonResponse({"success": False, "message": msg}, status=400) if is_flutter else render(request, 'main/venue_manage_schedule.html', {'error': msg, 'venue': venue, 'schedule_form': schedule_form})
 
             if end_dt <= start_dt:
-                return JsonResponse({"success": False, "message": "Waktu selesai harus setelah mulai."}, status=400)
+                msg = "Waktu selesai harus setelah mulai."
+                return JsonResponse({"success": False, "message": msg}, status=400) if is_flutter else render(request, 'main/venue_manage_schedule.html', {'error': msg, 'venue': venue, 'schedule_form': schedule_form})
 
+            # Proses Loop Create Slot
             created = 0
-            new_slots_data = [] 
-
+            new_slots_data = []
             current = start_dt
             while current < end_dt:
                 slot_start = current.time()
                 next_dt = current + timedelta(hours=1)
+                if next_dt > end_dt: next_dt = end_dt
                 slot_end = next_dt.time()
-                
-                if next_dt > end_dt:
-                    slot_end = end_dt.time()
 
-                exists = VenueSchedule.objects.filter(
-                    venue=venue, date=schedule_date, start_time=slot_start
-                ).exists()
-
+                exists = VenueSchedule.objects.filter(venue=venue, date=schedule_date, start_time=slot_start).exists()
                 if not exists:
-                    new_schedule = VenueSchedule.objects.create(
-                        venue=venue,
-                        date=schedule_date,
-                        start_time=slot_start,
-                        end_time=slot_end,
-                        is_available=is_available
-                    )
+                    new_sch = VenueSchedule.objects.create(venue=venue, date=schedule_date, start_time=slot_start, end_time=slot_end, is_available=is_available)
                     created += 1
+                    # Simpan data slot baru untuk return ke Flutter
                     new_slots_data.append({
-                        'id': new_schedule.id,
-                        'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
-                        'date_str_display': new_schedule.date.strftime('%A, %d %b %Y'),
-                        'start_time': new_schedule.start_time.strftime('%H:%M'),
-                        'end_time': new_schedule.end_time.strftime('%H:%M'),
+                        'id': new_sch.id,
+                        'date': new_sch.date.strftime('%Y-%m-%d'),
+                        'start_time': new_sch.start_time.strftime('%H:%M'),
+                        'end_time': new_sch.end_time.strftime('%H:%M'),
                         'is_booked': False,
+                        'is_available': True,
                     })
-                
                 current = next_dt
             
-            return JsonResponse({
-                "success": True, 
-                "message": f"{created} slot jadwal berhasil ditambahkan.",
-                "new_slots": new_slots_data
-            }, status=200)
+            # --- RESPONSE SUKSES POST ---
+            if is_flutter:
+                return JsonResponse({
+                    "success": True, 
+                    "message": f"{created} slot berhasil dibuat.",
+                    "new_slots": new_slots_data
+                })
+            else:
+                # Kalau Web, refresh halaman atau redirect
+                return render(request, 'main/venue_manage_schedule.html', {
+                    'success_msg': f"{created} slot berhasil dibuat.",
+                    'venue': venue,
+                    'schedule_form': VenueScheduleForm(), # Reset form
+                    'schedules': venue.schedules.all().order_by('date', 'start_time')
+                })
 
         else:
-            return JsonResponse({"success": False, "message": "Data tidak valid.", "errors": schedule_form.errors}, status=400)
-            
-    # --- LOGIKA GET ---
-    # Jika Flutter melakukan GET, biasanya kita return JSON list jadwalnya saja
-    # Tapi kalau view ini dipakai hybrid (Web & Mobile), biarkan return render html
-    # Untuk Flutter, sebaiknya buat logic: if request.headers.get('Accept') == 'application/json' return JsonResponse(...)
+            # --- RESPONSE ERROR POST ---
+            if is_flutter:
+                return JsonResponse({"success": False, "message": "Data tidak valid", "errors": schedule_form.errors}, status=400)
+            else:
+                return render(request, 'main/venue_manage_schedule.html', {
+                    'venue': venue, 'schedule_form': schedule_form, 
+                    'schedules': venue.schedules.all().order_by('date', 'start_time')
+                })
+
+    # === 2. LOGIKA GET (Mengambil Data) ===
     
+    # A. JIKA FLUTTER (Minta JSON)
+    # Flutter nanti request ke: /venue/1/manage/?format=json
+    if request.GET.get('format') == 'json':
+        schedules = venue.schedules.all().order_by('date', 'start_time')
+        data = []
+        for s in schedules:
+            data.append({
+                'id': s.id,
+                'date': s.date.strftime('%Y-%m-%d'),
+                'start_time': s.start_time.strftime('%H:%M'),
+                'end_time': s.end_time.strftime('%H:%M'),
+                'is_booked': s.is_booked,
+                'is_available': s.is_available,
+            })
+        return JsonResponse(data, safe=False)
+
+    # B. JIKA WEB BROWSER (Minta HTML)
+    # Browser request ke: /venue/1/manage/
     schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
     context = {
@@ -553,6 +575,7 @@ def venue_manage_schedule_view(request, venue_id):
         'schedule_form': schedule_form,
         'schedules': schedules,
     }
+    # INI WAJIB ADA untuk Website
     return render(request, 'main/venue_manage_schedule.html', context)
 
 @csrf_exempt # Tetap diperlukan agar Flutter tidak kena 403 Forbidden
