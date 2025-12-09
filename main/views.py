@@ -1,4 +1,5 @@
 from django.db import transaction as db_transaction, IntegrityError
+from django.db.models import Avg
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm 
@@ -1792,7 +1793,7 @@ def my_bookings(request):
                     'sport_category': venue.sport_category.name if venue.sport_category else None,
                     'location': venue.location.name if venue.location else None,
                     'price_per_hour': float(venue.price_per_hour or 0),
-                    'image_url': request.build_absolute_uri(venue.image.url) if venue.image else None,
+                    'image_url': request.build_absolute_uri(venue.main_image.url) if venue.main_image else None,
                 },
                 'schedule': {
                     'id': booking.venue_schedule.id,
@@ -2507,123 +2508,119 @@ def show_booking_history_json(request):
 @csrf_exempt
 def api_create_booking(request, venue_id):
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
-    
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'message': 'Login required'}, status=401)
+        return JsonResponse({'success': False, 'message': 'Method not allowed'})
     
     try:
+        import json
         data = json.loads(request.body)
         
+        venue = get_object_or_404(Venue, pk=venue_id)
         schedule_id = data.get('schedule_id')
-        coach_schedule_id = data.get('coach_schedule_id')  
-        equipment_ids = data.get('equipment', [])  
-        quantities = data.get('quantities', {})  
+        coach_schedule_id = data.get('coach_schedule_id')
+        equipment_ids = data.get('equipment', [])
+        quantities = data.get('quantities', {})
         payment_method = data.get('payment_method', 'CASH')
         
-        if not schedule_id:
-            return JsonResponse({'success': False, 'message': 'Pilih jadwal terlebih dahulu'}, status=400)
+        schedule = get_object_or_404(VenueSchedule, pk=schedule_id, venue=venue)
         
-        try:
-            venue_schedule = VenueSchedule.objects.get(pk=schedule_id, is_booked=False)
-        except VenueSchedule.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Jadwal tidak tersedia'}, status=400)
+        if schedule.is_booked:
+            return JsonResponse({'success': False, 'message': 'Jadwal sudah dibooking'})
         
-        venue = venue_schedule.venue
-        
-        total_price = float(venue.price_per_hour or 0)
+        total_price = venue.price_per_hour
+        revenue_coach = 0
         
         coach_schedule = None
         if coach_schedule_id:
-            try:
-                coach_schedule = CoachSchedule.objects.get(pk=coach_schedule_id, is_booked=False)
-                total_price += float(coach_schedule.coach.rate_per_hour or 0)
-            except CoachSchedule.DoesNotExist:
-                pass
+            coach_schedule = get_object_or_404(CoachSchedule, pk=coach_schedule_id)
+            if coach_schedule.is_booked:
+                return JsonResponse({'success': False, 'message': 'Coach sudah dibooking'})
+            revenue_coach = coach_schedule.coach.rate_per_hour
+            total_price += revenue_coach
         
-        equipment_list = []
+        equipment_total = 0
         for eq_id in equipment_ids:
-            try:
-                eq = Equipment.objects.get(pk=eq_id)
-                qty = int(quantities.get(str(eq_id), 1))
-                equipment_list.append({'equipment': eq, 'quantity': qty})
-                total_price += float(eq.rental_price or 0) * qty
-            except Equipment.DoesNotExist:
-                pass
+            eq = get_object_or_404(Equipment, pk=eq_id, venue=venue)
+            qty = int(quantities.get(str(eq_id), 1))
+            equipment_total += eq.rental_price * qty
         
-        with db_transaction.atomic():
-            booking = Booking.objects.create(
-                customer=request.user,
-                venue_schedule=venue_schedule,
-                coach_schedule=coach_schedule,
-                total_price=total_price,
-            )
-            
-            for item in equipment_list:
-                BookingEquipment.objects.create(
-                    booking=booking,
-                    equipment=item['equipment'],
-                    quantity=item['quantity']
-                )
-            
-            venue_schedule.is_booked = True
-            venue_schedule.save()
-            
-            if coach_schedule:
-                coach_schedule.is_booked = True
-                coach_schedule.save()
-            
-            Transaction.objects.create(
+        total_price += equipment_total
+        
+        booking = Booking.objects.create(
+            customer=request.user,
+            venue_schedule=schedule,
+            coach_schedule=coach_schedule,
+            total_price=total_price,
+        )
+        
+        for eq_id in equipment_ids:
+            eq = get_object_or_404(Equipment, pk=eq_id, venue=venue)
+            qty = int(quantities.get(str(eq_id), 1))
+            BookingEquipment.objects.create(
                 booking=booking,
-                amount=total_price,
-                payment_method=payment_method,
-                status='PENDING'
+                equipment=eq,
+                quantity=qty,
+                sub_total=eq.rental_price * qty,
             )
+        
+        Transaction.objects.create(
+            booking=booking,
+            status='PENDING',
+            payment_method=payment_method,
+            revenue_venue=float(venue.price_per_hour) + equipment_total,
+            revenue_coach=float(revenue_coach),
+            revenue_platform=0,
+        )
+        
+        schedule.is_booked = True
+        schedule.is_available = False
+        schedule.save()
+        
+        if coach_schedule:
+            coach_schedule.is_booked = True
+            coach_schedule.is_available = False
+            coach_schedule.save()
         
         return JsonResponse({
             'success': True,
-            'message': 'Booking berhasil dibuat!',
-            'booking_id': booking.id,
-            'total_price': total_price
+            'message': 'Booking berhasil dibuat',
+            'booking_id': booking.pk,
         })
         
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return JsonResponse({'success': False, 'message': str(e)})
     
 @csrf_exempt
 def api_filter_venues(request):
-    """API untuk list venues dengan filter (Flutter)"""
-    search = request.GET.get('search', '')
-    sport = request.GET.get('sport', '')
-    location = request.GET.get('location', '')
+    """API endpoint untuk filter venues (untuk Flutter)"""
+    search = request.GET.get('search', '').strip()
     
-    venues = Venue.objects.all()
+    venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
     
     if search:
-        venues = venues.filter(name__icontains=search)
-    if sport:
-        venues = venues.filter(sport_category__name__icontains=sport)
-    if location:
-        venues = venues.filter(location__name__icontains=location)
+        venues = venues.filter(
+            Q(name__icontains=search) |
+            Q(location__name__icontains=search) |
+            Q(sport_category__name__icontains=search)
+        )
     
     venues_data = []
     for v in venues:
+        avg_rating = Review.objects.filter(target_venue=v).aggregate(avg=Avg('rating'))['avg']
+        
         venues_data.append({
-            'id': v.id,
+            'id': v.pk,
             'name': v.name,
-            'location': v.location.name if v.location else None,
-            'sport_category': v.sport_category.name if v.sport_category else None,
-            'description': v.description,
+            'description': v.description or '',
+            'location': v.location.name if v.location else '',
+            'sport_category': v.sport_category.name if v.sport_category else '',
             'price_per_hour': float(v.price_per_hour or 0),
-            'rating': float(v.rating or 5.0),
-            'image': v.main_image.url if v.main_image else None,
+            'image': v.main_image.url if v.main_image else '',  
+            'rating': float(avg_rating) if avg_rating else 5.0,  
         })
     
     return JsonResponse({
         'success': True,
-        'venues': venues_data
+        'venues': venues_data,
     })
 
 
@@ -2785,17 +2782,23 @@ def api_booking_detail(request, booking_id):
     try:
         booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
         
+        equipments = []
+        for be in booking.equipment_details.all():
+            equipments.append({
+                'id': be.equipment.pk,
+                'name': be.equipment.name,
+                'quantity': be.quantity,
+            })
+        
         data = {
             'success': True,
             'booking': {
                 'id': booking.pk,
-                'schedule_id': booking.schedule.pk if booking.schedule else None,
+                'venue_id': booking.venue_schedule.venue.pk,      
+                'schedule_id': booking.venue_schedule.pk,        
                 'coach_schedule_id': booking.coach_schedule.pk if booking.coach_schedule else None,
                 'payment_method': booking.transaction.payment_method if hasattr(booking, 'transaction') else 'CASH',
-                'equipments': [
-                    {'id': be.equipment.pk, 'name': be.equipment.name, 'quantity': be.quantity}
-                    for be in booking.bookingequipment_set.all()
-                ]
+                'equipments': equipments,
             }
         }
         return JsonResponse(data)
