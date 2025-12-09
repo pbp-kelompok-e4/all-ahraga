@@ -216,17 +216,17 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('custom-toast'); if (!toast) return; const msgEl = document.getElementById('toast-message'); const iconEl = document.getElementById('toast-icon'); let color = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f97316'); let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️'); toast.style.backgroundColor = color; msgEl.textContent = message; iconEl.textContent = icon; toast.classList.remove('hidden'); toast.classList.add('show-toast'); setTimeout(() => { toast.classList.remove('show-toast'); setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
 }
 
-// --- FUNGSI HELPER UNTUK DOM ---
 function createSlotHtml(slot) {
     return `
     <label class="relative inline-flex items-center slot-label">
         <input type="checkbox" class="delete-checkbox form-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500" data-id="${slot.id}" />
-        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-700 hover:bg-teal-50 shadow-sm transition-colors duration-150">
-            <svg class="h-4 w-4 icon text-teal-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-600 hover:bg-teal-50 shadow-sm transition-colors duration-150">
+            <i class="fa-solid fa-check h-4 w-4 icon text-teal-600"></i>
             <span class="text-sm font-medium">${slot.start_time} - ${slot.end_time}</span>
         </span>
     </label>`;
 }
+
 function createGroupCardHtmlForAjax(firstSlot, allSlots) {
     let slotsHtml = allSlots.map(createSlotHtml).join(''); const count = allSlots.length; const slotText = count !== 1 ? 'slots' : 'slot';
     return `
