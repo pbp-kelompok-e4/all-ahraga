@@ -2561,22 +2561,82 @@ def admin_toggle_coach_verification_view(request, coach_id):
 
 def show_json(request):
     if request.user.is_authenticated:
-        booking_list = Booking.objects.filter(customer=request.user)
+        booking_list = Booking.objects.filter(customer=request.user).select_related(
+            'venue_schedule__venue', 
+            'coach_schedule__coach__user'
+        )
     else:
         booking_list = Booking.objects.none()
     
-    json_data = serializers.serialize("json", booking_list)
-    return HttpResponse(json_data, content_type="application/json")
+    data = []
+    for booking in booking_list:
+        item = {
+            "model": "main.booking",
+            "pk": booking.pk,
+            "fields": {
+                "venue_schedule": booking.venue_schedule.id, 
+                "coach_schedule": booking.coach_schedule.id if booking.coach_schedule else None,
+                "customer": booking.customer.id, 
+
+                "customer_name": booking.customer.get_full_name() or booking.customer.username,
+                "venue_name": booking.venue_schedule.venue.name,
+                "date": booking.venue_schedule.date.strftime("%Y-%m-%d"),
+                "start_time": booking.venue_schedule.start_time.strftime("%H:%M"),
+                "end_time": booking.venue_schedule.end_time.strftime("%H:%M"),
+                "coach_name": booking.coach_schedule.coach.user.get_full_name() if booking.coach_schedule else "-",
+                
+                "total_price": str(booking.total_price),
+                "booking_time": booking.booking_time.isoformat() if hasattr(booking, 'booking_time') else None
+            }
+        }
+        data.append(item)
+    
+    return JsonResponse(data, safe=False)
 
 def show_my_bookings_json(request):
-    if request.user.is_authenticated:
-        bookings = Booking.objects.filter(
-            customer=request.user,
-            transaction__status='PENDING'  
-        )
-    else:
-        bookings = Booking.objects.none()
-    return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
+    if not request.user.is_authenticated:
+        return JsonResponse([], safe=False)
+
+    bookings = Booking.objects.filter(
+        customer=request.user,
+        transaction__status='PENDING'
+    ).select_related(
+        'venue_schedule__venue',
+        'coach_schedule__coach__user',
+        'transaction'
+    ).prefetch_related('equipment_details__equipment')
+
+    data = []
+    for booking in bookings:
+        equipments = []
+        for be in booking.equipment_details.all():
+            equipments.append({
+                "name": be.equipment.name,
+                "quantity": be.quantity
+            })
+
+        item = {
+            "model": "main.booking",
+            "pk": booking.pk,
+            "fields": {
+                "venue_schedule": booking.venue_schedule.id,
+                "coach_schedule": booking.coach_schedule.id if booking.coach_schedule else None,
+                "customer": booking.customer.id,
+                "customer_name": booking.customer.get_full_name() or booking.customer.username,
+                "venue_name": booking.venue_schedule.venue.name,
+                "date": booking.venue_schedule.date.strftime("%Y-%m-%d"),
+                "start_time": booking.venue_schedule.start_time.strftime("%H:%M"),
+                "end_time": booking.venue_schedule.end_time.strftime("%H:%M"),
+                "coach_name": booking.coach_schedule.coach.user.get_full_name() if booking.coach_schedule else "-",
+                "total_price": str(booking.total_price),
+                "booking_time": booking.booking_time.isoformat() if booking.booking_time else None,
+                "payment_method": booking.transaction.payment_method if booking.transaction else "CASH",
+                "equipments": equipments,
+            }
+        }
+        data.append(item)
+
+    return JsonResponse(data, safe=False)
 
 def show_booking_history_json(request):
     if request.user.is_authenticated:
@@ -2716,7 +2776,6 @@ def api_booking_form_data(request, venue_id):
     
     schedules = VenueSchedule.objects.filter(
         venue=venue,
-        is_booked=False,
         date__gte=timezone.now().date()
     ).order_by('date', 'start_time')
     
@@ -2728,7 +2787,7 @@ def api_booking_form_data(request, venue_id):
             'date_display': s.date.strftime('%a, %d %b %Y'),
             'start_time': s.start_time.strftime('%H:%M'),
             'end_time': s.end_time.strftime('%H:%M'),
-            'is_booked': s.is_booked,
+            'is_booked': s.is_booked, 
         })
     
     equipments = Equipment.objects.filter(venue=venue, stock_quantity__gt=0)
@@ -2755,7 +2814,6 @@ def api_booking_form_data(request, venue_id):
         'schedules': schedules_data,
         'equipments': equipments_data,
     })
-
 
 @csrf_exempt
 def api_get_coaches_for_schedule(request, schedule_id):
@@ -2793,7 +2851,7 @@ def api_get_coaches_for_schedule(request, schedule_id):
 @csrf_exempt
 @login_required(login_url='login')
 def api_cancel_booking(request, booking_id):
-    if request.method != 'POST':
+    if request.method != 'DELETE':
         return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
     
     try:
@@ -2813,14 +2871,13 @@ def api_cancel_booking(request, booking_id):
 @csrf_exempt
 @login_required(login_url='login')
 def api_update_booking(request, booking_id):
-    """Update booking via API untuk Flutter"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
     
     try:
-        import json
         data = json.loads(request.body)
         booking = get_object_or_404(Booking, pk=booking_id, customer=request.user)
+        venue = booking.venue_schedule.venue 
         
         if hasattr(booking, 'transaction') and booking.transaction.status != 'PENDING':
             return JsonResponse({
@@ -2829,35 +2886,97 @@ def api_update_booking(request, booking_id):
             })
         
         if 'schedule_id' in data:
-            schedule = get_object_or_404(VenueSchedule, pk=data['schedule_id'])
-            booking.schedule = schedule
-        
+            new_schedule_id = data['schedule_id']
+            
+            if booking.venue_schedule.id != new_schedule_id:
+                new_schedule = get_object_or_404(VenueSchedule, pk=new_schedule_id)
+                
+                if new_schedule.is_booked:
+                     return JsonResponse({'success': False, 'message': 'Maaf, jadwal tersebut baru saja dibooking orang lain.'})
+
+                old_schedule = booking.venue_schedule
+                old_schedule.is_booked = False
+                old_schedule.is_available = True
+                old_schedule.save()
+                
+                booking.venue_schedule = new_schedule
+                new_schedule.is_booked = True
+                new_schedule.is_available = False
+                new_schedule.save()
+
         if 'coach_schedule_id' in data:
-            if data['coach_schedule_id']:
-                coach_schedule = get_object_or_404(CoachSchedule, pk=data['coach_schedule_id'])
-                booking.coach_schedule = coach_schedule
+            new_coach_sched_id = data['coach_schedule_id']
+            old_coach_sched = booking.coach_schedule
+            
+            if old_coach_sched and (not new_coach_sched_id or old_coach_sched.id != new_coach_sched_id):
+                old_coach_sched.is_booked = False
+                old_coach_sched.save()
+            
+            if new_coach_sched_id:
+                new_coach_sched = get_object_or_404(CoachSchedule, pk=new_coach_sched_id)
+                
+                if new_coach_sched.is_booked and (not old_coach_sched or new_coach_sched.id != old_coach_sched.id):
+                    return JsonResponse({'success': False, 'message': 'Coach tersebut sudah dibooking.'})
+                
+                booking.coach_schedule = new_coach_sched
+                new_coach_sched.is_booked = True
+                new_coach_sched.save()
             else:
                 booking.coach_schedule = None
-        
-        if 'payment_method' in data:
-            booking.transaction.payment_method = data['payment_method']
-            booking.transaction.save()
-        
-        booking.save()
-        
-        if 'equipments' in data:
+
+        if 'equipment' in data:
             BookingEquipment.objects.filter(booking=booking).delete()
-            for eq in data['equipments']:
-                equipment = get_object_or_404(Equipment, pk=eq['id'])
+            
+            equipment_ids = data.get('equipment', [])
+            quantities = data.get('quantities', {})
+            
+            total_equipment_price = 0
+            
+            for eq_id in equipment_ids:
+                equipment = get_object_or_404(Equipment, pk=eq_id)
+                qty = int(quantities.get(str(eq_id), 1))
+                
+                sub_total = equipment.rental_price * qty
+                total_equipment_price += sub_total
+                
                 BookingEquipment.objects.create(
                     booking=booking,
                     equipment=equipment,
-                    quantity=eq['quantity']
+                    quantity=qty,
+                    sub_total=sub_total
                 )
+
+        if 'payment_method' in data:
+            booking.transaction.payment_method = data['payment_method']
+            
+        new_total_price = float(venue.price_per_hour)
         
-        return JsonResponse({'success': True, 'message': 'Booking berhasil diupdate'})
+        revenue_coach = 0
+        if booking.coach_schedule:
+            revenue_coach = float(booking.coach_schedule.coach.rate_per_hour)
+            new_total_price += revenue_coach
+            
+        if 'equipment' not in data:
+            current_equipments = BookingEquipment.objects.filter(booking=booking)
+            equipment_cost = sum([e.sub_total for e in current_equipments])
+            new_total_price += float(equipment_cost)
+        else:
+            recalc_equipments = BookingEquipment.objects.filter(booking=booking)
+            equipment_cost = sum([e.sub_total for e in recalc_equipments])
+            new_total_price += float(equipment_cost)
+
+        booking.total_price = new_total_price
+        booking.save()
+        
+        transaction = booking.transaction
+        transaction.revenue_venue = float(venue.price_per_hour) + float(equipment_cost)
+        transaction.revenue_coach = revenue_coach
+        transaction.save()
+        
+        return JsonResponse({'success': True, 'message': 'Booking berhasil diperbarui'})
+
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @csrf_exempt
 @login_required(login_url='login')
