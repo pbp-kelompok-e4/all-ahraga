@@ -2639,14 +2639,50 @@ def show_my_bookings_json(request):
     return JsonResponse(data, safe=False)
 
 def show_booking_history_json(request):
-    if request.user.is_authenticated:
-        bookings = Booking.objects.filter(
-            customer=request.user,
-            transaction__status='CONFIRMED'  
-        )
-    else:
-        bookings = Booking.objects.none()
-    return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
+    if not request.user.is_authenticated:
+        return JsonResponse([], safe=False)
+    
+    bookings = Booking.objects.filter(
+        customer=request.user,
+        transaction__status='CONFIRMED'  
+    ).select_related(
+        'venue_schedule__venue',
+        'coach_schedule__coach__user',
+        'transaction'
+    ).prefetch_related('equipment_details__equipment')
+
+    data = []
+    for booking in bookings:
+        equipments = []
+        for be in booking.equipment_details.all():
+            equipments.append({
+                "name": be.equipment.name,
+                "quantity": be.quantity
+            })
+
+        item = {
+            "model": "main.booking",
+            "pk": booking.pk,
+            "fields": {
+                "venue_schedule": booking.venue_schedule.id,
+                "coach_schedule": booking.coach_schedule.id if booking.coach_schedule else None,
+                "customer": booking.customer.id,
+                "customer_name": booking.customer.get_full_name() or booking.customer.username,
+                "venue_name": booking.venue_schedule.venue.name,
+                "date": booking.venue_schedule.date.strftime("%Y-%m-%d"),
+                "start_time": booking.venue_schedule.start_time.strftime("%H:%M"),
+                "end_time": booking.venue_schedule.end_time.strftime("%H:%M"),
+                
+                "coach_name": booking.coach_schedule.coach.user.get_full_name() if booking.coach_schedule else "-",
+                "total_price": str(booking.total_price),
+                "booking_time": booking.booking_time.isoformat() if booking.booking_time else None,
+                "payment_method": booking.transaction.payment_method if booking.transaction else "CASH",
+                "equipments": equipments,
+            }
+        }
+        data.append(item)
+
+    return JsonResponse(data, safe=False)
 
 @csrf_exempt
 def api_create_booking(request, venue_id):
