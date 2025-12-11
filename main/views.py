@@ -1552,137 +1552,120 @@ def create_booking(request, venue_id):
     }
     return render(request, 'main/create_booking.html', context)
 
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def customer_payment(request, booking_id):
+    # 1. Ambil Booking & Transaksi
     booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
     transaction = booking.transaction
+    
+    # 2. Deteksi Request AJAX / JSON (LOGIKA YANG DIPERBAIKI)
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-    is_json = request.headers.get('Content-Type') == 'application/json' or request.headers.get('Accept') == 'application/json'
+    content_type = request.headers.get('Content-Type', '')
+    accept_header = request.headers.get('Accept', '')
+    
+    # Gunakan 'in' untuk mencocokkan "application/json" meskipun ada charset
+    is_json = 'application/json' in content_type or 'application/json' in accept_header
 
-    if request.method == 'GET' and is_json:
+    # 3. Handle GET Request (Menampilkan Halaman / Data JSON)
+    if request.method == 'GET':
+        # Jika request dari Flutter (JSON), kembalikan data detail
+        if is_json:
+            if transaction.status == 'CONFIRMED':
+                return JsonResponse({'success': False, 'message': 'Booking ini sudah dikonfirmasi.'})
+
+            if transaction.status == 'CANCELLED':
+                return JsonResponse({'success': False, 'message': 'Booking ini sudah dibatalkan.'})
+
+            return JsonResponse({
+                'success': True,
+                'booking': {
+                    'id': booking.id,
+                    'total_price': float(booking.total_price),
+                    'venue_name': booking.venue_schedule.venue.name,
+                    'date': booking.venue_schedule.date.isoformat(),
+                    'time': f"{booking.venue_schedule.start_time.strftime('%H:%M')} - {booking.venue_schedule.end_time.strftime('%H:%M')}",
+                },
+                'transaction': {
+                    'id': transaction.id,
+                    'status': transaction.status,
+                    'payment_method': transaction.payment_method,
+                    'payment_method_display': transaction.get_payment_method_display(),
+                }
+            })
+
+        # Validasi status untuk Web
         if transaction.status == 'CONFIRMED':
-            return JsonResponse({'success': False, 'message': 'Booking ini sudah dikonfirmasi.'}, status=400)
+            error_msg = "Booking ini sudah dikonfirmasi."
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg})
+            messages.success(request, error_msg)
+            return redirect('my_bookings')
 
         if transaction.status == 'CANCELLED':
-            return JsonResponse({'success': False, 'message': 'Booking ini sudah dibatalkan.'}, status=400)
+            if is_json:
+                return JsonResponse({'success': False, 'message': 'Booking ini sudah dibatalkan.'})
+            return redirect('booking_history')
 
-        return JsonResponse({
-            'success': True,
-            'booking': {
-                'id': booking.id,
-                'total_price': float(booking.total_price),
-                'venue_name': booking.venue_schedule.venue.name,
-                'date': booking.venue_schedule.date.isoformat(),
-                'time': f"{booking.venue_schedule.start_time.strftime('%H:%M')} - {booking.venue_schedule.end_time.strftime('%H:%M')}",
-            },
-            'transaction': {
-                'id': transaction.id,
-                'status': transaction.status,
-                'payment_method': transaction.payment_method,
-                'payment_method_display': transaction.get_payment_method_display(),
-            }
-        })
+        if transaction.status != 'PENDING':
+            error_msg = "Status booking tidak valid untuk pembayaran."
+            if is_json:
+                return JsonResponse({'success': False, 'message': error_msg})
+            messages.error(request, error_msg)
+            return redirect('my_bookings')
+        
+        # Render HTML untuk Web
+        context = {
+            'booking': booking,
+            'transaction': transaction,
+        }
+        return render(request, 'main/customer_payment.html', context)
 
-    if transaction.status == 'CONFIRMED':
-        error_msg = "Booking ini sudah dikonfirmasi."
-        if is_json or is_ajax:
-            return JsonResponse({'success': False, 'message': error_msg}, status=400)
-        messages.success(request, error_msg)
-        return redirect('my_bookings')
-
-    if transaction.status == 'CANCELLED':
-        if is_json:
-            return JsonResponse({'success': False, 'message': 'Booking dibatalkan.'}, status=400)
-        return redirect('booking_history')
-
-    if transaction.status != 'PENDING':
-        error_msg = "Status booking tidak valid untuk pembayaran."
-        if is_json:
-            return JsonResponse({'success': False, 'message': error_msg}, status=400)
-        messages.error(request, error_msg)
-        return redirect('my_bookings')
-
-    if request.method == 'POST' or (transaction.payment_method and transaction.payment_method.upper() == 'CASH'):
-        is_cash_auto_confirm = transaction.payment_method and transaction.payment_method.upper() == 'CASH' and request.method != 'POST'
-
+    # 4. Handle POST Request (Konfirmasi Pembayaran)
+    if request.method == 'POST':
         try:
+            # Gunakan Atomic Transaction agar data konsisten
             with db_transaction.atomic():
-                venue_schedule = VenueSchedule.objects.select_for_update().get(id=booking.venue_schedule.id)
-                already_booked_by_others = Booking.objects.filter(
-                    venue_schedule=venue_schedule,
-                    transaction__status='CONFIRMED'
-                ).exclude(id=booking.id).exists()
-
-                if already_booked_by_others:
-                    transaction.status = 'CANCELLED'
-                    transaction.save()
-                    raise IntegrityError("Maaf, jadwal ini baru saja dikonfirmasi oleh pengguna lain.")
-
-                booking_equipments = BookingEquipment.objects.filter(booking=booking).select_related('equipment')
-
-                for be in booking_equipments:
-                    equipment = Equipment.objects.select_for_update().get(id=be.equipment.id)
-
-                    if equipment.stock_quantity < be.quantity:
-                        raise IntegrityError(f"Maaf, stok untuk {equipment.name} tidak mencukupi (tersisa {equipment.stock_quantity}).")
-
-                    equipment.stock_quantity -= be.quantity
-                    equipment.save()
-
-                venue_schedule.is_booked = True
-                venue_schedule.is_available = False
-                venue_schedule.save()
-
-                if booking.coach_schedule:
-                    coach_schedule = CoachSchedule.objects.select_for_update().get(id=booking.coach_schedule.id)
-                    coach_schedule.is_booked = True
-                    coach_schedule.is_available = False
-                    coach_schedule.save()
-
+                # Update Status Transaksi
                 transaction.status = 'CONFIRMED'
                 transaction.save()
 
-                other_pending = Booking.objects.filter(
-                    venue_schedule=venue_schedule,
-                    transaction__status='PENDING'
-                ).exclude(id=booking.id)
+                # Update Status Jadwal Venue
+                venue_schedule = booking.venue_schedule
+                venue_schedule.is_booked = True
+                venue_schedule.save()
 
-                for pending in other_pending:
-                    pending.transaction.status = 'CANCELLED'
-                    pending.transaction.save()
+                # Update Status Jadwal Coach (Jika ada)
+                if booking.coach_schedule:
+                    coach_schedule = booking.coach_schedule
+                    coach_schedule.is_booked = True
+                    coach_schedule.save()
 
-        except IntegrityError as e:
-            error_msg = str(e) if ("stok" in str(e) or "jadwal" in str(e)) else "Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi."
+            success_msg = 'Pembayaran berhasil dikonfirmasi!'
+            
+            # --- PERBAIKAN: Return JSON untuk Flutter/AJAX ---
+            if is_json or is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': success_msg,
+                    'booking_id': booking.id,
+                    'transaction_status': 'CONFIRMED'
+                })
 
-            if is_json or (is_ajax and not is_cash_auto_confirm):
-                return JsonResponse({'success': False, 'message': error_msg}, status=400)
-
-            messages.error(request, error_msg)
+            # Return Redirect untuk Web Biasa
+            messages.success(request, success_msg)
             return redirect('my_bookings')
 
-        success_msg = 'Pembayaran berhasil dikonfirmasi!'
-        
-        if is_json or (is_ajax and not is_cash_auto_confirm):
-            return JsonResponse({
-                'success': True,
-                'message': success_msg,
-                'redirect_url': reverse('my_bookings') if not is_json else None
-            })
-
-        if is_cash_auto_confirm:
-            redirect_url = reverse('my_bookings')
-            toast_msg = 'Booking berhasil dikonfirmasi! Silakan bayar di tempat.'
-            toast_type = 'success'
-            return redirect(f"{redirect_url}?toast_msg={toast_msg}&toast_type={toast_type}")
-
-        return redirect('my_bookings')
-
-    context = {
-        'booking': booking,
-        'transaction': transaction,
-    }
-    return render(request, 'main/customer_payment.html', context)
+        except IntegrityError as e:
+            error_msg = 'Terjadi kesalahan saat konfirmasi pembayaran. Silakan coba lagi.'
+            if is_json or is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return redirect('my_bookings')
+            
+    # Method selain GET/POST
+    return JsonResponse({'success': False, 'message': 'Metode tidak diizinkan'}, status=405)
 
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
@@ -1889,7 +1872,7 @@ def my_bookings(request):
                     'id': coach.id,
                     'name': coach.user.get_full_name() or coach.user.username,
                     'rate_per_hour': float(coach.rate_per_hour or 0),
-                    'specialization': coach.specialization or '',
+                    'specialization': coach.main_sport_trained.name if coach.main_sport_trained else ''
                 } if coach else None,
                 'equipments': equipments,
                 'transaction': {
@@ -1929,6 +1912,7 @@ def my_bookings(request):
     }
     return render(request, 'main/my_bookings.html', context)
 
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def delete_booking(request, booking_id):
@@ -1988,6 +1972,7 @@ def delete_booking(request, booking_id):
         messages.error(request, error_msg)
         return redirect('my_bookings')
 
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='home')
 def update_booking(request, booking_id):
@@ -2244,7 +2229,7 @@ def update_booking_data(request, booking_id):
             'id': coach.id,
             'name': coach.user.get_full_name() or coach.user.username,
             'rate': float(coach.rate_per_hour or 0),
-            'specialization': coach.specialization or ''
+            'specialization': coach.main_sport_trained.name if coach.main_sport_trained else ''
         }
 
     selected_equipment_map = {
@@ -2627,7 +2612,7 @@ def show_my_bookings_json(request):
                 "date": booking.venue_schedule.date.strftime("%Y-%m-%d"),
                 "start_time": booking.venue_schedule.start_time.strftime("%H:%M"),
                 "end_time": booking.venue_schedule.end_time.strftime("%H:%M"),
-                "coach_name": booking.coach_schedule.coach.user.get_full_name() if booking.coach_schedule else "-",
+                "coach_name": (booking.coach_schedule.coach.user.get_full_name() or booking.coach_schedule.coach.user.username) if booking.coach_schedule else "-",
                 "total_price": str(booking.total_price),
                 "booking_time": booking.booking_time.isoformat() if booking.booking_time else None,
                 "payment_method": booking.transaction.payment_method if booking.transaction else "CASH",
@@ -2639,14 +2624,50 @@ def show_my_bookings_json(request):
     return JsonResponse(data, safe=False)
 
 def show_booking_history_json(request):
-    if request.user.is_authenticated:
-        bookings = Booking.objects.filter(
-            customer=request.user,
-            transaction__status='CONFIRMED'  
-        )
-    else:
-        bookings = Booking.objects.none()
-    return HttpResponse(serializers.serialize("json", bookings), content_type="application/json")
+    if not request.user.is_authenticated:
+        return JsonResponse([], safe=False)
+    
+    bookings = Booking.objects.filter(
+        customer=request.user,
+        transaction__status='CONFIRMED'  
+    ).select_related(
+        'venue_schedule__venue',
+        'coach_schedule__coach__user',
+        'transaction'
+    ).prefetch_related('equipment_details__equipment')
+
+    data = []
+    for booking in bookings:
+        equipments = []
+        for be in booking.equipment_details.all():
+            equipments.append({
+                "name": be.equipment.name,
+                "quantity": be.quantity
+            })
+
+        item = {
+            "model": "main.booking",
+            "pk": booking.pk,
+            "fields": {
+                "venue_schedule": booking.venue_schedule.id,
+                "coach_schedule": booking.coach_schedule.id if booking.coach_schedule else None,
+                "customer": booking.customer.id,
+                "customer_name": booking.customer.get_full_name() or booking.customer.username,
+                "venue_name": booking.venue_schedule.venue.name,
+                "date": booking.venue_schedule.date.strftime("%Y-%m-%d"),
+                "start_time": booking.venue_schedule.start_time.strftime("%H:%M"),
+                "end_time": booking.venue_schedule.end_time.strftime("%H:%M"),
+                
+                "coach_name": (booking.coach_schedule.coach.user.get_full_name() or booking.coach_schedule.coach.user.username) if booking.coach_schedule else "-",
+                "total_price": str(booking.total_price),
+                "booking_time": booking.booking_time.isoformat() if booking.booking_time else None,
+                "payment_method": booking.transaction.payment_method if booking.transaction else "CASH",
+                "equipments": equipments,
+            }
+        }
+        data.append(item)
+
+    return JsonResponse(data, safe=False)
 
 @csrf_exempt
 def api_create_booking(request, venue_id):
@@ -2709,7 +2730,7 @@ def api_create_booking(request, venue_id):
             booking=booking,
             status='PENDING',
             payment_method=payment_method,
-            revenue_venue=float(venue.price_per_hour) + equipment_total,
+            revenue_venue=float(venue.price_per_hour) + float(equipment_total),
             revenue_coach=float(revenue_coach),
             revenue_platform=0,
         )
@@ -2818,17 +2839,19 @@ def api_booking_form_data(request, venue_id):
 @csrf_exempt
 def api_get_coaches_for_schedule(request, schedule_id):
     try:
-        venue_schedule = VenueSchedule.objects.get(pk=schedule_id)
+        venue_schedule = VenueSchedule.objects.select_related('venue', 'venue__sport_category', 'venue__location').get(pk=schedule_id)
+        venue = venue_schedule.venue
     except VenueSchedule.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Schedule tidak ditemukan'}, status=404)
     
-    # Get coaches yang available di waktu tersebut
     coach_schedules = CoachSchedule.objects.filter(
         date=venue_schedule.date,
         start_time__lte=venue_schedule.start_time,
         end_time__gte=venue_schedule.end_time,
-        is_booked=False
-    ).select_related('coach', 'coach__user')
+        is_booked=False,
+        coach__main_sport_trained=venue.sport_category, 
+        coach__service_areas=venue.location          
+    ).select_related('coach', 'coach__user', 'coach__main_sport_trained')
     
     coaches_data = []
     for cs in coach_schedules:
@@ -2838,8 +2861,10 @@ def api_get_coaches_for_schedule(request, schedule_id):
             'coach_schedule_id': cs.id,
             'name': coach.user.get_full_name() or coach.user.username,
             'rate_per_hour': float(coach.rate_per_hour or 0),
-            'sport': coach.sport_category.name if coach.sport_category else None,
-            'experience_desc': coach.experience_description,
+            
+            'sport': coach.main_sport_trained.name if coach.main_sport_trained else None,
+            
+            'experience_desc': coach.experience_desc,
             'profile_picture': coach.profile_picture.url if coach.profile_picture else None,
         })
     
