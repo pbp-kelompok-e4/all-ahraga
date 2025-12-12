@@ -838,10 +838,12 @@ def save_coach_profile_ajax(request):
             'errors': errors
         }, status=400)
 
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
-@require_http_methods(["POST"])
+@require_http_methods(["DELETE", "POST"]) 
 def delete_coach_profile_ajax(request):
+    
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
         coach_profile.delete()
@@ -3546,6 +3548,8 @@ def save_coach_profile_flutter(request):
     Endpoint untuk save/update coach profile dari Flutter
     Mendukung multipart/form-data untuk upload gambar
     """
+
+    
     if request.method != 'POST':
         return JsonResponse({
             'success': False,
