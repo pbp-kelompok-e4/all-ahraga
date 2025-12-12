@@ -594,22 +594,20 @@ def venue_manage_schedule_view(request, venue_id):
     }
     return render(request, 'main/venue_manage_schedule.html', context)
 
-@csrf_exempt # Tetap diperlukan agar Flutter tidak kena 403 Forbidden
+@csrf_exempt
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_schedule_delete(request, venue_id):
-    # 1. Cek Method harus DELETE
-    if request.method != 'DELETE':
-        return JsonResponse({"success": False, "message": "Metode tidak diizinkan. Gunakan DELETE."}, status=405)
+    # --- MODIFIKASI PENTING DI SINI ---
+    # Kita izinkan method 'DELETE' (Standar) ATAU 'POST' (Alternatif Flutter)
+    if request.method != 'DELETE' and request.method != 'POST':
+        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
 
     venue = get_object_or_404(Venue, id=venue_id)
 
-    # 2. Cek kepemilikan
     if venue.owner != request.user:
         return JsonResponse({"success": False, "message": "Anda tidak memiliki izin."}, status=403)
 
-    # 3. Parsing JSON Body
-    # DELETE request membawa data (list ID yang mau dihapus) di dalam body
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -619,13 +617,11 @@ def venue_schedule_delete(request, venue_id):
     if not ids:
         return JsonResponse({"success": False, "message": "Tidak ada jadwal yang dipilih."}, status=400)
 
-    # 4. Filter dan Hapus
-    # Pastikan hanya menghapus jadwal milik venue ini dan yang belum dibooking
     deletable_qs = VenueSchedule.objects.filter(id__in=ids, venue_id=venue.id, is_booked=False)
     count = deletable_qs.count()
     
     if count == 0:
-         return JsonResponse({"success": True, "message": "Tidak ada jadwal yang dapat dihapus (mungkin sudah dibooking atau ID salah)."})
+         return JsonResponse({"success": True, "message": "Tidak ada jadwal yang dapat dihapus."})
 
     deletable_qs.delete()
     
@@ -1035,16 +1031,16 @@ def coach_schedule(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_schedule_delete(request):
-    # 1. Cek Method
-    if request.method != 'DELETE':
-        return JsonResponse({"message": "Metode tidak diizinkan. Gunakan DELETE."}, status=405)
+    # --- UBAH BAGIAN INI (Agar support POST dari Flutter) ---
+    if request.method != 'DELETE' and request.method != 'POST':
+        return JsonResponse({"message": "Metode tidak diizinkan."}, status=405)
 
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
         return JsonResponse({"message": "Profil pelatih tidak ditemukan."}, status=400)
 
-    # 2. Parsing JSON Body
+    # ... (Sisanya sama, parsing JSON body dst) ...
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -1054,8 +1050,6 @@ def coach_schedule_delete(request):
     if not ids:
         return JsonResponse({"success": False, "message": "Tidak ada jadwal yang dipilih."}, status=400)
 
-    # 3. Filter & Hapus
-    # Pastikan hanya menghapus jadwal milik coach ini
     deleted = 0
     warning_count = 0
     
@@ -1064,7 +1058,7 @@ def coach_schedule_delete(request):
     for cs in deletable_qs:
         if cs.is_booked:
             warning_count += 1
-            continue # Skip yang sudah dibooking agar tidak merusak transaksi
+            continue 
         
         cs.delete()
         deleted += 1
