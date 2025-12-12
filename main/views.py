@@ -3445,3 +3445,187 @@ def api_venue_delete(request, venue_id):
             }, status=500)
     
     return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def get_coach_profile_json(request):
+    """Endpoint JSON untuk mendapatkan coach profile user yang sedang login"""
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+        
+        data = {
+            'id': coach_profile.id,
+            'user_id': str(coach_profile.user.id),
+            'username': coach_profile.user.username,
+            'first_name': coach_profile.user.first_name,
+            'last_name': coach_profile.user.last_name,
+            'email': coach_profile.user.email,
+            'age': coach_profile.age,
+            'experience_desc': coach_profile.experience_desc,
+            'rate_per_hour': float(coach_profile.rate_per_hour) if coach_profile.rate_per_hour else None,
+            'main_sport_trained': coach_profile.main_sport_trained.name if coach_profile.main_sport_trained else None,
+            'main_sport_trained_id': coach_profile.main_sport_trained.id if coach_profile.main_sport_trained else None,
+            'service_areas': [area.name for area in coach_profile.service_areas.all()],
+            'service_area_ids': [area.id for area in coach_profile.service_areas.all()],
+            'is_verified': coach_profile.is_verified,
+            'profile_picture': request.build_absolute_uri(coach_profile.profile_picture.url) if coach_profile.profile_picture else None,
+            'created_at': coach_profile.created_at.isoformat() if hasattr(coach_profile, 'created_at') else None,
+            'updated_at': coach_profile.updated_at.isoformat() if hasattr(coach_profile, 'updated_at') else None,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'has_profile': True,
+            'profile': data
+        })
+        
+    except CoachProfile.DoesNotExist:
+        return JsonResponse({
+            'success': True,
+            'has_profile': False,
+            'profile': None,
+            'user': {
+                'username': request.user.username,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'email': request.user.email,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+    
+@login_required(login_url='login')
+def get_sport_categories_json(request):
+    """Endpoint untuk mendapatkan daftar kategori olahraga"""
+    try:
+        categories = SportCategory.objects.all().values('id', 'name')
+        return JsonResponse({
+            'success': True,
+            'categories': list(categories)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required(login_url='login')
+def get_location_areas_json(request):
+    """Endpoint untuk mendapatkan daftar area lokasi"""
+    try:
+        areas = LocationArea.objects.all().values('id', 'name')
+        return JsonResponse({
+            'success': True,
+            'areas': list(areas)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@login_required(login_url='login')
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
+def save_coach_profile_flutter(request):
+    """
+    Endpoint untuk save/update coach profile dari Flutter
+    Mendukung multipart/form-data untuk upload gambar
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'message': 'Method not allowed'
+        }, status=405)
+    
+    try:
+        # Cek apakah profile sudah ada
+        try:
+            coach_profile = CoachProfile.objects.get(user=request.user)
+            is_update = True
+        except CoachProfile.DoesNotExist:
+            coach_profile = CoachProfile(user=request.user)
+            is_update = False
+        
+        # Ambil data dari POST
+        age = request.POST.get('age')
+        rate_per_hour = request.POST.get('rate_per_hour')
+        main_sport_trained_id = request.POST.get('main_sport_trained_id')
+        experience_desc = request.POST.get('experience_desc')
+        service_area_ids = request.POST.get('service_area_ids')  # JSON string array
+        
+        # Validasi required fields
+        if not all([age, rate_per_hour, main_sport_trained_id, experience_desc, service_area_ids]):
+            return JsonResponse({
+                'success': False,
+                'message': 'Semua field wajib diisi'
+            }, status=400)
+        
+        # Update fields
+        coach_profile.age = int(age)
+        coach_profile.rate_per_hour = float(rate_per_hour)
+        
+        # Set main sport
+        try:
+            coach_profile.main_sport_trained = SportCategory.objects.get(id=int(main_sport_trained_id))
+        except SportCategory.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Kategori olahraga tidak valid'
+            }, status=400)
+        
+        coach_profile.experience_desc = experience_desc
+        
+        # Handle profile picture upload
+        if 'profile_picture' in request.FILES:
+            coach_profile.profile_picture = request.FILES['profile_picture']
+        
+        # Save profile
+        coach_profile.save()
+        
+        # Set service areas (many-to-many)
+        try:
+            area_ids = json.loads(service_area_ids)
+            service_areas = LocationArea.objects.filter(id__in=area_ids)
+            coach_profile.service_areas.set(service_areas)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': 'Format area layanan tidak valid'
+            }, status=400)
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'message': f'Profil berhasil {"diperbarui" if is_update else "dibuat"}!',
+            'profile': {
+                'id': coach_profile.id,
+                'age': coach_profile.age,
+                'experience_desc': coach_profile.experience_desc,
+                'rate_per_hour': float(coach_profile.rate_per_hour),
+                'main_sport_trained': coach_profile.main_sport_trained.name,
+                'main_sport_trained_id': coach_profile.main_sport_trained.id,
+                'service_areas': [area.name for area in coach_profile.service_areas.all()],
+                'service_area_ids': [area.id for area in coach_profile.service_areas.all()],
+                'is_verified': coach_profile.is_verified,
+                'profile_picture': request.build_absolute_uri(coach_profile.profile_picture.url) if coach_profile.profile_picture else None,
+            }
+        }
+        
+        return JsonResponse(response_data, status=200)
+        
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Format data tidak valid: {str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Terjadi kesalahan: {str(e)}'
+        }, status=500)

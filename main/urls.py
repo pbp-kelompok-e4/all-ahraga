@@ -60,4 +60,9 @@ urlpatterns = [
     path('api/venue/revenue/', views.api_venue_revenue, name='api_venue_revenue'),
     path('api/venue/<int:venue_id>/manage/', views.api_venue_manage, name='api_venue_manage'),
     path('api/venue/<int:venue_id>/delete/', views.api_venue_delete, name='api_venue_delete'),
+    path('coach/profile/json/', views.get_coach_profile_json, name='get_coach_profile_json'),
+    path('coach/profile/delete/', views.delete_coach_profile_ajax, name='delete_coach_profile_ajax'),
+    path('api/sport-categories/', views.get_sport_categories_json, name='get_sport_categories_json'),
+    path('api/location-areas/', views.get_location_areas_json, name='get_location_areas_json'),
+    path('coach/profile/save/', views.save_coach_profile_flutter, name='save_coach_profile_flutter'),
 ]
