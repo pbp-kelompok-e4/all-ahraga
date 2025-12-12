@@ -26,6 +26,7 @@ from django.http import HttpResponse
 from django.core import serializers
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.formats import date_format 
+import base64
 
 def get_user_dashboard(user):
     # Disederhanakan menggunakan helper baru
@@ -3254,6 +3255,7 @@ def api_venue_manage(request, venue_id):
             'location_id': venue.location.id,
             'sport_category_id': venue.sport_category.id,
             'payment_options': venue.payment_options,
+            'image': venue.main_image.url if venue.main_image else None, # TAMBAHKAN INI
         }
         
         locations_data = [{'id': loc.id, 'name': loc.name} for loc in locations]
@@ -3280,12 +3282,25 @@ def api_venue_manage(request, venue_id):
             action = data.get('action')
             
             # Edit venue
-            if action == 'edit_venue':
-                venue.name = data.get('name', venue.name)
-                venue.description = data.get('description', venue.description)
-                venue.price_per_hour = data.get('price_per_hour', venue.price_per_hour)
-                venue.payment_options = data.get('payment_options', venue.payment_options)
+            if 'image' in data and data['image']:
+                from django.core.files.base import ContentFile
                 
+                try:
+                    # Format dari Flutter: "data:image/jpeg;base64,....."
+                    format, imgstr = data['image'].split(';base64,')
+                    ext = format.split('/')[-1]
+                    
+                    # (Opsional) Hapus gambar lama agar tidak menumpuk sampah file
+                    if venue.main_image:
+                        venue.main_image.delete(save=False)
+                        
+                    file_name = f'venue_{venue.id}_{timezone.now().timestamp()}.{ext}'
+                    image_data = ContentFile(base64.b64decode(imgstr), name=file_name)
+                    venue.main_image = image_data
+                except Exception as e:
+                    print(f"Error saving image: {e}")
+                    pass # Abaikan jika gagal decode
+
                 # Update location
                 if 'location' in data:
                     try:
