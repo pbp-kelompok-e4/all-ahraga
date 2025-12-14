@@ -65,12 +65,23 @@ def login(request):
             role_type = get_role_type(user)
             redirect_name = get_dashboard_redirect_name(user)
 
+            # Mengambil role dari UserProfile
+            try:
+                user_profile = UserProfile.objects.get(user=user)
+                if user_profile.is_venue_owner:
+                    role_type = 'VENUE_OWNER'
+                elif user_profile.is_coach:
+                    role_type = 'COACH'
+                else:
+                    role_type = 'CUSTOMER'
+            except UserProfile.DoesNotExist:
+                role_type = 'CUSTOMER'  # Default fallback
             # Login status successful.
             return JsonResponse({
                 "username": user.username,
                 "status": True,
-                "role_type": role_type,          # 🔹 untuk Flutter
-                "redirect_to": redirect_name,    # 🔹 nama URL pattern yg biasa dipakai HTML
+                "role_type": role_type,          # untuk Flutter
+                "redirect_to": redirect_name,   
                 "message": "Login successful!"
             }, status=200)
         else:
@@ -121,7 +132,7 @@ def register(request):
             "message": "Username already exists."
         }, status=400)
 
-    # (Opsional) validasi role_type
+    # validasi role_type
     if role_type not in {ROLE_CUSTOMER, ROLE_VENUE_OWNER, ROLE_COACH}:
         return JsonResponse({
             "status": False,
