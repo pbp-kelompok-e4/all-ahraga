@@ -2325,17 +2325,16 @@ def _guard_confirmed_owner(request, booking):
     if booking.customer != request.user:
         raise Http404("Tidak ditemukan.")
     if getattr(booking, "transaction", None) and booking.transaction.status != "CONFIRMED":
-        # Untuk XHR kirim JSON error, untuk non-XHR pakai messages
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({"success": False, "message": "Feedback hanya untuk booking berstatus CONFIRMED."}, status=400)
-        messages.error(request, "Feedback hanya untuk booking berstatus CONFIRMED.")
-        return False
+        return JsonResponse({"success": False, "message": "Feedback hanya untuk booking berstatus CONFIRMED."}, status=400)
     return True
 
 
-@login_required
+@csrf_exempt
 def upsert_review(request, booking_id):
     """Create/edit review berdasarkan target. ?target=venue|coach"""
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Anda harus login terlebih dahulu."}, status=401)
+    
     target = request.GET.get("target")
     booking = get_object_or_404(
         Booking.objects.select_related(
@@ -2345,23 +2344,16 @@ def upsert_review(request, booking_id):
         customer=request.user
     )
 
-    # --- Guard kepemilikan & status booking ---
     guard = _guard_confirmed_owner(request, booking)
-    if guard is False:
-        return redirect("booking_history")
     if isinstance(guard, JsonResponse):
-        return guard  # guard udah balikin JSON error kalau XHR
+        return guard
 
-    # --- Tentukan target review ---
     instance = None
     if target == "venue":
         venue = getattr(getattr(booking, "venue_schedule", None), "venue", None)
         if not venue:
             msg = "Booking ini tidak memiliki venue yang valid."
-            if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                return JsonResponse({"success": False, "message": msg}, status=400)
-            messages.error(request, msg)
-            return redirect("booking_history")
+            return JsonResponse({"success": False, "message": msg}, status=400)
 
         instance = Review.objects.filter(customer=request.user, target_venue=venue).order_by("-created_at").first()
         title = "Edit Review Venue" if instance else "Beri Review Venue"
@@ -2371,19 +2363,15 @@ def upsert_review(request, booking_id):
         coach = getattr(getattr(booking, "coach_schedule", None), "coach", None)
         if not coach:
             msg = "Booking ini tidak memiliki pelatih."
-            if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                return JsonResponse({"success": False, "message": msg}, status=400)
-            messages.error(request, msg)
-            return redirect("booking_history")
+            return JsonResponse({"success": False, "message": msg}, status=400)
 
         instance = Review.objects.filter(customer=request.user, target_coach=coach).order_by("-created_at").first()
         title = "Edit Review Coach" if instance else "Beri Review Coach"
         target_ctx = {"target": "coach", "target_name": getattr(coach, "user", coach).__str__()}
 
     else:
-        raise Http404("Target tidak valid.")
+        return JsonResponse({"success": False, "message": "Target tidak valid."}, status=400)
 
-    # --- Handle POST (submit form) ---
     if request.method == "POST":
         form = ReviewForm(request.POST, instance=instance)
         if form.is_valid():
@@ -2396,25 +2384,12 @@ def upsert_review(request, booking_id):
             obj.save()
 
             msg = "Feedback diperbarui." if instance else "Feedback berhasil ditambahkan."
+            return JsonResponse({"success": True, "message": msg})
 
-            # kalau AJAX, balikin JSON biar toast muncul
-            if request.headers.get("x-requested-with") == "XMLHttpRequest":
-                return JsonResponse({"success": True, "message": msg})
-
-            # kalau bukan AJAX (misal user akses langsung)
-            messages.success(request, msg)
-            return redirect("booking_history")
-
-        # kalau form invalid
         err = next(iter(form.errors.values()))[0] if form.errors else "Form tidak valid."
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"success": False, "message": err}, status=400)
-        messages.error(request, err)
-        return redirect(request.path)
+        return JsonResponse({"success": False, "message": err}, status=400)
 
-    # --- Render form biasa ---
-    else:
-        form = ReviewForm(instance=instance)
+    form = ReviewForm(instance=instance)
 
     return render(request, "main/review_form.html", {
         "title": title,
@@ -2425,21 +2400,87 @@ def upsert_review(request, booking_id):
         "existing_id": getattr(instance, "id", None),
     })
 
-@login_required
+@csrf_exempt
+@require_http_methods(['POST'])
 def delete_review(request, review_id):
-    review = get_object_or_404(Review, pk=review_id, customer=request.user)
-    if request.method == "POST":
-        review.delete()
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({"success": True, "message": "Feedback dihapus."})
-        messages.success(request, "Feedback dihapus.")
-        return redirect("booking_history")
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Anda harus login terlebih dahulu."}, status=401)
+    
+    try:
+        review = Review.objects.get(pk=review_id, customer=request.user)
+    except Review.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Review tidak ditemukan."}, status=404)
+    
+    review.delete()
+    return JsonResponse({"success": True, "message": "Feedback berhasil dihapus."})
 
-    # Metode selain POST
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
-    messages.info(request, "Konfirmasi hapus dilakukan dari tombol di halaman.")
-    return redirect("booking_history")
+@csrf_exempt
+def get_booking_reviews(request, booking_id):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"error": "Anda harus login terlebih dahulu."},
+            status=401
+        )
+    
+    try:
+        booking = Booking.objects.select_related(
+            'venue_schedule__venue',
+            'coach_schedule__coach__user',
+            'customer'
+        ).get(pk=booking_id)
+    except Booking.DoesNotExist:
+        return JsonResponse(
+            {"error": "Booking tidak ditemukan."},
+            status=404
+        )
+    
+    if booking.customer != request.user:
+        return JsonResponse(
+            {"error": "Anda tidak memiliki izin untuk melihat reviews booking ini."},
+            status=403
+        )
+    
+    reviews_data = []
+    
+    if booking.venue_schedule and booking.venue_schedule.venue:
+        venue = booking.venue_schedule.venue
+        venue_review = Review.objects.filter(
+            customer=request.user,
+            target_venue=venue
+        ).first()
+        
+        if venue_review:
+            reviews_data.append({
+                "pk": venue_review.id,
+                "fields": {
+                    "rating": venue_review.rating,
+                    "comment": venue_review.comment,
+                    "target_type": "venue",
+                    "target_name": venue.name,
+                    "created_at": venue_review.created_at.isoformat() if venue_review.created_at else None,
+                }
+            })
+    
+    if booking.coach_schedule and booking.coach_schedule.coach:
+        coach = booking.coach_schedule.coach
+        coach_review = Review.objects.filter(
+            customer=request.user,
+            target_coach=coach
+        ).first()
+        
+        if coach_review:
+            reviews_data.append({
+                "pk": coach_review.id,
+                "fields": {
+                    "rating": coach_review.rating,
+                    "comment": coach_review.comment,
+                    "target_type": "coach",
+                    "target_name": coach.user.get_full_name() or coach.user.username,
+                    "created_at": coach_review.created_at.isoformat() if coach_review.created_at else None,
+                }
+            })
+    
+    return JsonResponse(reviews_data, safe=False)
 
 # ======================================================
 # ======================================================
