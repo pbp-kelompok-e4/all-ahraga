@@ -38,6 +38,7 @@ urlpatterns = [
     path('ajax/filter-venues/', views.filter_venues_ajax, name='filter_venues_ajax'),
     path('landing/', views.landing_page_view, name='landing'),
     path('review/<int:booking_id>/new/', views.upsert_review, name='submit_review'),
+    path('review/<int:booking_id>/list/json/', views.get_booking_reviews, name='get_booking_reviews'),
     path('review/<int:review_id>/delete/', views.delete_review, name='delete_review'),
     path('dashboard/admin/', views.admin_dashboard_view, name='admin_dashboard'),
     path('dashboard/admin/users/', views.admin_user_management_view, name='admin_users'),
