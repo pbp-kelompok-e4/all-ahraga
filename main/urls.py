@@ -66,4 +66,7 @@ urlpatterns = [
     path('api/sport-categories/', views.get_sport_categories_json, name='get_sport_categories_json'),
     path('api/location-areas/', views.get_location_areas_json, name='get_location_areas_json'),
     path('coach/profile/save/', views.save_coach_profile_flutter, name='save_coach_profile_flutter'),
+    path('api/coach/revenue/', views.coach_revenue_api, name='coach_revenue_api'),
+    path('api/coaches/', views.coach_list_json, name='coach_list_json'),
+    path('api/coach/<int:coach_id>/', views.coach_detail_json, name='coach_detail_json'),
 ]
