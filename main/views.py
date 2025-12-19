@@ -3683,3 +3683,231 @@ def save_coach_profile_flutter(request):
             'success': False,
             'message': f'Terjadi kesalahan: {str(e)}'
         }, status=500)
+    
+@login_required(login_url='login')
+@csrf_exempt
+def coach_revenue_api(request):
+    """API endpoint untuk mendapatkan data revenue coach dalam format JSON"""
+    try:
+        coach_profile = CoachProfile.objects.get(user=request.user)
+        has_profile = True
+        
+        transactions = Transaction.objects.filter(
+            booking__coach_schedule__coach=coach_profile, 
+            status='CONFIRMED'
+        ).order_by('-transaction_time')
+        
+        total_revenue = transactions.aggregate(Sum('revenue_coach'))['revenue_coach__sum'] or 0
+        
+        transactions_data = []
+        for transaction in transactions:
+            transactions_data.append({
+                'id': transaction.id,
+                'payment_method': transaction.payment_method,
+                'status': transaction.status,
+                'revenue_coach': float(transaction.revenue_coach),
+                'transaction_time': transaction.transaction_time.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'has_profile': has_profile,
+            'total_revenue': float(total_revenue),
+            'transactions': transactions_data,
+            'transactions_count': len(transactions_data),
+        })
+        
+    except CoachProfile.DoesNotExist:
+        return JsonResponse({
+            'success': True,
+            'has_profile': False,
+            'total_revenue': 0,
+            'transactions': [],
+            'transactions_count': 0,
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+    
+@login_required(login_url='login')
+def coach_list_json(request):
+    """API endpoint untuk mendapatkan daftar coach dalam format JSON"""
+    try:
+        coaches_list = CoachProfile.objects.all().select_related(
+            'user', 'main_sport_trained'
+        ).prefetch_related('service_areas').order_by('user__first_name')
+        
+        # Filter berdasarkan pencarian
+        query = request.GET.get('q', '')
+        if query:
+            coaches_list = coaches_list.filter(
+                Q(user__first_name__icontains=query) |
+                Q(user__last_name__icontains=query) |
+                Q(user__username__icontains=query)
+            )
+        
+        # Filter berdasarkan olahraga
+        sport_filter = request.GET.get('sport', '')
+        if sport_filter:
+            coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
+        
+        # Filter berdasarkan area
+        area_filter = request.GET.get('area', '')
+        if area_filter:
+            coaches_list = coaches_list.filter(service_areas__id=area_filter)
+        
+        # Pagination
+        paginator = Paginator(coaches_list, 8)
+        page_number = request.GET.get('page', 1)
+        
+        try:
+            coaches = paginator.page(page_number)
+        except PageNotAnInteger:
+            coaches = paginator.page(1)
+        except EmptyPage:
+            coaches = paginator.page(paginator.num_pages)
+        
+        # Serialize data
+        coaches_data = []
+        for coach in coaches:
+            # Get profile picture URL
+            profile_pic = None
+            if coach.profile_picture:
+                profile_pic = request.build_absolute_uri(coach.profile_picture.url)
+            elif hasattr(coach, 'profile_picture_url') and coach.profile_picture_url:
+                profile_pic = coach.profile_picture_url
+            
+            # Get service areas
+            service_areas = [{'id': area.id, 'name': area.name} for area in coach.service_areas.all()]
+            
+            coaches_data.append({
+                'id': coach.id,
+                'user': {
+                    'id': coach.user.id,
+                    'username': coach.user.username,
+                    'first_name': coach.user.first_name,
+                    'last_name': coach.user.last_name,
+                    'full_name': coach.user.get_full_name() or coach.user.username,
+                },
+                'profile_picture': profile_pic,
+                'age': coach.age,
+                'main_sport_trained': {
+                    'id': coach.main_sport_trained.id,
+                    'name': coach.main_sport_trained.name,
+                } if coach.main_sport_trained else None,
+                'rate_per_hour': float(coach.rate_per_hour),
+                'service_areas': service_areas,
+                'experience_desc': coach.experience_desc or '',
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'coaches': coaches_data,
+            'pagination': {
+                'current_page': coaches.number,
+                'total_pages': paginator.num_pages,
+                'has_previous': coaches.has_previous(),
+                'has_next': coaches.has_next(),
+                'previous_page': coaches.previous_page_number() if coaches.has_previous() else None,
+                'next_page': coaches.next_page_number() if coaches.has_next() else None,
+                'total_count': paginator.count,
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+    
+@login_required(login_url='login')
+def coach_detail_json(request, coach_id):
+    """API endpoint untuk mendapatkan detail coach dalam format JSON"""
+    try:
+        coach = get_object_or_404(
+            CoachProfile.objects.select_related('user', 'main_sport_trained')
+            .prefetch_related('service_areas'),
+            id=coach_id
+        )
+        
+        # Get profile picture URL
+        profile_pic = None
+        if coach.profile_picture:
+            profile_pic = request.build_absolute_uri(coach.profile_picture.url)
+        elif hasattr(coach, 'profile_picture_url') and coach.profile_picture_url:
+            profile_pic = coach.profile_picture_url
+        
+        # Get service areas
+        service_areas = [
+            {'id': area.id, 'name': area.name} 
+            for area in coach.service_areas.all()
+        ]
+        
+        # Get reviews
+        reviews = Review.objects.filter(
+            target_coach=coach
+        ).select_related('customer').order_by('-created_at')[:10]
+        
+        reviews_data = []
+        total_rating = 0
+        for review in reviews:
+            reviews_data.append({
+                'id': review.id,
+                'customer_name': review.customer.get_full_name() or review.customer.username,
+                'rating': review.rating,
+                'comment': review.comment or '',
+                'created_at': review.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+            total_rating += review.rating
+        
+        # Calculate average rating
+        avg_rating = 0
+        if reviews.count() > 0:
+            avg_rating = total_rating / reviews.count()
+        
+        coach_data = {
+            'id': coach.id,
+            'user': {
+                'id': coach.user.id,
+                'username': coach.user.username,
+                'first_name': coach.user.first_name,
+                'last_name': coach.user.last_name,
+                'full_name': coach.user.get_full_name() or coach.user.username,
+                'email': coach.user.email,
+            },
+            'profile_picture': profile_pic,
+            'age': coach.age,
+            'gender': coach.gender if hasattr(coach, 'gender') else None,
+            'phone': coach.phone if hasattr(coach, 'phone') else None,
+            'main_sport_trained': {
+                'id': coach.main_sport_trained.id,
+                'name': coach.main_sport_trained.name,
+            } if coach.main_sport_trained else None,
+            'rate_per_hour': float(coach.rate_per_hour),
+            'service_areas': service_areas,
+            'experience_desc': coach.experience_desc or '',
+            'years_of_experience': coach.years_of_experience if hasattr(coach, 'years_of_experience') else None,
+            'certifications': coach.certifications if hasattr(coach, 'certifications') else None,
+            'achievements': coach.achievements if hasattr(coach, 'achievements') else None,
+            'reviews': reviews_data,
+            'total_reviews': reviews.count(),
+            'avg_rating': round(avg_rating, 1),
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'coach': coach_data,
+        })
+        
+    except CoachProfile.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Coach tidak ditemukan'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
