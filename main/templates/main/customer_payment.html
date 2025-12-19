@@ -115,7 +115,7 @@ function showUserToast(message, type = 'info') {
     `;
 
     container.appendChild(toast);
-    toast.classList.add('show'); // Tambahkan class 'show' untuk memicu animasi
+    toast.classList.add('show');  
 
     const closeBtn = toast.querySelector('.close-btn');
     const closeToast = () => {
@@ -178,10 +178,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const delay = Math.max(0, minProcessingTime - duration);
             
             if (ok && data.success) {
-                // Panggil 'handleSuccess' SETELAH sisa waktu tunggu
                 setTimeout(() => handleSuccess(data), delay);
                } else {
-                // Panggil 'handleError' SETELAH sisa waktu tunggu
                  const errorMsg = data.message || 'Terjadi kesalahan saat memproses pembayaran.';
                 setTimeout(() => handleError(errorMsg), delay);
               }
