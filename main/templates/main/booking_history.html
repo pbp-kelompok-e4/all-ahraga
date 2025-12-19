@@ -183,7 +183,6 @@
 </script>
 
 <script>
-/* ===== AJAX FILTERING + DELETE FEEDBACK ===== */
 (function(){
   const input   = document.getElementById('searchBooking');
   const select  = document.getElementById('statusFilter');
@@ -192,7 +191,6 @@
 
   const baseUrl = window.location.pathname;
 
-  // --- CSRF helper 
   function getCookie(name){
     const v = document.cookie.split(';').map(c=>c.trim());
     for(const c of v){ if(c.startsWith(name+'=')) return decodeURIComponent(c.slice(name.length+1)); }
@@ -200,15 +198,12 @@
   }
   const getCSRF = () => (document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '');
 
-  // --- debounce
   const debounce = (fn, ms=350)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
 
   const showLoading = ()=>{ wrap.style.opacity = .6; };
   const hideLoading = ()=>{ wrap.style.opacity = 1; };
 
-  // --- Rebind aksi dalam partial (hapus feedback via AJAX)
   function hydrateBookingList(){
-    // intercept semua form delete review
     wrap.querySelectorAll('form[action*="delete_review"]').forEach(form=>{
       form.addEventListener('submit', async (e)=>{
         e.preventDefault();
@@ -231,7 +226,6 @@
           const data = await res.json().catch(()=>null);
           if(data?.success){
             window.toast(data.message || 'Feedback dihapus.', 'success');
-            // reload list agar card yang terkait ter-update
             const q = input?.value?.trim() || '';
             const status = select?.value || '';
             fetchList({ q, status }, false);
@@ -247,7 +241,6 @@
 
   }
 
-  // --- Fetch & replace partial
   async function fetchList(params, push=true){
     const url = new URL(baseUrl, window.location.origin);
     if(params.q) url.searchParams.set('q', params.q);
@@ -272,7 +265,6 @@
     }
   }
 
-  // --- Pagination (kalau ada link page di partial)
   wrap.addEventListener('click', (e)=>{
     const a = e.target.closest('a');
     if(!a) return;
@@ -285,7 +277,6 @@
     }
   });
 
-  // --- Listeners search & filter
   if(input){
     input.addEventListener('input', debounce(()=>{
       const q = input.value.trim();
@@ -301,17 +292,15 @@
     });
   }
 
-  // --- Init: isi dari URL (tanpa fetch ulang karena sudah include)
   (function syncFromURL(){
     const p = new URLSearchParams(location.search);
     const q = p.get('q') || '';
     const s = p.get('status') || '';
     if(input)  input.value  = q;
     if(select) select.value = s;
-    hydrateBookingList(); // bind aksi delete untuk render awal
+    hydrateBookingList(); 
   })();
 
-  // --- Back/forward
   window.addEventListener('popstate', (ev)=>{
     const q = (ev.state && ev.state.q) || new URLSearchParams(location.search).get('q') || '';
     const status = (ev.state && ev.state.status) || new URLSearchParams(location.search).get('status') || '';

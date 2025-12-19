@@ -217,7 +217,6 @@ function showUserToast(message, type = 'info') {
 }
 
 
-// --- DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', function() {
   {% if messages %}
     {% for message in messages %}
@@ -404,12 +403,13 @@ if (form) {
         try {
             let urlTemplate = "{% url 'update_booking' booking_id=99999 %}".replace('99999', bookingId);
             const response = await fetch(urlTemplate, {
-                method: 'PUT',  
+                method: 'POST',  
                 headers: {
                     'Content-Type': 'application/json',  
                     'X-CSRFToken': getCookie('csrftoken'),  
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'include',
                 body: JSON.stringify(data)  
             });
 
@@ -497,9 +497,7 @@ function closeDeleteModal() {
     }
 }
 
-// --- Delete Booking Handler ---
 document.addEventListener('submit', async function(e) {
-    // Cek apakah yang disubmit adalah form delete booking
     if (e.target.classList.contains('delete-booking-form')) {
         e.preventDefault();
         
@@ -507,16 +505,13 @@ document.addEventListener('submit', async function(e) {
         const bookingId = form.dataset.bookingId;
         const venueName = form.dataset.venueName;
         
-        // Set data untuk modal konfirmasi
         if (deleteVenueNameSpan) deleteVenueNameSpan.textContent = venueName;
         currentDeleteForm = form;
         
-        // Buka modal konfirmasi
         if (deleteModal) deleteModal.classList.remove('hidden');
     }
 });
 
-// Konfirmasi delete dari modal
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', async function() {
         if (!currentDeleteForm) return;
@@ -529,7 +524,7 @@ if (confirmDeleteBtn) {
         
         try {
             const response = await fetch(deleteUrl, {
-                method: 'DELETE',  // Ubah dari POST ke DELETE
+                method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken'),
                     'X-Requested-With': 'XMLHttpRequest'
@@ -542,7 +537,6 @@ if (confirmDeleteBtn) {
                 showUserToast(data.message, 'success');
                 closeDeleteModal();
                 
-                // Refresh list booking
                 setTimeout(() => {
                     fetchMyBookings();
                 }, 500);
