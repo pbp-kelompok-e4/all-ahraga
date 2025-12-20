@@ -2824,17 +2824,23 @@ def api_booking_form_data(request, venue_id):
 
 @csrf_exempt
 def api_get_coaches_for_schedule(request, schedule_id):
+    editing_booking_id = request.GET.get('editing_booking_id')
+
     try:
         venue_schedule = VenueSchedule.objects.select_related('venue', 'venue__sport_category', 'venue__location').get(pk=schedule_id)
         venue = venue_schedule.venue
     except VenueSchedule.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Schedule tidak ditemukan'}, status=404)
     
+    coach_booked_filter = Q(is_booked=False)
+    if editing_booking_id and editing_booking_id != 'null' and editing_booking_id != '':
+        coach_booked_filter |= Q(booking__id=editing_booking_id)
+
     coach_schedules = CoachSchedule.objects.filter(
+        coach_booked_filter, 
         date=venue_schedule.date,
         start_time__lte=venue_schedule.start_time,
         end_time__gte=venue_schedule.end_time,
-        is_booked=False,
         coach__main_sport_trained=venue.sport_category, 
         coach__service_areas=venue.location          
     ).select_related('coach', 'coach__user', 'coach__main_sport_trained')
@@ -2847,9 +2853,7 @@ def api_get_coaches_for_schedule(request, schedule_id):
             'coach_schedule_id': cs.id,
             'name': coach.user.get_full_name() or coach.user.username,
             'rate_per_hour': float(coach.rate_per_hour or 0),
-            
             'sport': coach.main_sport_trained.name if coach.main_sport_trained else None,
-            
             'experience_desc': coach.experience_desc,
             'profile_picture': coach.profile_picture.url if coach.profile_picture else None,
         })
