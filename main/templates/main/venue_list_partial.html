@@ -5,7 +5,7 @@
     <div class="venue-card" onclick="window.location.href='{% url 'create_booking' venue.id %}'">
         <div class="venue-image-wrapper">
             {% if venue.main_image %}
-            <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="venue-image">
+            <img src="{{ venue.main_image }}" alt="{{ venue.name }}" class="venue-image">
             {% else %}
             <div class="venue-image" style="display: flex; align-items: center; justify-center; font-size: 60px;">
                 🏟️

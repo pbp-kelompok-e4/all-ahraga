@@ -1,4 +1,4 @@
-<form id="coachProfileForm" enctype="multipart/form-data" class="space-y-6"> {# Ubah space-y-8 jadi 6 #}
+<form id="coachProfileForm" class="space-y-6"> {# Ubah space-y-8 jadi 6 #}
     {% csrf_token %}
 
     <div id="formErrors" class="hidden bg-red-50 border border-red-300 rounded-xl p-5 mb-6">
@@ -11,7 +11,7 @@
     {% if coach_profile and coach_profile.profile_picture %}
     <div class="flex justify-center mb-4"> {# Kurangi mb #}
         <div class="relative group">
-            <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil Saat Ini" id="currentProfilePic"
+            <img src="{{ coach_profile.profile_picture }}" alt="Foto Profil Saat Ini" id="currentProfilePic"
                  class="w-28 h-28 rounded-full object-cover border-4 border-teal-300 shadow-lg">
             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity duration-200">
                 <span class="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200">Ganti Foto</span>
@@ -61,10 +61,10 @@
         </div>
 
         <div class="form-group md:col-span-2">
-            <label for="id_profile_picture" class="block text-sm font-medium text-gray-700 mb-1">Foto Profil</label>
+            <label for="id_profile_picture" class="block text-sm font-medium text-gray-700 mb-1">URL Foto Profil</label>
             {{ form.profile_picture }} {# Hapus |attr #}
             <div class="field-error text-red-600 text-xs mt-1 hidden" id="error_id_profile_picture"></div> {# Tambah ID #}
-            <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG (Max 5MB). Akan ditampilkan rasio 1:1.</p>
+            <p class="text-xs text-gray-500 mt-1">Masukkan URL lengkap gambar profil (https://...)</p>
            
             <div id="imagePreviewContainer" class="mt-3 hidden"> {# Kurangi mt #}
                  <p class="text-xs text-gray-500 mb-1">Preview:</p>
@@ -141,22 +141,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() { // Pastikan DOM siap
-    const fileInput = document.getElementById('id_profile_picture');
+    const urlInput = document.getElementById('id_profile_picture');
     const previewContainer = document.getElementById('imagePreviewContainer');
     const imagePreview = document.getElementById('imagePreview');
     
-    if (fileInput && previewContainer && imagePreview) {
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && file.type.startsWith('image/')) { // Pastikan itu gambar
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    previewContainer.classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
+    if (urlInput && previewContainer && imagePreview) {
+        urlInput.addEventListener('change', function(e) {
+            const url = e.target.value;
+            if (url && url.trim()) { // Jika ada URL
+                imagePreview.src = url;
+                previewContainer.classList.remove('hidden');
             } else {
-                imagePreview.src = ""; // Kosongkan jika bukan gambar atau tidak ada file
+                imagePreview.src = ""; // Kosongkan jika URL kosong
                 previewContainer.classList.add('hidden');
             }
         });
