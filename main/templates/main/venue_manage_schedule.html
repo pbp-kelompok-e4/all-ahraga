@@ -45,8 +45,6 @@ input.datepicker:focus, input.timepicker:focus {
 {% endblock extra_head %}
 
 {% block content %}
-{# Header konten dihapus #}
-
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
   
   <div class="lg:col-span-2 space-y-6">
@@ -61,6 +59,7 @@ input.datepicker:focus, input.timepicker:focus {
           <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Semua</button>
         </div>
 
+        {# Form URL action ini akan digunakan oleh JS untuk fetch DELETE #}
         <form method="post" action="{% url 'venue_schedule_delete' venue_id=venue.id %}" id="bulk-delete-form" class="flex-shrink-0">
           {% csrf_token %}
           <div class="flex items-center gap-3">
@@ -89,7 +88,7 @@ input.datepicker:focus, input.timepicker:focus {
               </div>
             </div>
             <div class="flex flex-wrap gap-3 slot-container">
-              {% for s in group.list %} {# Looping variabel 's' dari context venue #}
+              {% for s in group.list %} 
                 <label class="relative inline-flex items-center slot-label">
                   <input type="checkbox" class="delete-checkbox form-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500" data-id="{{ s.id }}" {% if s.is_booked %}disabled{% endif %} />
                   {% if s.is_booked %}
@@ -163,6 +162,40 @@ input.datepicker:focus, input.timepicker:focus {
   </aside>
 </div>
 
+<div id="delete-modal" class="relative z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm"></div>
+
+  <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+      <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-gray-200">
+        <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start">
+            <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
+            </div>
+            <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+              <h3 class="text-base font-semibold leading-6 text-gray-900" id="modal-title">Hapus Jadwal</h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500" id="modal-message">
+                  Apakah Anda yakin ingin menghapus jadwal yang dipilih? Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+          <button type="button" id="confirm-delete-btn" class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto transition">
+            Ya, Hapus
+          </button>
+          <button type="button" id="cancel-modal-btn" class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="custom-toast" role="status" aria-live="polite" class="hidden">
     <span id="toast-icon"></span>
     <span id="toast-message" class="ml-2"></span>
@@ -172,7 +205,6 @@ input.datepicker:focus, input.timepicker:focus {
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-{# ✅ JAVASCRIPT DIAMBIL DARI venue_manage_schedule.html YANG LAMA (YANG FUNGSIONAL) #}
 <script>
 // --- UTILITY: GET CSRF TOKEN ---
 function getCookie(name) {
@@ -184,17 +216,17 @@ function showToast(message, type = 'success') {
     const toast = document.getElementById('custom-toast'); if (!toast) return; const msgEl = document.getElementById('toast-message'); const iconEl = document.getElementById('toast-icon'); let color = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f97316'); let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️'); toast.style.backgroundColor = color; msgEl.textContent = message; iconEl.textContent = icon; toast.classList.remove('hidden'); toast.classList.add('show-toast'); setTimeout(() => { toast.classList.remove('show-toast'); setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
 }
 
-// --- FUNGSI HELPER BARU UNTUK DOM (VENUE VERSION) ---
 function createSlotHtml(slot) {
     return `
     <label class="relative inline-flex items-center slot-label">
         <input type="checkbox" class="delete-checkbox form-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500" data-id="${slot.id}" />
-        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-700 hover:bg-teal-50 shadow-sm transition-colors duration-150">
-            <svg class="h-4 w-4 icon text-teal-700" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+        <span class="slot-card available inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 cursor-pointer hover:border-teal-600 hover:bg-teal-50 shadow-sm transition-colors duration-150">
+            <i class="fa-solid fa-check h-4 w-4 icon text-teal-600"></i>
             <span class="text-sm font-medium">${slot.start_time} - ${slot.end_time}</span>
         </span>
     </label>`;
 }
+
 function createGroupCardHtmlForAjax(firstSlot, allSlots) {
     let slotsHtml = allSlots.map(createSlotHtml).join(''); const count = allSlots.length; const slotText = count !== 1 ? 'slots' : 'slot';
     return `
@@ -213,51 +245,181 @@ document.addEventListener('DOMContentLoaded',function(){
     flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, minuteIncrement: 60 });
 
     // Elemen
-    const filter = document.getElementById('filter-date'); const applyBtn = document.getElementById('apply-filter'); const clearBtn = document.getElementById('clear-filter'); const bodyEl = document.body; const deleteToggleBtn = document.getElementById('delete-toggle-btn'); const deleteToggleText = document.getElementById('delete-toggle-text'); const cancelBtn = document.getElementById('cancel-delete-btn'); const selectAllBtn = document.getElementById('select-all'); const bulkForm = document.getElementById('bulk-delete-form'); const addScheduleForm = document.getElementById('add-schedule-form'); const deleteControlsContainer = document.getElementById('delete-controls-container'); const scheduleListContainer = document.getElementById('schedules-list-container');
-    let selectionActive = false; let filterTimeout;
+    const filter = document.getElementById('filter-date'); 
+    const applyBtn = document.getElementById('apply-filter'); 
+    const clearBtn = document.getElementById('clear-filter'); 
+    const bodyEl = document.body; 
+    
+    // Elemen Delete & Modal
+    const deleteToggleBtn = document.getElementById('delete-toggle-btn'); 
+    const deleteToggleText = document.getElementById('delete-toggle-text'); 
+    const cancelBtn = document.getElementById('cancel-delete-btn'); 
+    const selectAllBtn = document.getElementById('select-all'); 
+    const bulkForm = document.getElementById('bulk-delete-form'); 
+    
+    // Form & Container
+    const addScheduleForm = document.getElementById('add-schedule-form'); 
+    const deleteControlsContainer = document.getElementById('delete-controls-container'); 
+    const scheduleListContainer = document.getElementById('schedules-list-container');
+    
+    // Modal Elements
+    const deleteModal = document.getElementById('delete-modal');
+    const modalMessage = document.getElementById('modal-message');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn'); // Tombol "Ya, Hapus" di Modal
+    const cancelModalBtn = document.getElementById('cancel-modal-btn');     // Tombol "Batal" di Modal
 
-    // --- AJAX TAMBAH JADWAL ---
+    let selectionActive = false;
+    let idsToDeletePending = []; // Menyimpan ID sementara saat modal terbuka
+
     addScheduleForm?.addEventListener('submit', async function(e){
-        e.preventDefault(); const formData = new FormData(this); const submitButton = this.querySelector('button[type="submit"]'); submitButton.disabled = true;
+        e.preventDefault(); 
+        
+        // 1. Ambil data form
+        const formData = new FormData(this);
+        const dataObj = {};
+        
+        // 2. Konversi FormData ke JSON Object
+        formData.forEach((value, key) => {
+            dataObj[key] = value;
+        });
+
+        const submitButton = this.querySelector('button[type="submit"]'); 
+        submitButton.disabled = true;
+        
         try {
-            const response = await fetch(this.action, { method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') } });
+            // 4. Kirim sebagai JSON (Content-Type: application/json)
+            const response = await fetch(this.action, { 
+                method: 'POST', 
+                body: JSON.stringify(dataObj), // UBAH KE JSON STRING
+                headers: {
+                    'Content-Type': 'application/json', // HEADER WAJIB
+                    'X-Requested-With': 'XMLHttpRequest', 
+                    'X-CSRFToken': getCookie('csrftoken') 
+                } 
+            });
+            
+            // Backend sekarang akan mendeteksi JSON dan me-return JsonResponse
             const data = await response.json();
-            if (!response.ok) { throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`)); }
+            
+            if (!data.success) { // Sesuaikan cek success (backend return success: true/false)
+                throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`)); 
+            }
+            
             showToast(data.message || 'Jadwal berhasil ditambahkan!', 'success');
+            
+            // ... (Kode update DOM di bawah ini SAMA SAJA, tidak berubah) ...
             if (data.new_slots && data.new_slots.length > 0) {
                 const noScheduleMsg = document.getElementById('no-schedule-message'); if (noScheduleMsg) noScheduleMsg.remove();
                 const slotsByDate = data.new_slots.reduce((acc, slot) => { const date = slot.date_str_iso; if (!acc[date]) acc[date] = []; acc[date].push(slot); return acc; }, {});
-                for (const dateISO in slotsByDate) { // Logic insert/update DOM
+                for (const dateISO in slotsByDate) { 
                     const slotsForThisDate = slotsByDate[dateISO]; if (slotsForThisDate.length === 0) continue; const firstSlot = slotsForThisDate[0]; let groupCard = scheduleListContainer.querySelector(`.group[data-date="${dateISO}"]`);
                     if (groupCard) { const slotContainer = groupCard.querySelector('.slot-container'); if (slotContainer) { let slotsHtml = slotsForThisDate.map(createSlotHtml).join(''); slotContainer.insertAdjacentHTML('beforeend', slotsHtml); const countEl = groupCard.querySelector('.slot-count'); if (countEl) { const newCount = slotContainer.children.length; countEl.textContent = `${newCount} ${newCount > 1 ? 'slots' : 'slot'}`; }}}
                     else { const newGroupHtml = createGroupCardHtmlForAjax(firstSlot, slotsForThisDate); const tempDiv = document.createElement('div'); tempDiv.innerHTML = newGroupHtml.trim(); const newGroupCard = tempDiv.firstChild; const allCards = Array.from(scheduleListContainer.querySelectorAll('.group[data-date]')); let inserted = false; for (let i = 0; i < allCards.length; i++) { if (dateISO < allCards[i].getAttribute('data-date')) { scheduleListContainer.insertBefore(newGroupCard, allCards[i]); inserted = true; break; }} if (!inserted) scheduleListContainer.appendChild(newGroupCard); }
                 }
             }
             addScheduleForm.reset(); document.querySelectorAll('.datepicker, .timepicker').forEach(fpInput => { if (fpInput._flatpickr) fpInput._flatpickr.clear(); });
-        } catch (error) { console.error('AJAX Error:', error); showToast(error.message || 'Terjadi kesalahan.', 'error'); }
-        finally { submitButton.disabled = false; }
+        
+        } catch (error) { 
+            console.error('AJAX Error:', error); 
+            showToast(error.message || 'Terjadi kesalahan.', 'error'); 
+        } finally { 
+            submitButton.disabled = false; 
+        }
     });
 
-    // --- AJAX HAPUS JADWAL ---
+    // --- FUNGSI MODAL ---
+    function showDeleteModal(count) {
+        modalMessage.textContent = `Apakah Anda yakin ingin menghapus ${count} jadwal yang dipilih? Tindakan ini tidak dapat dibatalkan.`;
+        deleteModal.classList.remove('hidden');
+    }
+    function hideDeleteModal() {
+        deleteModal.classList.add('hidden');
+        idsToDeletePending = []; // Reset ID
+    }
+    cancelModalBtn?.addEventListener('click', hideDeleteModal);
+
+
+    // --- 1. CLICK BUTTON "HAPUS JADWAL" (Buka Modal) ---
     deleteToggleBtn?.addEventListener('click', function(){
-        if (!selectionActive) { enterSelectionMode(); return; }
-        const checkedCheckboxes = Array.from(scheduleListContainer.querySelectorAll('.delete-checkbox:checked:not(:disabled)')); if (checkedCheckboxes.length === 0) { showToast('Pilih jadwal untuk dihapus.', 'warning'); return; }
-        if (!confirm(`Hapus ${checkedCheckboxes.length} jadwal terpilih?`)) return;
-        const idsToDelete = checkedCheckboxes.map(ch => ch.dataset.id);
-        fetch(bulkForm.action, { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}, body: JSON.stringify({ selected_schedules: idsToDelete }) })
+        if (!selectionActive) { 
+            enterSelectionMode(); 
+            return; 
+        }
+        const checkedCheckboxes = Array.from(scheduleListContainer.querySelectorAll('.delete-checkbox:checked:not(:disabled)')); 
+        if (checkedCheckboxes.length === 0) { 
+            showToast('Pilih jadwal untuk dihapus.', 'warning'); 
+            return; 
+        }
+        // Simpan ID yang mau dihapus ke variabel sementara
+        idsToDeletePending = checkedCheckboxes.map(ch => ch.dataset.id);
+        
+        // Tampilkan Modal
+        showDeleteModal(checkedCheckboxes.length);
+    });
+
+    // --- 2. CLICK "YA, HAPUS" DI MODAL (Eksekusi DELETE) ---
+    confirmDeleteBtn?.addEventListener('click', function() {
+        // UI Feedback
+        const originalText = confirmDeleteBtn.textContent;
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.textContent = 'Menghapus...';
+
+        fetch(bulkForm.action, { 
+            method: 'DELETE', // Method DELETE sesuai backend baru
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }, 
+            body: JSON.stringify({ selected_schedules: idsToDeletePending }) 
+        })
         .then(res => res.ok ? res.json() : res.json().then(err => { throw err; }))
         .then(data => {
             if (data.success) {
-                showToast(data.message || 'Jadwal dihapus!', 'success');
-                idsToDelete.forEach(id => { // Logic hapus DOM
-                    const checkbox = scheduleListContainer.querySelector(`.delete-checkbox[data-id="${id}"]`); const label = checkbox?.closest('label.slot-label'); const groupContainer = label?.parentElement; const card = groupContainer?.closest('.group[data-date]'); label?.remove();
-                    if (card && groupContainer?.children.length === 0) { card.remove(); } else if (card) { const countEl = card.querySelector('.slot-count'); const newCount = groupContainer.children.length; if(countEl) countEl.textContent = `${newCount} ${newCount !== 1 ? 'slots' : 'slot'}`; }
+                showToast(data.message || 'Jadwal berhasil dihapus!', 'success');
+                
+                // Update DOM (Hapus element)
+                idsToDeletePending.forEach(id => { 
+                    const checkbox = scheduleListContainer.querySelector(`.delete-checkbox[data-id="${id}"]`); 
+                    const label = checkbox?.closest('label.slot-label'); 
+                    const groupContainer = label?.parentElement;
+                    const card = groupContainer?.closest('.group[data-date]');
+                    
+                    label?.remove();
+
+                    if (card && groupContainer?.children.length === 0) { 
+                        card.remove(); 
+                    } else if (card) { 
+                        const countEl = card.querySelector('.slot-count'); 
+                        const newCount = groupContainer.children.length; 
+                        if(countEl) countEl.textContent = `${newCount} ${newCount !== 1 ? 'slots' : 'slot'}`; 
+                    }
                 });
-                if (scheduleListContainer.querySelectorAll('.group[data-date]').length === 0 && !document.getElementById('no-schedule-message')) { scheduleListContainer.innerHTML = `<div class="bg-white ... text-center" id="no-schedule-message">...Belum ada jadwal...</div>`; }
-            } else { throw new Error(data.message || 'Gagal menghapus.'); }
+
+                // Cek Empty State
+                if (scheduleListContainer.querySelectorAll('.group[data-date]').length === 0 && !document.getElementById('no-schedule-message')) { 
+                    scheduleListContainer.innerHTML = `<div class="bg-white border border-dashed border-gray-300 rounded-xl p-8 shadow-sm text-center" id="no-schedule-message">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <h3 class="text-lg font-medium text-slate-900">Belum ada jadwal</h3><p class="mt-1 text-sm text-gray-500">Tambahkan jadwal menggunakan form di samping.</p></div>`; 
+                }
+
+                // Tutup Modal & Keluar Mode Seleksi
+                hideDeleteModal();
+                exitSelectionMode();
+
+            } else { 
+                throw new Error(data.message || 'Gagal menghapus.'); 
+            }
         })
-        .catch(error => { console.error("Delete Error:", error); showToast(error.message || 'Kesalahan koneksi.', 'error'); })
-        .finally(exitSelectionMode);
+        .catch(error => { 
+            console.error("Delete Error:", error); 
+            showToast(error.message || 'Terjadi kesalahan koneksi.', 'error');
+            hideDeleteModal();
+        })
+        .finally(() => {
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.textContent = originalText;
+        });
     });
     
     // --- LOGIC FILTER ---

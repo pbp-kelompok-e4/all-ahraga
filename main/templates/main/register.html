@@ -6,41 +6,86 @@
 {% block extra_head %}
 <style>
   @keyframes fadeIn { from {opacity:0; transform: translateY(20px);} to {opacity:1; transform:none;} }
+  @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+  
   .animate-fade-in { animation: fadeIn .6s ease-out forwards; }
 
-  .bg-img{
-    position: fixed; inset: 0; background:url("{% static 'image/bg-court.jpg' %}") center/cover no-repeat;
-    filter: blur(6px) saturate(1.05);
-    z-index:0;
+  body {
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
   }
-  .bg-tint{
-    position: fixed; inset: 0;
-    background: linear-gradient(135deg, rgba(13,148,136,.55), rgba(17,94,89,.65)), rgba(0,0,0,.35);
-    mix-blend-mode: multiply; z-index:1;
+
+  /* Dekorasi lingkaran floating */
+  body::before {
+    content: '';
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(20,184,166,.15) 0%, transparent 70%);
+    border-radius: 50%;
+    top: -100px;
+    right: -100px;
+    z-index: 0;
+    animation: float 6s ease-in-out infinite;
+    pointer-events: none;
   }
+
+  body::after {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(13,148,136,.1) 0%, transparent 70%);
+    border-radius: 50%;
+    bottom: -50px;
+    left: -50px;
+    z-index: 0;
+    animation: float 8s ease-in-out infinite reverse;
+    pointer-events: none;
+  }
+
   header, nav, footer { position: relative; z-index: 5; }
 
-  .page-center{
-    position:relative; z-index:2; min-height:80vh;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:3rem 1rem 4rem;
+  .page-center {
+    position: relative;
+    z-index: 2;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
   }
 
-  .login-hero-title{
-    color:#fff; text-align:center; font-weight:900;
-    font-size:clamp(2.2rem, 2.6vw + 1.4rem, 3.1rem);
-    letter-spacing:-0.02em; line-height:1.1;
-    text-shadow:0 10px 28px rgba(0,0,0,.35);
-    margin-bottom:.8rem;
-  }
-  .login-hero-sub{
-    color:rgba(255,255,255,.92); text-align:center; margin-bottom:1.8rem;
-    font-size:clamp(1rem, .6vw + .8rem, 1.2rem);
+  .login-hero-title {
+    color: #fff;
+    text-align: center;
+    font-weight: 900;
+    font-size: clamp(2rem, 2.4vw + 1.2rem, 2.8rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-shadow: 0 10px 28px rgba(0,0,0,.25);
+    margin-bottom: .6rem;
   }
 
-  .register-card{
-    background:#fff; border-radius:1.25rem; padding:2rem; max-width:460px; width:100%;
-    box-shadow:0 18px 40px rgba(0,0,0,.18);
+  .login-hero-sub {
+    color: rgba(255,255,255,.95);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: clamp(.95rem, .5vw + .75rem, 1.1rem);
+  }
+
+  .register-card {
+    background: #fff;
+    border-radius: 1.25rem;
+    padding: 2rem;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 18px 40px rgba(0,0,0,.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.2);
   }
 
   .form-label{ font-size:.9rem; font-weight:700; color:#334155; margin-bottom:.4rem; display:block; }
@@ -63,28 +108,64 @@
   .register-meta a:hover{text-decoration:underline;}
 
   .error-box{
-    display:none;margin-bottom:.9rem;background:#fee2e2;border:1px solid #fca5a5;
-    color:#7f1d1d;border-radius:.85rem;padding:.7rem .9rem;font-size:.9rem;
+    display:none;margin-bottom:.9rem;background:linear-gradient(135deg,#fee2e2,#fecaca);
+    border:2px solid #ef4444;color:#7f1d1d;border-radius:1rem;padding:1rem 1.2rem;
+    font-size:.92rem;font-weight:600;box-shadow:0 8px 16px rgba(239,68,68,.15);
   }
+
+  @keyframes slideInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideOutDown { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(30px); } }
 
   #toast{
     position:fixed;
-    bottom: 1.25rem; /* <-- Diubah dari 'top' */
-    right: 1.25rem;
+    bottom: 1.5rem;
+    right: 1.5rem;
     z-index:60;
-    /* ... */
-    opacity:0; transform:translateY(10px); /* <-- Animasi dari bawah */
-    transition:opacity .25s ease, transform .25s ease;
-    font-weight:600;
+    max-width:380px;
+    padding:1rem 1.5rem;
+    border-radius:1rem;
+    font-weight:700;
+    font-size:.95rem;
+    display:flex;
+    align-items:center;
+    gap:0.75rem;
+    box-shadow:0 16px 32px rgba(0,0,0,.3);
+    opacity:0;
+    transform:translateY(30px);
+    transition:opacity .3s ease, transform .3s ease;
+    pointer-events:none;
   }
-  #toast.show{ opacity:1; transform:translateY(0); }
+
+  #toast.show{
+    opacity:1;
+    transform:translateY(0);
+    pointer-events:auto;
+    animation:slideInUp .4s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  #toast.hide{
+    animation:slideOutDown .3s ease forwards;
+  }
+
+  #toast::before{
+    content:'✓';
+    font-size:1.3rem;
+    font-weight:900;
+    flex-shrink:0;
+  }
+
+  #toast.error::before{
+    content:'⚠';
+    color:#ef4444;
+  }
+
+  #toast.success::before{
+    color:#22c55e;
+  }
 </style>
 {% endblock extra_head %}
 
 {% block content %}
-<div class="bg-img"></div>
-<div class="bg-tint"></div>
-
 <div class="page-center">
   <h1 class="login-hero-title animate-fade-in">Buat Akun Baru</h1>
   <p class="login-hero-sub animate-fade-in" style="animation-delay:.08s">Daftar untuk mulai booking venue & coach favoritmu</p>
@@ -162,16 +243,29 @@
     set('id_password2', 'Ulangi password');
   })();
 
-  function showToast(message,type='success',duration=3000){
-    const t=document.getElementById('toast');
-    if(!t)return;
-    t.textContent=message;
-    t.style.background=(type==='error')
-      ?'linear-gradient(90deg,#b91c1c,#dc2626)'
-      :'linear-gradient(90deg,#059669,#0d9488)';
-    t.classList.add('show');
+  function showToast(message, type='success', duration=3500){
+    const t = document.getElementById('toast');
+    if(!t) return;
+    
+    t.textContent = message;
+    t.className = 'show ' + type;
+    
+    if (type === 'error') {
+      t.style.background = 'linear-gradient(135deg,#fee2e2,#fecaca)';
+      t.style.color = '#7f1d1d';
+      t.style.boxShadow = '0 16px 32px rgba(239,68,68,.25)';
+    } else {
+      t.style.background = 'linear-gradient(135deg,#dcfce7,#bbf7d0)';
+      t.style.color = '#166534';
+      t.style.boxShadow = '0 16px 32px rgba(34,197,94,.25)';
+    }
+    
     clearTimeout(t._timeout);
-    t._timeout=setTimeout(()=>{t.classList.remove('show');},duration);
+    t._timeout = setTimeout(()=>{
+      t.classList.remove('show');
+      t.classList.add('hide');
+      setTimeout(()=>{ t.classList.remove('hide'); }, 300);
+    }, duration);
   }
 
   (function(){
@@ -229,17 +323,37 @@
             trigger: 'after_register_success',
             ts: Date.now()
           }));
-          window.location.href = data.redirect || "{% url 'login' %}";
+          showToast("✓ Registrasi berhasil! Silakan login..","success",3500);
+          setTimeout(()=>{ window.location.href = data.redirect || "{% url 'login' %}"; }, 800);
           return;
         }
-        const messages = data?.errors ? Object.values(data.errors).flat() : ["Registrasi gagal."];
+        
+        // Format error messages dengan lebih baik
+        let errorMessages = [];
+        if (data?.errors) {
+          Object.entries(data.errors).forEach(([field, msgs])=>{
+            const fieldLabel = field.replace(/_/g,' ').toUpperCase();
+            if (Array.isArray(msgs)) {
+              errorMessages.push(`${fieldLabel}: ${msgs.join(', ')}`);
+            } else {
+              errorMessages.push(`${fieldLabel}: ${msgs}`);
+            }
+          });
+        }
+        
+        if (errorMessages.length === 0) {
+          errorMessages = ["Registrasi gagal. Periksa kembali data Anda."];
+        }
+        
         errorBox.style.display = 'block';
-        errorBox.innerHTML = messages.join('<br>');
-        showToast("Registrasi gagal. Periksa kembali data Anda.","error",3200);
+        errorBox.innerHTML = errorMessages.map(msg => `<div style="margin-bottom:0.5rem;">• ${msg}</div>`).join('');
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showToast("❌ " + errorMessages[0].split(':')[0] + " tidak valid", "error", 4000);
       } catch (err) {
         errorBox.style.display = 'block';
-        errorBox.textContent = "Kesalahan jaringan. Silakan coba lagi.";
-        showToast("Kesalahan jaringan.","error",3200);
+        errorBox.innerHTML = '<div style="font-weight:700;">Kesalahan jaringan</div><div style="margin-top:0.3rem;">Pastikan koneksi internet Anda stabil dan coba lagi.</div>';
+        errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showToast("❌ Kesalahan jaringan. Coba lagi.", "error", 4000);
       }
     });
   })();

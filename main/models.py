@@ -45,11 +45,10 @@ class Venue(models.Model):
     sport_category = models.ForeignKey(SportCategory, on_delete=models.PROTECT, 
                                        related_name='venues_by_sport')
     
-    main_image = models.ImageField(
-        upload_to='venue_photos/', # Disimpan di media/venue_photos/
+    main_image = models.URLField(
         null=True, 
         blank=True,
-        verbose_name="Foto Utama Lapangan"
+        verbose_name="URL Foto Utama Lapangan"
     )
 
     PAYMENT_CHOICES = [
@@ -98,10 +97,9 @@ class CoachProfile(models.Model):
     experience_desc = models.TextField(blank=True)
     rate_per_hour = models.DecimalField(max_digits=10, decimal_places=0, validators=[MinValueValidator(0)])
     
-    profile_picture = models.ImageField(
-        upload_to='coach_photos/',
+    profile_picture = models.URLField(
         null=True, blank=True,
-        verbose_name="Foto Profil"
+        verbose_name="URL Foto Profil"
     )
     
     # kalau kategori olahraga dihapus → tolak (biar tidak merusak referensi)
@@ -157,7 +155,7 @@ class Booking(models.Model):
 class BookingEquipment(models.Model):
     """Detail peralatan yang disewa dalam satu booking."""
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='equipment_details')
-    equipment = models.ForeignKey(Equipment, on_delete=models.PROTECT)
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
     quantity = models.IntegerField(validators=[MinValueValidator(1)])
     sub_total = models.DecimalField(max_digits=10, decimal_places=0)
 

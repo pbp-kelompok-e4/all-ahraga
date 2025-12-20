@@ -217,7 +217,6 @@ function showUserToast(message, type = 'info') {
 }
 
 
-// --- DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', function() {
   {% if messages %}
     {% for message in messages %}
@@ -385,31 +384,44 @@ if (form) {
         submitButton.innerHTML = 'Menyimpan...';
 
         const formData = new FormData(form);
-        equipmentListDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            if (!cb.checked) {
-                formData.delete(`quantity_${cb.value}`);
+        const data = {};
+        
+        data.schedule_id = formData.get('schedule_id');
+        data.coach_id = formData.get('coach_id') || '';
+        data.payment_method = formData.get('payment_method') || 'CASH';
+        
+        const equipmentCheckboxes = equipmentListDiv.querySelectorAll('input[type="checkbox"]:checked');
+        data.equipment = Array.from(equipmentCheckboxes).map(cb => cb.value);
+        
+        equipmentCheckboxes.forEach(cb => {
+            const qtyInput = equipmentListDiv.querySelector(`input[name="quantity_${cb.value}"]`);
+            if (qtyInput) {
+                data[`quantity_${cb.value}`] = parseInt(qtyInput.value) || 1;
             }
         });
 
         try {
             let urlTemplate = "{% url 'update_booking' booking_id=99999 %}".replace('99999', bookingId);
             const response = await fetch(urlTemplate, {
-                method: 'POST',
-                body: formData,
+                method: 'POST',  
                 headers: {
+                    'Content-Type': 'application/json',  
+                    'X-CSRFToken': getCookie('csrftoken'),  
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)  
             });
 
-            const data = await response.json();
+            const responseData = await response.json();
 
-            if (data.success) {
-                showUserToast(data.message || 'Booking berhasil diperbarui.', 'success');
+            if (responseData.success) {
+                showUserToast(responseData.message || 'Booking berhasil diperbarui.', 'success');
                 setTimeout(() => {
-                    window.location.href = data.redirect_url || "{% url 'my_bookings' %}";
+                    window.location.href = responseData.redirect_url || "{% url 'my_bookings' %}";
                 }, 1000);
             } else {
-                throw new Error(data.message || 'Terjadi kesalahan.');
+                throw new Error(responseData.message || 'Terjadi kesalahan.');
             }
 
         } catch (error) {
@@ -421,26 +433,54 @@ if (form) {
     });
 }
 
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 const searchInput = document.getElementById('searchMyBooking');
 const bookingListWrapper = document.getElementById('bookingListWrapper');
 const dataUrl = "{% url 'my_bookings' %}"; 
 let debounceTimer;
 function debounce(func, delay) { return function(...args) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { func.apply(this, args); }, delay); }; }
 async function fetchMyBookings() {
-    const searchTerm = searchInput.value;
+    const searchTerm = searchInput ? searchInput.value : '';
     const url = new URL(dataUrl, window.location.origin);
     if (searchTerm) url.searchParams.append('q', searchTerm);
 
     try {
         bookingListWrapper.innerHTML = `<div class="flex flex-col items-center justify-center py-16 text-center"><i class="fa-solid fa-spinner fa-spin text-4xl text-teal-600 mb-4"></i><p class="text-gray-500 font-medium">Memuat bookingan Anda...</p></div>`;
-        const response = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+        
+        const response = await fetch(url.toString(), { 
+            headers: { 
+                'X-Requested-With': 'XMLHttpRequest'
+            } 
+        });
+        
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-        const html = await response.text();
-        bookingListWrapper.innerHTML = html;
+        
+        const data = await response.json();
+        
+        if (data.success && data.html) {
+            bookingListWrapper.innerHTML = data.html;
+        } else {
+            throw new Error(data.message || 'Gagal memuat data');
+        }
+        
         window.history.replaceState({}, '', url.toString());
     } catch (error) {
         console.error('Error fetching my bookings:', error);
-        bookingListWrapper.innerHTML = `<div class="text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200"><p class="font-semibold mb-2">Oops! Gagal memuat data.</p><p class="text-sm">Silakan coba refresh halaman.</p></div>`;
+        bookingListWrapper.innerHTML = `<div class="text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200"><p class="font-semibold mb-2">Oops! Gagal memuat data.</p><p class="text-sm">${error.message}</p></div>`;
     }
 }
 if (searchInput) { searchInput.addEventListener('input', debounce(fetchMyBookings, 350)); }
@@ -457,72 +497,60 @@ function closeDeleteModal() {
     }
 }
 
-// --- Delete Booking Handler ---
 document.addEventListener('submit', async function(e) {
-    // Cek apakah yang disubmit adalah form delete booking
     if (e.target.classList.contains('delete-booking-form')) {
         e.preventDefault();
         
-        currentDeleteForm = e.target;
-        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
-        const venueName = bookingItem.querySelector('.text-orange-600').textContent.trim();
+        const form = e.target;
+        const bookingId = form.dataset.bookingId;
+        const venueName = form.dataset.venueName;
         
-        // Set nama venue di modal
-        deleteVenueNameSpan.textContent = venueName;
+        if (deleteVenueNameSpan) deleteVenueNameSpan.textContent = venueName;
+        currentDeleteForm = form;
         
-        // Tampilkan modal
-        deleteModal.classList.remove('hidden');
+        if (deleteModal) deleteModal.classList.remove('hidden');
     }
 });
 
-// Konfirmasi delete dari modal
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', async function() {
         if (!currentDeleteForm) return;
         
-        const bookingItem = currentDeleteForm.closest('li[id^="booking-item-"]');
+        const bookingId = currentDeleteForm.dataset.bookingId;
+        const deleteUrl = currentDeleteForm.action;
         
-        // Disable button saat loading
-        const originalText = confirmDeleteBtn.innerHTML;
         confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<svg class="w-5 h-5 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+        confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menghapus...';
         
         try {
-            const response = await fetch(currentDeleteForm.action, {
+            const response = await fetch(deleteUrl, {
                 method: 'POST',
-                body: new FormData(currentDeleteForm),
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
             
             const data = await response.json();
             
-            // Tutup modal terlebih dahulu
-            closeDeleteModal();
-            
             if (data.success) {
-                showUserToast(data.message || 'Booking berhasil dibatalkan.', 'success');
+                showUserToast(data.message, 'success');
+                closeDeleteModal();
                 
-                // Animasi fade out item yang dihapus
-                bookingItem.style.transition = 'opacity 0.3s, transform 0.3s';
-                bookingItem.style.opacity = '0';
-                bookingItem.style.transform = 'translateX(-20px)';
-                
-                // Refresh list setelah animasi
                 setTimeout(() => {
                     fetchMyBookings();
-                }, 400);
+                }, 500);
             } else {
-                throw new Error(data.message || 'Gagal membatalkan booking.');
+                throw new Error(data.message || 'Gagal menghapus booking.');
             }
+            
         } catch (error) {
-            console.error('Error:', error);
-            showUserToast(error.message || 'Terjadi kesalahan saat membatalkan booking.', 'error');
+            console.error('Error deleting booking:', error);
+            showUserToast(error.message, 'error');
         } finally {
-            // Restore button
             confirmDeleteBtn.disabled = false;
-            confirmDeleteBtn.innerHTML = originalText;
+            confirmDeleteBtn.innerHTML = 'Ya, Batalkan';
+            currentDeleteForm = null;
         }
     });
 }

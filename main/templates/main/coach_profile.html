@@ -71,7 +71,7 @@
     <div class="mb-5 flex justify-center">
       <div id="profilePictureContainer">
         {% if coach_profile and coach_profile.profile_picture %}
-          <img src="{{ coach_profile.profile_picture.url }}" alt="Foto Profil"
+          <img src="{{ coach_profile.profile_picture }}" alt="Foto Profil"
                id="headerProfilePic"
                class="w-32 h-32 sm:w-36 sm:h-36 rounded-full object-cover border-4 border-yellow-400 shadow-xl transition-transform duration-300 hover:scale-105"> {# Border sedikit lebih terang #}
         {% else %}

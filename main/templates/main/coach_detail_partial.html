@@ -1,7 +1,7 @@
 <div class="p-8">
   <div class="text-center border-b border-gray-100 pb-6 mb-6">
     {% if coach.profile_picture %}
-      <img class="w-32 h-32 object-cover rounded-full border-4 border-teal-600 mx-auto shadow-xl transform hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}">
+      <img class="w-32 h-32 object-cover rounded-full border-4 border-teal-600 mx-auto shadow-xl transform hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture }}" alt="Foto {{ coach.user.get_full_name }}">
     {% elif coach.profile_picture_url %}
       <img class="w-32 h-32 object-cover rounded-full border-4 border-teal-600 mx-auto shadow-xl transform hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}">
     {% else %}

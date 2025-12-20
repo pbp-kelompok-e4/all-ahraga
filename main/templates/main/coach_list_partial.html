@@ -2,7 +2,7 @@
   {% for coach in coaches %}
   <article class="group bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex flex-col h-full">
     {% if coach.profile_picture %}
-      <img class="w-full h-60 object-cover object-top group-hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}">
+      <img class="w-full h-60 object-cover object-top group-hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture }}" alt="Foto {{ coach.user.get_full_name }}">
     {% elif coach.profile_picture_url %}
       <img class="w-full h-60 object-cover object-top group-hover:scale-105 transition-transform duration-300" src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}">
     {% else %}
