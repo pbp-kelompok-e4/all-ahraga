@@ -41,17 +41,30 @@ class VenueForm(forms.ModelForm):
         model = Venue
         fields = [
             'name', 'description', 'location', 'sport_category', 
-            'price_per_hour', 'payment_options', 'main_image'
+            'price_per_hour', 'main_image'
         ]
         # 'owner' tidak dimasukkan karena akan diisi otomatis oleh view
+        # 'payment_options' dihapus, akan diset default di view
+        widgets = {
+            'main_image': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg',
+                'placeholder': 'https://example.com/image.jpg'
+            }),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Mengisi pilihan (queryset) untuk location dan sport_category
         self.fields['location'].queryset = LocationArea.objects.all()
         self.fields['sport_category'].queryset = SportCategory.objects.all()
-        # Anda bisa menambahkan styling/widget di sini jika perlu
         self.fields['description'].widget = forms.Textarea(attrs={'rows': 4})
+        
+        # Ensure main_image field uses URLInput and has proper attributes
+        self.fields['main_image'].widget = forms.URLInput(attrs={
+            'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg',
+            'placeholder': 'https://example.com/image.jpg',
+            'type': 'url'
+        })
 
 
 class VenueScheduleForm(forms.ModelForm):
@@ -129,11 +142,14 @@ class EquipmentForm(forms.ModelForm):
         }
 
 class CoachProfileForm(forms.ModelForm):
-    # pakai upload image sesuai CoachProfile.profile_picture
-    profile_picture = forms.ImageField(
+    # ganti ke URLField untuk input link gambar
+    profile_picture = forms.URLField(
         required=False,
-        label="Foto Profil",
-        widget=forms.ClearableFileInput(attrs={'accept': 'image/*'})
+        label="URL Foto Profil",
+        widget=forms.URLInput(attrs={
+            'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg',
+            'placeholder': 'https://example.com/photo.jpg'
+        })
     )
 
     class Meta:
