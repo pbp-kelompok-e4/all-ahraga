@@ -482,13 +482,6 @@ def venue_manage_schedule_view(request, venue_id):
     
     # === 1. LOGIKA POST (Menambah Data) ===
     if request.method == 'POST':
-<<<<<<< HEAD
-        schedule_form = VenueScheduleForm(request.POST)
-        
-        if schedule_form.is_valid():
-            # Ambil end_time_global dari form yang valid
-            end_time_global_str = schedule_form.cleaned_data.get('end_time_global')
-=======
         # Cek apakah data dari Flutter (JSON Body) atau Web (Form Data)
         try:
             data = json.loads(request.body)
@@ -497,7 +490,6 @@ def venue_manage_schedule_view(request, venue_id):
         except json.JSONDecodeError:
             schedule_form = VenueScheduleForm(request.POST)
             is_flutter = False # Penanda request dari Web
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
 
         if schedule_form.is_valid():
             cd = schedule_form.cleaned_data
@@ -576,11 +568,6 @@ def venue_manage_schedule_view(request, venue_id):
                 })
 
         else:
-<<<<<<< HEAD
-            # Form tidak valid
-            return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": schedule_form.errors}, status=400)
-            
-=======
             # --- RESPONSE ERROR POST ---
             if is_flutter:
                 return JsonResponse({"success": False, "message": "Data tidak valid", "errors": schedule_form.errors}, status=400)
@@ -611,7 +598,6 @@ def venue_manage_schedule_view(request, venue_id):
         return JsonResponse(data, safe=False)
 
     # B. JIKA WEB BROWSER (Minta HTML)
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
     schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
     context = {
@@ -635,12 +621,6 @@ def venue_schedule_delete(request, venue_id):
     if venue.owner != request.user:
         return JsonResponse({"success": False, "message": "Anda tidak memiliki izin."}, status=403)
 
-<<<<<<< HEAD
-    if request.method != 'POST':
-        return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
-
-=======
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -914,36 +894,16 @@ def get_coach_profile_form_ajax(request):
 def coach_schedule(request):
     """Handles displaying and AJAX/JSON creation of coach schedules."""
 
-<<<<<<< HEAD
-    coach_profile = None
-    schedules = CoachSchedule.objects.none() # Default: queryset kosong
-
-    try:
-        coach_profile = CoachProfile.objects.get(user=request.user)
-        if request.method == 'GET':
-            schedules = coach_profile.schedules.all().order_by('date', 'start_time')
-=======
     # --- 1. Ambil Profil Coach ---
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
     except CoachProfile.DoesNotExist:
         # Jika profil belum ada
         if request.method == 'POST':
-<<<<<<< HEAD
-            return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil Anda terlebih dahulu."}, status=400)
-        else:
-            pass 
-
-    form_data = request.POST if request.method == 'POST' else None
-    form = CoachScheduleForm(form_data)
-
-=======
             return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil dulu."}, status=400)
         coach_profile = None
 
     # --- 2. LOGIKA POST (Menambah Jadwal) ---
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
     if request.method == 'POST':
         if not coach_profile:
              return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan."}, status=400)
@@ -1037,8 +997,6 @@ def coach_schedule(request):
                     "new_slots": new_slots_data
                 }, status=200)
 
-<<<<<<< HEAD
-=======
         else:
             # F. Response Error Form
             if is_flutter:
@@ -1069,7 +1027,6 @@ def coach_schedule(request):
 
     # B. Jika Web Request HTML
     form = CoachScheduleForm()
->>>>>>> ec2a20a46b67e8f567347b41be451fbe4cd6e8d7
     user_has_profile = coach_profile is not None
     
     context = {
