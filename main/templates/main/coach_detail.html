@@ -23,7 +23,7 @@
     <div class="bg-white shadow-3xl rounded-3xl overflow-hidden transform hover:shadow-4xl transition-shadow duration-500">
       
       {% if coach.profile_picture %}
-        <img src="{{ coach.profile_picture.url }}" alt="Foto {{ coach.user.get_full_name }}" 
+        <img src="{{ coach.profile_picture }}" alt="Foto {{ coach.user.get_full_name }}"
              class="w-full h-72 md:h-96 object-cover object-top transition-transform duration-500 hover:scale-105">
       {% elif coach.profile_picture_url %}
          <img src="{{ coach.profile_picture_url }}" alt="Foto {{ coach.user.get_full_name }}" 

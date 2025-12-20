@@ -4,8 +4,8 @@
   
   <div class="relative h-48 bg-gray-50 overflow-hidden">
     {% if venue.main_image %}
-      <img src="{{ venue.main_image.url }}" 
-           alt="{{ venue.name }}" 
+      <img src="{{ venue.main_image }}"
+           alt="{{ venue.name }}"
            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
     {% else %}
       <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">

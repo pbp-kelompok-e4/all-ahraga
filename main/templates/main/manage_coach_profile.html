@@ -69,8 +69,8 @@
             {% if coach_profile and coach_profile.profile_picture %}
             <div class="flex justify-center mb-10">
                 <div class="relative">
-                    <img src="{{ coach_profile.profile_picture.url }}" 
-                         alt="Foto Profil" 
+                    <img src="{{ coach_profile.profile_picture }}"
+                         alt="Foto Profil"
                          class="w-32 h-32 rounded-full object-cover border-4 border-teal-300 shadow-xl">
                     <div class="absolute bottom-0 right-0 bg-teal-600 rounded-full p-2 shadow-xl border-2 border-white">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +82,7 @@
             </div>
             {% endif %}
 
-            <form method="post" enctype="multipart/form-data" class="space-y-8">
+            <form method="post" class="space-y-8">
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}

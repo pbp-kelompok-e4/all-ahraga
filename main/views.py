@@ -10,7 +10,6 @@ from django.db.models import Q, Sum
 from datetime import date, datetime, timedelta
 from .forms import CustomUserCreationForm, ReviewForm, VenueForm, VenueScheduleForm, EquipmentForm, CoachProfileForm, CoachScheduleForm
 from .models import Venue, SportCategory, LocationArea, CoachProfile, VenueSchedule, Transaction, Review, UserProfile, Booking, BookingEquipment, Equipment, CoachSchedule
-from django.core.files.base import ContentFile
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 from django.urls import reverse
@@ -275,11 +274,13 @@ def venue_revenue_view(request):
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_create_view(request):
     if request.method == 'POST':
-        form = VenueForm(request.POST, request.FILES)
+        form = VenueForm(request.POST)
         if form.is_valid():
             user = request.user
             venue = form.save(commit=False)
             venue.owner = user
+            # Set payment_options default ke TRANSFER (bisa handle TRANSFER dan CASH)
+            venue.payment_options = 'TRANSFER'
             venue.save()
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -291,6 +292,7 @@ def venue_create_view(request):
                         'name': venue.name,
                         'category': venue.sport_category.name,
                         'location': venue.location.name,
+                        'image_url': venue.main_image if venue.main_image else '',
                         'manage_url': reverse('venue_manage', args=[venue.id])
                     }
                 })
@@ -313,14 +315,24 @@ def venue_manage_view(request, venue_id):
     if request.method == 'POST':
         # Handle Venue Edit
         if 'submit_venue_edit' in request.POST:
-            venue_edit_form = VenueForm(request.POST, request.FILES, instance=venue)
+            venue_edit_form = VenueForm(request.POST, instance=venue)
             if venue_edit_form.is_valid():
-                venue_edit_form.save()
+                updated_venue = venue_edit_form.save()
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
-                        'message': 'Data lapangan berhasil diperbarui.'
+                        'message': 'Data lapangan berhasil diperbarui.',
+                        'venue': {
+                            'id': updated_venue.id,
+                            'name': updated_venue.name,
+                            'description': updated_venue.description,
+                            'location': updated_venue.location.name,
+                            'sport_category': updated_venue.sport_category.name,
+                            'price_per_hour': updated_venue.price_per_hour,
+                            'payment_options': updated_venue.payment_options,
+                            'main_image': updated_venue.main_image if updated_venue.main_image else ''
+                        }
                     })
                 
                 messages.success(request, "Data lapangan berhasil diperbarui.")
@@ -757,12 +769,7 @@ def get_available_coaches(request, schedule_id):
     coaches_data = []
     for coach in coaches_for_schedule:
         full_name = coach.user.get_full_name() or coach.user.username
-        profile_picture_url = None
-        if coach.profile_picture:
-            try:
-                profile_picture_url = coach.profile_picture.url
-            except ValueError:
-                profile_picture_url = None 
+        profile_picture_url = coach.profile_picture if coach.profile_picture else None
         areas_list = [area.name for area in coach.service_areas.all()]
         coaches_data.append({
             'id': coach.id,
@@ -806,7 +813,7 @@ def save_coach_profile_ajax(request):
     except CoachProfile.DoesNotExist:
         coach_profile = CoachProfile(user=request.user)
 
-    form = CoachProfileForm(request.POST, request.FILES, instance=coach_profile)
+    form = CoachProfileForm(request.POST, instance=coach_profile)
     
     if form.is_valid():
         profile = form.save()
@@ -822,7 +829,7 @@ def save_coach_profile_ajax(request):
                 'main_sport_trained': profile.main_sport_trained.name,
                 'service_areas': [area.name for area in profile.service_areas.all()],
                 'is_verified': profile.is_verified,
-                'profile_picture': profile.profile_picture.url if profile.profile_picture else None,
+                'profile_picture': profile.profile_picture if profile.profile_picture else None,
             }
         }
         return JsonResponse(response_data)
@@ -1797,7 +1804,7 @@ def my_bookings(request):
                     'sport_category': venue.sport_category.name if venue.sport_category else None,
                     'location': venue.location.name if venue.location else None,
                     'price_per_hour': float(venue.price_per_hour or 0),
-                    'image_url': request.build_absolute_uri(venue.main_image.url) if venue.main_image else None,
+                    'image_url': venue.main_image if venue.main_image else None,
                 },
                 'schedule': {
                     'id': booking.venue_schedule.id,
@@ -2242,7 +2249,7 @@ def filter_venues_ajax(request):
             'location': venue.location.name if venue.location else '-',
             'sport': venue.sport_category.name,
             'price': float(venue.price_per_hour),
-            'image': venue.main_image.url if venue.main_image else None,
+            'image': venue.main_image if venue.main_image else None,
             'rating': round(avg_rating, 1),
         })
     
@@ -2764,7 +2771,7 @@ def api_filter_venues(request):
             'location': v.location.name if v.location else '',
             'sport_category': v.sport_category.name if v.sport_category else '',
             'price_per_hour': float(v.price_per_hour or 0),
-            'image': v.main_image.url if v.main_image else '',  
+            'image': v.main_image if v.main_image else '',
             'rating': float(avg_rating) if avg_rating else 5.0,  
         })
     
@@ -2816,7 +2823,7 @@ def api_booking_form_data(request, venue_id):
             'location': venue.location.name if venue.location else None,
             'price_per_hour': float(venue.price_per_hour or 0),
             'description': venue.description,
-            'image': venue.main_image.url if venue.main_image else None,
+            'image': venue.main_image if venue.main_image else None,
         },
         'schedules': schedules_data,
         'equipments': equipments_data,
@@ -2843,19 +2850,22 @@ def api_get_coaches_for_schedule(request, schedule_id):
         end_time__gte=venue_schedule.end_time,
         coach__main_sport_trained=venue.sport_category, 
         coach__service_areas=venue.location          
-    ).select_related('coach', 'coach__user', 'coach__main_sport_trained')
+    ).select_related('coach', 'coach__user', 'coach__main_sport_trained').prefetch_related('coach__service_areas')
     
     coaches_data = []
     for cs in coach_schedules:
         coach = cs.coach
+        service_areas = [area.name for area in coach.service_areas.all()] if coach.service_areas.exists() else []
         coaches_data.append({
             'id': coach.id,
             'coach_schedule_id': cs.id,
             'name': coach.user.get_full_name() or coach.user.username,
+            'age': coach.age,
             'rate_per_hour': float(coach.rate_per_hour or 0),
             'sport': coach.main_sport_trained.name if coach.main_sport_trained else None,
             'experience_desc': coach.experience_desc,
-            'profile_picture': coach.profile_picture.url if coach.profile_picture else None,
+            'profile_picture_url': coach.profile_picture if coach.profile_picture else None,
+            'areas': service_areas,
         })
     
     return JsonResponse({
@@ -3059,7 +3069,7 @@ def api_venue_dashboard(request):
                 'location': venue.location.name,
                 'description': venue.description or '',
                 'price_per_hour': float(venue.price_per_hour or 0),
-                'image_url': request.build_absolute_uri(venue.main_image.url) if venue.main_image else None,
+                'image_url': venue.main_image if venue.main_image else None,
             })
         return JsonResponse({'success': True, 'venues': venues_data})
     
@@ -3138,16 +3148,10 @@ def api_venue_add(request):
                 description=data.get('description', '')
             )
             
-            # Handle image if provided (base64)
+            # Handle image URL if provided
             if 'image' in data and data['image']:
-                import base64
-                from django.core.files.base import ContentFile
-                
                 try:
-                    format, imgstr = data['image'].split(';base64,')
-                    ext = format.split('/')[-1]
-                    image_data = ContentFile(base64.b64decode(imgstr), name=f'venue_{venue.id}.{ext}')
-                    venue.main_image = image_data
+                    venue.main_image = data['image']  # URLField accepts string
                     venue.save()
                 except Exception as e:
                     pass  # Image is optional
@@ -3267,7 +3271,7 @@ def api_venue_manage(request, venue_id):
             'location_id': venue.location.id,
             'sport_category_id': venue.sport_category.id,
             'payment_options': venue.payment_options,
-            'image': venue.main_image.url if venue.main_image else None, # TAMBAHKAN INI
+            'image': venue.main_image if venue.main_image else None, # TAMBAHKAN INI
         }
         
         locations_data = [{'id': loc.id, 'name': loc.name} for loc in locations]
@@ -3293,57 +3297,8 @@ def api_venue_manage(request, venue_id):
             data = json.loads(request.body)
             action = data.get('action')
             
-            # Edit venue
-            if 'image' in data and data['image']:
-                from django.core.files.base import ContentFile
-                
-                try:
-                    # Format dari Flutter: "data:image/jpeg;base64,....."
-                    format, imgstr = data['image'].split(';base64,')
-                    ext = format.split('/')[-1]
-                    
-                    # (Opsional) Hapus gambar lama agar tidak menumpuk sampah file
-                    if venue.main_image:
-                        venue.main_image.delete(save=False)
-                        
-                    file_name = f'venue_{venue.id}_{timezone.now().timestamp()}.{ext}'
-                    image_data = ContentFile(base64.b64decode(imgstr), name=file_name)
-                    venue.main_image = image_data
-                except Exception as e:
-                    print(f"Error saving image: {e}")
-                    pass # Abaikan jika gagal decode
-
-                # Update location
-                if 'location' in data:
-                    try:
-                        location = LocationArea.objects.get(id=data['location'])
-                        venue.location = location
-                    except LocationArea.DoesNotExist:
-                        return JsonResponse({
-                            'success': False,
-                            'message': 'Lokasi tidak valid'
-                        }, status=400)
-                
-                # Update sport category
-                if 'sport_category' in data:
-                    try:
-                        category = SportCategory.objects.get(id=data['sport_category'])
-                        venue.sport_category = category
-                    except SportCategory.DoesNotExist:
-                        return JsonResponse({
-                            'success': False,
-                            'message': 'Kategori olahraga tidak valid'
-                        }, status=400)
-                
-                venue.save()
-                
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Venue berhasil diperbarui'
-                })
-            
-            # Add equipment
-            elif action == 'add_equipment':
+            # Check action first - equipment operations
+            if action == 'add_equipment':
                 equipment = Equipment.objects.create(
                     venue=venue,
                     name=data.get('name'),
@@ -3420,11 +3375,53 @@ def api_venue_manage(request, venue_id):
                         'message': 'Equipment tidak ditemukan'
                     }, status=404)
             
+            # Default: Edit venue
             else:
+                # Edit venue - update image if provided
+                if 'image' in data and data['image']:
+                    try:
+                        # Accept image as URL string
+                        venue.main_image = data['image']
+                    except Exception as e:
+                        print(f"Error saving image: {e}")
+                        pass # Abaikan jika gagal
+
+                # Update location
+                if 'location' in data:
+                    try:
+                        location = LocationArea.objects.get(id=data['location'])
+                        venue.location = location
+                    except LocationArea.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'Lokasi tidak valid'
+                        }, status=400)
+                
+                # Update sport category
+                if 'sport_category' in data:
+                    try:
+                        category = SportCategory.objects.get(id=data['sport_category'])
+                        venue.sport_category = category
+                    except SportCategory.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'Kategori olahraga tidak valid'
+                        }, status=400)
+                
+                # Update other venue fields
+                if 'name' in data:
+                    venue.name = data['name']
+                if 'description' in data:
+                    venue.description = data['description']
+                if 'price_per_hour' in data:
+                    venue.price_per_hour = data['price_per_hour']
+                
+                venue.save()
+                
                 return JsonResponse({
-                    'success': False,
-                    'message': 'Action tidak valid'
-                }, status=400)
+                    'success': True,
+                    'message': 'Venue berhasil diperbarui'
+                })
                 
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
@@ -3489,7 +3486,7 @@ def get_coach_profile_json(request):
             'service_areas': [area.name for area in coach_profile.service_areas.all()],
             'service_area_ids': [area.id for area in coach_profile.service_areas.all()],
             'is_verified': coach_profile.is_verified,
-            'profile_picture': request.build_absolute_uri(coach_profile.profile_picture.url) if coach_profile.profile_picture else None,
+            'profile_picture': coach_profile.profile_picture if coach_profile.profile_picture else None,
             'created_at': coach_profile.created_at.isoformat() if hasattr(coach_profile, 'created_at') else None,
             'updated_at': coach_profile.updated_at.isoformat() if hasattr(coach_profile, 'updated_at') else None,
         }
@@ -3636,7 +3633,7 @@ def save_coach_profile_flutter(request):
                 'service_areas': [area.name for area in coach_profile.service_areas.all()],
                 'service_area_ids': [area.id for area in coach_profile.service_areas.all()],
                 'is_verified': coach_profile.is_verified,
-                'profile_picture': request.build_absolute_uri(coach_profile.profile_picture.url) if coach_profile.profile_picture else None,
+                'profile_picture': coach_profile.profile_picture if coach_profile.profile_picture else None,
             }
         }
         
@@ -3742,11 +3739,7 @@ def coach_list_json(request):
         coaches_data = []
         for coach in coaches:
             # Get profile picture URL
-            profile_pic = None
-            if coach.profile_picture:
-                profile_pic = request.build_absolute_uri(coach.profile_picture.url)
-            elif hasattr(coach, 'profile_picture_url') and coach.profile_picture_url:
-                profile_pic = coach.profile_picture_url
+            profile_pic = coach.profile_picture if coach.profile_picture else None
             
             # Get service areas
             service_areas = [{'id': area.id, 'name': area.name} for area in coach.service_areas.all()]
@@ -3802,11 +3795,7 @@ def coach_detail_json(request, coach_id):
         )
         
         # Get profile picture URL
-        profile_pic = None
-        if coach.profile_picture:
-            profile_pic = request.build_absolute_uri(coach.profile_picture.url)
-        elif hasattr(coach, 'profile_picture_url') and coach.profile_picture_url:
-            profile_pic = coach.profile_picture_url
+        profile_pic = coach.profile_picture if coach.profile_picture else None
         
         # Get service areas
         service_areas = [
