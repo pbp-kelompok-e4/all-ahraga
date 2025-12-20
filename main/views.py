@@ -1300,6 +1300,7 @@ def admin_dashboard_view(request):
 def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     
+    # === GET REQUEST (JSON / API) ===
     if request.method == 'GET' and request.headers.get('Accept') == 'application/json':
         equipment_list = Equipment.objects.filter(venue=venue)
         
@@ -1358,6 +1359,7 @@ def create_booking(request, venue_id):
             'equipments': equipments_data,
         })
 
+    # === POST REQUEST (CREATE BOOKING) ===
     if request.method == 'POST':
         is_json = request.headers.get('Content-Type') == 'application/json'
         
@@ -1372,11 +1374,31 @@ def create_booking(request, venue_id):
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
         else:
+            # === FORM DATA HANDLING (Web Browser) ===
             schedule_id = request.POST.get('schedule_id')
             equipment_ids = request.POST.getlist('equipment')
             coach_id = request.POST.get('coach')
             payment_method = request.POST.get('payment_method', 'CASH')
             quantities = {}
+
+            # --- [FIX START] Sanitize Inputs for Thousand Separators ---
+            # Membersihkan titik (format ribuan) agar menjadi integer murni
+            if schedule_id and isinstance(schedule_id, str):
+                schedule_id = schedule_id.replace('.', '')
+            
+            if coach_id and isinstance(coach_id, str):
+                coach_id = coach_id.replace('.', '')
+                if coach_id == '': coach_id = None # Handle empty string
+
+            if equipment_ids:
+                cleaned_ids = []
+                for eid in equipment_ids:
+                    if isinstance(eid, str):
+                        cleaned_ids.append(eid.replace('.', ''))
+                    else:
+                        cleaned_ids.append(eid)
+                equipment_ids = cleaned_ids
+            # --- [FIX END] ---
 
         if not schedule_id:
             error_msg = "Anda harus memilih jadwal terlebih dahulu!"
@@ -1394,6 +1416,7 @@ def create_booking(request, venue_id):
 
             with db_transaction.atomic():
                 try:
+                    # Query Schedule (ID sekarang sudah bersih)
                     schedule = VenueSchedule.objects.select_for_update().get(
                         id=schedule_id,
                         venue=venue,
@@ -1403,7 +1426,7 @@ def create_booking(request, venue_id):
                     if schedule.date == today and schedule.start_time < current_time:
                         raise VenueSchedule.DoesNotExist("Jadwal yang dipilih sudah lewat.")
                 except VenueSchedule.DoesNotExist as e:
-                    error_msg = f"Jadwal tidak tersedia atau sudah dibooking. ({str(e)})"
+                    error_msg = f"Jadwal tidak tersedia atau sudah dibooking."
                     if is_json:
                         return JsonResponse({'success': False, 'message': error_msg}, status=400)
                     messages.error(request, error_msg)
@@ -1413,13 +1436,29 @@ def create_booking(request, venue_id):
                 selected_equipment_data = []
                 equipment_revenue = 0
 
+                # Handle Equipment
                 if equipment_ids:
                     equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
                     for eq in equipment_queryset:
                         if is_json:
                             quantity = quantities.get(str(eq.id), 1)
                         else:
-                            quantity_str = request.POST.get(f'quantity_{eq.id}', '1')
+                            # Coba ambil quantity dengan berbagai format key
+                            # Format normal: quantity_123
+                            # Format L10n: quantity_1.234
+                            
+                            # 1. Coba ambil langsung ID bersih
+                            q_val = request.POST.get(f'quantity_{eq.id}')
+                            
+                            # 2. Jika tidak ketemu, coba format dengan titik (lokalisasi)
+                            if not q_val:
+                                from django.utils.numberformat import format
+                                id_with_dot = format(eq.id, '.', grouping=3, thousand_sep='.', force_grouping=True)
+                                q_val = request.POST.get(f'quantity_{id_with_dot}')
+                            
+                            # 3. Default ke '1'
+                            quantity_str = q_val if q_val else '1'
+                            
                             try:
                                 quantity = int(quantity_str)
                                 if quantity <= 0: quantity = 1
@@ -1437,6 +1476,7 @@ def create_booking(request, venue_id):
                         equipment_revenue += item_sub_total
                         selected_equipment_data.append((eq, quantity, item_sub_total))
 
+                # Handle Coach
                 coach_obj = None
                 coach_schedule_obj = None
                 coach_revenue = 0
@@ -1455,10 +1495,13 @@ def create_booking(request, venue_id):
                         error_msg = "Coach tidak tersedia pada jadwal yang dipilih."
                         if is_json:
                             return JsonResponse({'success': False, 'message': error_msg}, status=400)
-                        raise IntegrityError(error_msg)
+                        # Jangan raise error fatal, cukup info user dan proceed tanpa coach atau redirect
+                        messages.error(request, error_msg)
+                        return redirect('create_booking', venue_id=venue.id)
 
                 total_price += equipment_revenue + coach_revenue
 
+                # Create Booking Object
                 booking = Booking.objects.create(
                     customer=request.user,
                     venue_schedule=schedule,
@@ -1466,6 +1509,7 @@ def create_booking(request, venue_id):
                     total_price=total_price,
                 )
 
+                # Update Status Schedule
                 schedule.is_booked = True
                 schedule.save()
 
@@ -1473,6 +1517,7 @@ def create_booking(request, venue_id):
                     coach_schedule_obj.is_booked = True
                     coach_schedule_obj.save()
 
+                # Save Booking Equipments
                 booking_equipment_list = []
                 for equipment, quantity, sub_total in selected_equipment_data:
                     booking_equipment_list.append(
@@ -1486,6 +1531,7 @@ def create_booking(request, venue_id):
                 if booking_equipment_list:
                     BookingEquipment.objects.bulk_create(booking_equipment_list)
 
+                # Create Transaction
                 Transaction.objects.create(
                     booking=booking,
                     status='PENDING',
@@ -1522,6 +1568,7 @@ def create_booking(request, venue_id):
             messages.error(request, f'Terjadi kesalahan: {str(e)}')
             return redirect('create_booking', venue_id=venue.id)
 
+    # === GET REQUEST (Display Form) ===
     equipment_list = Equipment.objects.filter(venue=venue)
     
     try:
