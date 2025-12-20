@@ -157,7 +157,7 @@ class Booking(models.Model):
 class BookingEquipment(models.Model):
     """Detail peralatan yang disewa dalam satu booking."""
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='equipment_details')
-    equipment = models.ForeignKey(Equipment, on_delete=models.PROTECT)
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
     quantity = models.IntegerField(validators=[MinValueValidator(1)])
     sub_total = models.DecimalField(max_digits=10, decimal_places=0)
 

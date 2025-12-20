@@ -217,7 +217,6 @@ function showUserToast(message, type = 'info') {
 }
 
 
-// --- DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', function() {
   {% if messages %}
     {% for message in messages %}
@@ -404,12 +403,13 @@ if (form) {
         try {
             let urlTemplate = "{% url 'update_booking' booking_id=99999 %}".replace('99999', bookingId);
             const response = await fetch(urlTemplate, {
-                method: 'PUT',  
+                method: 'POST',  
                 headers: {
                     'Content-Type': 'application/json',  
                     'X-CSRFToken': getCookie('csrftoken'),  
                     'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'include',
                 body: JSON.stringify(data)  
             });
 
@@ -454,7 +454,7 @@ const dataUrl = "{% url 'my_bookings' %}";
 let debounceTimer;
 function debounce(func, delay) { return function(...args) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { func.apply(this, args); }, delay); }; }
 async function fetchMyBookings() {
-    const searchTerm = searchInput.value;
+    const searchTerm = searchInput ? searchInput.value : '';
     const url = new URL(dataUrl, window.location.origin);
     if (searchTerm) url.searchParams.append('q', searchTerm);
 
@@ -463,8 +463,7 @@ async function fetchMyBookings() {
         
         const response = await fetch(url.toString(), { 
             headers: { 
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'  
+                'X-Requested-With': 'XMLHttpRequest'
             } 
         });
         
@@ -472,8 +471,8 @@ async function fetchMyBookings() {
         
         const data = await response.json();
         
-        if (data.success) {
-            bookingListWrapper.innerHTML = data.html;  
+        if (data.success && data.html) {
+            bookingListWrapper.innerHTML = data.html;
         } else {
             throw new Error(data.message || 'Gagal memuat data');
         }
@@ -481,7 +480,7 @@ async function fetchMyBookings() {
         window.history.replaceState({}, '', url.toString());
     } catch (error) {
         console.error('Error fetching my bookings:', error);
-        bookingListWrapper.innerHTML = `<div class="text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200"><p class="font-semibold mb-2">Oops! Gagal memuat data.</p><p class="text-sm">Silakan coba refresh halaman.</p></div>`;
+        bookingListWrapper.innerHTML = `<div class="text-center p-10 bg-red-50 text-red-700 rounded-lg border border-red-200"><p class="font-semibold mb-2">Oops! Gagal memuat data.</p><p class="text-sm">${error.message}</p></div>`;
     }
 }
 if (searchInput) { searchInput.addEventListener('input', debounce(fetchMyBookings, 350)); }
@@ -498,9 +497,7 @@ function closeDeleteModal() {
     }
 }
 
-// --- Delete Booking Handler ---
 document.addEventListener('submit', async function(e) {
-    // Cek apakah yang disubmit adalah form delete booking
     if (e.target.classList.contains('delete-booking-form')) {
         e.preventDefault();
         
@@ -508,16 +505,13 @@ document.addEventListener('submit', async function(e) {
         const bookingId = form.dataset.bookingId;
         const venueName = form.dataset.venueName;
         
-        // Set data untuk modal konfirmasi
         if (deleteVenueNameSpan) deleteVenueNameSpan.textContent = venueName;
         currentDeleteForm = form;
         
-        // Buka modal konfirmasi
         if (deleteModal) deleteModal.classList.remove('hidden');
     }
 });
 
-// Konfirmasi delete dari modal
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', async function() {
         if (!currentDeleteForm) return;
@@ -530,7 +524,7 @@ if (confirmDeleteBtn) {
         
         try {
             const response = await fetch(deleteUrl, {
-                method: 'DELETE',  // Ubah dari POST ke DELETE
+                method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken'),
                     'X-Requested-With': 'XMLHttpRequest'
@@ -543,7 +537,6 @@ if (confirmDeleteBtn) {
                 showUserToast(data.message, 'success');
                 closeDeleteModal();
                 
-                // Refresh list booking
                 setTimeout(() => {
                     fetchMyBookings();
                 }, 500);
