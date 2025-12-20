@@ -177,6 +177,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:*",
     "http://127.0.0.1:*",
+    "https://muhammad-razka41-allahraga.pbp.cs.ui.ac.id",
 ]
 
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
