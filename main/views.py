@@ -3600,9 +3600,8 @@ def get_location_areas_json(request):
 def save_coach_profile_flutter(request):
     """
     Endpoint untuk save/update coach profile dari Flutter
-    Mendukung multipart/form-data untuk upload gambar
+    Menerima data JSON dengan profile_picture sebagai URL
     """
-
     
     if request.method != 'POST':
         return JsonResponse({
@@ -3611,6 +3610,9 @@ def save_coach_profile_flutter(request):
         }, status=405)
     
     try:
+        # Parse JSON body
+        data = json.loads(request.body)
+        
         # Cek apakah profile sudah ada
         try:
             coach_profile = CoachProfile.objects.get(user=request.user)
@@ -3619,12 +3621,13 @@ def save_coach_profile_flutter(request):
             coach_profile = CoachProfile(user=request.user)
             is_update = False
         
-        # Ambil data dari POST
-        age = request.POST.get('age')
-        rate_per_hour = request.POST.get('rate_per_hour')
-        main_sport_trained_id = request.POST.get('main_sport_trained_id')
-        experience_desc = request.POST.get('experience_desc')
-        service_area_ids = request.POST.get('service_area_ids')  # JSON string array
+        # Ambil data dari JSON
+        age = data.get('age')
+        rate_per_hour = data.get('rate_per_hour')
+        main_sport_trained_id = data.get('main_sport_trained_id')
+        experience_desc = data.get('experience_desc')
+        service_area_ids = data.get('service_area_ids')  # Array
+        profile_picture_url = data.get('profile_picture')  # URL string atau None atau empty string
         
         # Validasi required fields
         if not all([age, rate_per_hour, main_sport_trained_id, experience_desc, service_area_ids]):
@@ -3648,22 +3651,26 @@ def save_coach_profile_flutter(request):
         
         coach_profile.experience_desc = experience_desc
         
-        # Handle profile picture upload
-        if 'profile_picture' in request.FILES:
-            coach_profile.profile_picture = request.FILES['profile_picture']
+        # Handle profile picture URL
+        # Jika profile_picture ada di data (termasuk empty string), update
+        if 'profile_picture' in data:
+            if profile_picture_url:  # Ada URL baru
+                coach_profile.profile_picture = profile_picture_url
+            else:  # Empty string atau None -> hapus foto
+                coach_profile.profile_picture = None  # atau '' tergantung model field Anda
+        # Jika tidak ada di data, tidak mengubah foto yang sudah ada
         
         # Save profile
         coach_profile.save()
         
         # Set service areas (many-to-many)
         try:
-            area_ids = json.loads(service_area_ids)
-            service_areas = LocationArea.objects.filter(id__in=area_ids)
+            service_areas = LocationArea.objects.filter(id__in=service_area_ids)
             coach_profile.service_areas.set(service_areas)
-        except json.JSONDecodeError:
+        except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': 'Format area layanan tidak valid'
+                'message': f'Format area layanan tidak valid: {str(e)}'
             }, status=400)
         
         # Prepare response
@@ -3686,6 +3693,11 @@ def save_coach_profile_flutter(request):
         
         return JsonResponse(response_data, status=200)
         
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Format JSON tidak valid'
+        }, status=400)
     except ValueError as e:
         return JsonResponse({
             'success': False,
