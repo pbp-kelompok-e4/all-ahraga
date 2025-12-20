@@ -7,7 +7,7 @@
   <div class="bg-white shadow rounded-lg p-6">
     <h2 class="text-xl font-semibold text-slate-900 mb-4">{{ page_title }}</h2>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
+    <form method="post" class="space-y-6">
       {% csrf_token %}
       <div class="grid grid-cols-1 gap-4">
         {% for field in form %}
@@ -17,10 +17,10 @@
           </label>
 
           {% if field.name == 'main_image' %}
-            <input type="file" name="{{ field.name }}" accept="image/*" class="block w-full text-sm text-slate-600">
+            <input type="url" name="{{ field.name }}" placeholder="https://example.com/image.jpg" class="block w-full text-sm text-slate-600">
             {% if field.value %}
             <div class="mt-2">
-              <img src="{{ field.value.url }}" alt="Current image" class="h-32 rounded border">
+              <img src="{{ field.value }}" alt="Current image" class="h-32 rounded border">
               <p class="text-xs text-slate-500 mt-1">Current image</p>
             </div>
             {% endif %}

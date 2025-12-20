@@ -3,7 +3,7 @@
 {% block title %}Kelola: {{ venue.name }}{% endblock title %}
 
 {% block page_title %}
-  Kelola Lapangan: {{ venue.name }}
+  <span id="pageTitle">Kelola Lapangan: {{ venue.name }}</span>
 {% endblock page_title %}
 
 {% block extra_head %}
@@ -104,7 +104,7 @@
         </div>
       </div>
       <div class="p-6">
-        <form id="venue-edit-form" method="post" enctype="multipart/form-data" class="space-y-6">
+        <form id="venue-edit-form" method="post" class="space-y-6">
           {% csrf_token %}
           
           <div>
@@ -193,55 +193,36 @@
                 <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.price_per_hour.errors.0 }}</p>
               {% endif %}
             </div>
-
-            <div>
-              <label for="id_payment_options" class="block text-sm font-semibold text-slate-700 mb-2">
-                <span class="flex items-center gap-2">
-                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                  </svg>
-                  Opsi Pembayaran
-                </span>
-              </label>
-              <select name="payment_options" id="id_payment_options" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all" required>
-                <option value="CASH" {% if venue.payment_options == 'CASH' %}selected{% endif %}>Tunai</option>
-                <option value="TRANSFER" {% if venue.payment_options == 'TRANSFER' %}selected{% endif %}>Transfer</option>
-              </select>
-              {% if venue_edit_form.payment_options.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ venue_edit_form.payment_options.errors.0 }}</p>
-              {% endif %}
-            </div>
           </div>
 
           <div>
             <label for="id_main_image" class="block text-sm font-semibold text-slate-700 mb-2">
               <span class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.658 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                 </svg>
-                Gambar Utama
+                URL Gambar Utama
               </span>
             </label>
 
-            <div class="rounded-md border-2 border-dashed border-slate-200 p-6 text-center">
-              <div class="space-y-1 text-center">
-                <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <div class="rounded-md border border-slate-300 p-4">
+              <input id="id_main_image" type="url" name="main_image" placeholder="https://example.com/image.jpg" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white text-sm">
+              <p class="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <div class="flex justify-center text-sm text-slate-600">
-                  <label class="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-500 mx-auto">
-                    <span>Unggah file</span>
-                    <input id="id_main_image" type="file" name="main_image" accept="image/*" class="sr-only">
-                  </label>
-                </div>
-                <p class="text-xs text-slate-500">PNG, JPG, GIF hingga 10MB</p>
-              </div>
+                Masukkan URL lengkap (contoh: https://example.com/image.jpg)
+              </p>
             </div>
 
             {% if venue.main_image %}
-              <div class="mt-3">
+              <div class="mt-3" data-type="main-image">
                 <p class="text-sm text-slate-600 mb-2">Gambar saat ini:</p>
-                <img src="{{ venue.main_image.url }}" alt="{{ venue.name }}" class="w-32 h-32 object-cover rounded-lg border-2 border-slate-200">
+                <img src="{{ venue.main_image }}" alt="{{ venue.name }}" class="w-32 h-32 object-cover rounded-lg border-2 border-slate-200">
+              </div>
+            {% else %}
+              <div class="mt-3" data-type="main-image" data-placeholder style="display: none;">
+                <p class="text-sm text-slate-500">Belum ada gambar</p>
               </div>
             {% endif %}
             {% if venue_edit_form.main_image.errors %}
@@ -536,36 +517,81 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': '{{ csrf_token }}' // Pastikan CSRF Token ada
+                'X-CSRFToken': '{{ csrf_token }}'
             },
             body: formData
         })
         .then(response => {
             if (!response.ok) {
-                // Coba parse error jika JSON
-                 return response.json().then(errData => {
-                     throw { status: response.status, data: errData };
-                 }).catch(() => {
-                     // Jika bukan JSON, throw status text
+                return response.json().then(errData => {
+                    throw { status: response.status, data: errData };
+                }).catch(() => {
                     throw new Error('Server merespons dengan status: ' + response.statusText);
-                 });
+                });
             }
             return response.json();
         })
         .then(data => {
             if (data.success) {
                 showToast('Berhasil', data.message, 'success');
-                // Optional: Update title jika nama venue berubah?
-                // document.querySelector('h1.text-slate-900').textContent = formData.get('name'); 
+                
+                // Update UI dengan data yang baru dari server
+                if (data.venue) {
+                    const venue = data.venue;
+                    
+                    // Update page title
+                    const pageTitle = document.getElementById('pageTitle');
+                    if (pageTitle) {
+                        pageTitle.textContent = `Kelola Lapangan: ${venue.name}`;
+                    }
+                    
+                    // Update browser title
+                    document.title = `Kelola: ${venue.name}`;
+                    
+                    // Update form input values untuk reflect perubahan
+                    const nameInput = document.getElementById('id_name');
+                    const descInput = document.getElementById('id_description');
+                    const locationSelect = document.getElementById('id_location');
+                    const categorySelect = document.getElementById('id_sport_category');
+                    const priceInput = document.getElementById('id_price_per_hour');
+                    const paymentSelect = document.getElementById('id_payment_options');
+                    
+                    if (nameInput) nameInput.value = venue.name;
+                    if (descInput) descInput.value = venue.description;
+                    if (priceInput) priceInput.value = venue.price_per_hour;
+                    
+                    // Update main image display jika ada
+                    const mainImageImg = document.querySelector('[data-type="main-image"] img');
+                    const mainImagePlaceholder = document.querySelector('[data-type="main-image"] [data-placeholder]');
+                    
+                    if (venue.main_image) {
+                        if (mainImageImg) {
+                            mainImageImg.src = venue.main_image;
+                            mainImageImg.style.display = 'block';
+                        }
+                        if (mainImagePlaceholder) {
+                            mainImagePlaceholder.style.display = 'none';
+                        }
+                    } else {
+                        if (mainImageImg) {
+                            mainImageImg.style.display = 'none';
+                        }
+                        if (mainImagePlaceholder) {
+                            mainImagePlaceholder.style.display = 'flex';
+                        }
+                    }
+                }
+                
+                closeEditModal();
             } else {
                 let errorMsg = 'Terjadi kesalahan: ';
-                 if (data.errors && typeof data.errors === 'object') {
+                if (data.errors && typeof data.errors === 'object') {
                     for (let field in data.errors) {
-                         errorMsg += `${field}: ${data.errors[field].join(', ')} `;
-                     }
-                 } else if (data.message) {
-                     errorMsg = data.message;
-                 }
+                        errorMsg += `${field}: ${data.errors[field].join(', ')} `;
+                    }
+                } else if (data.message) {
+                    errorMsg = data.message;
+                }
                 showToast('Kesalahan', errorMsg, 'error');
             }
         })
@@ -573,9 +599,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Kesalahan Fetch:', error);
             let detailError = 'Terjadi kesalahan saat menyimpan perubahan.';
             if(error.status && error.data && error.data.errors) {
-                 detailError = Object.values(error.data.errors).flat().join(' ');
+                detailError = Object.values(error.data.errors).flat().join(' ');
             } else if (error.message) {
-                 detailError = error.message;
+                detailError = error.message;
             }
             showToast('Kesalahan Server', detailError, 'error');
         });
