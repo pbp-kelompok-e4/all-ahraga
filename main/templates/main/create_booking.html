@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
-{% load humanize %}{% block title %}Booking — {{ venue.name }}{% endblock title %}
+{% load humanize %}
+{% load l10n %} {% block title %}Booking — {{ venue.name }}{% endblock title %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 my-10">
@@ -82,7 +83,7 @@
                   {% for s in schedules %}
                   <label class="slot-card relative block p-4 rounded-xl border transition-all cursor-pointer w-64 flex-shrink-0 
                         {% if s.is_booked %}bg-red-50 border-red-100 opacity-70 cursor-not-allowed hover:shadow-none{% else %}bg-gradient-to-b from-white to-gray-50 border-gray-200{% endif %}" 
-                        data-id="{{ s.id }}" 
+                        data-id="{{ s.id|unlocalize }}" 
                         data-date="{{ s.date|date:'Y-m-d' }}"
                         style="display: none;">
                     <div class="flex justify-between items-start">
@@ -96,7 +97,7 @@
                         <span class="text-sm font-medium text-teal-600 flex-shrink-0 ml-2">Available</span>
                       {% endif %}
                     </div>
-                    <input type="radio" name="schedule_id" value="{{ s.id }}" class="absolute opacity-0">
+                    <input type="radio" name="schedule_id" value="{{ s.id|unlocalize }}" class="absolute opacity-0">
                   </label>
                   {% endfor %}
                 </div>
@@ -158,8 +159,8 @@
               {% for eq in equipment_list %}
               <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 shadow-sm has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 transition-all cursor-pointer hover:shadow-md">
                 <div class="flex items-center gap-3"> 
-                  <input type="checkbox" name="equipment" value="{{ eq.id }}" data-price="{{ eq.rental_price|default:0|cut:'.' }}" 
-                    id="eq-cb-{{ eq.id }}"
+                  <input type="checkbox" name="equipment" value="{{ eq.id|unlocalize }}" data-price="{{ eq.rental_price|default:0|cut:'.' }}" 
+                    id="eq-cb-{{ eq.id|unlocalize }}"
                     class="eq-checkbox w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500">
                   <div>
                     <div class="font-bold text-gray-800">{{ eq.name }}</div>
@@ -168,9 +169,9 @@
                 </div>
                 <div class="flex items-center gap-4">
                   <span class="text-base font-semibold text-teal-700">Rp {{ eq.rental_price|default:0|intcomma }}</span>
-                  <input type="number" name="quantity_{{ eq.id }}" value="1" min="1" max="{{ eq.stock_quantity|default:1 }}" 
-                        id="eq-qty-{{ eq.id }}"
-                        data-eq-id="{{ eq.id }}"
+                  <input type="number" name="quantity_{{ eq.id|unlocalize }}" value="1" min="1" max="{{ eq.stock_quantity|default:1 }}" 
+                        id="eq-qty-{{ eq.id|unlocalize }}"
+                        data-eq-id="{{ eq.id|unlocalize }}"
                         class="eq-quantity w-16 p-1.5 text-center border border-gray-300 rounded-lg disabled:bg-gray-200 disabled:opacity-70 focus:ring-teal-500 focus:border-teal-500" 
                         disabled>
                 </div>
