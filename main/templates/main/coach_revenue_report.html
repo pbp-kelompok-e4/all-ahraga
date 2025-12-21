@@ -174,7 +174,6 @@
 {# Hanya sertakan JS untuk modal jika 'not has_profile' #}
 {% if not has_profile %}
 <script>
-  // --- UTILITIES (getCookie, showToast) ---
   function getCookie(name) { let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)'); return v ? v[2] : null; }
   function showToast(title, message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -186,33 +185,29 @@
       let gradientClass = ''; let iconContent = '';
       if (type === 'success') { gradientClass = 'bg-gradient-to-br from-green-600 to-green-800'; iconContent = '✅'; }
       else { gradientClass = 'bg-gradient-to-br from-red-600 to-red-800'; iconContent = '❌'; }
-      // Pastikan class animate-slideInRight ditambahkan saat menampilkan
       toast.className = `fixed bottom-6 right-6 text-white p-4 rounded-xl shadow-2xl z-[10000] min-w-[300px] ${gradientClass} animate-slideInRight`;
       toastIcon.textContent = iconContent;
       toast.classList.remove('hidden');
       setTimeout(() => {
-          // Opsi: Tambahkan animasi keluar sebelum hidden
           toast.classList.add('hidden');
       }, 3000);
   }
 
-  // --- Profile Modal Logic ---
   const manageModal = document.getElementById('manageModal');
   const formContainer = document.getElementById('formContainer');
 
   function showManageModal() {
       if (!manageModal) return;
-      manageModal.classList.add('modal-open'); // Gunakan class ini untuk display flex
-      manageModal.classList.remove('hidden'); // Hapus hidden jika ada
+      manageModal.classList.add('modal-open'); 
+      manageModal.classList.remove('hidden'); 
       document.body.style.overflow = 'hidden';
       loadProfileForm();
   }
   function hideManageModal() {
       if (!manageModal) return;
       manageModal.classList.remove('modal-open');
-      manageModal.classList.add('hidden'); // Tambah hidden lagi
+      manageModal.classList.add('hidden'); 
       document.body.style.overflow = 'auto';
-      // Reset form container
       formContainer.innerHTML = '<div class="text-center text-slate-600 py-16 flex flex-col items-center"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
   }
   function loadProfileForm() {
@@ -229,30 +224,24 @@
   function attachFormHandler() {
       const form = document.getElementById('coachProfileForm');
       if (!form) return;
-      form.addEventListener('submit', function(e) { /* ... (Logic submit form Anda) ... */ });
+      form.addEventListener('submit', function(e) {  });
   }
-  function displayFormErrors(errors) { /* ... (Logic display error Anda) ... */ }
+  function displayFormErrors(errors) {  }
 
-  // Event listener untuk backdrop click
+
   if (manageModal) manageModal.addEventListener('click', function(e){ if (e.target === manageModal) hideManageModal(); });
 
-   // --- PASTI KAN FUNGSI LAINNYA JUGA ADA ---
-   // function attachFormHandler() { ... (fungsi lengkap) ... }
-   // function displayFormErrors(errors) { ... (fungsi lengkap) ... }
-   
-   // --- CONTOH attachFormHandler (Pastikan ada) ---
    function attachFormHandler() {
         const form = document.getElementById('coachProfileForm');
         if (!form) return;
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            const submitBtn = form.querySelector('button[type="submit"]'); // Target tombol submit
+            const submitBtn = form.querySelector('button[type="submit"]'); 
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<svg class="animate-spin inline-block w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">...</svg> Menyimpan...';
-            // Reset errors
             form.querySelectorAll('.field-error').forEach(el => { el.classList.add('hidden'); el.textContent = ''; });
-            const formErrorsEl = document.getElementById('formErrors'); // Pastikan ID ini ada di template form AJAX
+            const formErrorsEl = document.getElementById('formErrors'); 
             if (formErrorsEl) formErrorsEl.classList.add('hidden');
 
             const formData = new FormData(form);
@@ -266,19 +255,18 @@
               if (data.success) {
                 hideManageModal();
                 showToast('Berhasil!', data.message || 'Profil disimpan.', 'success');
-                setTimeout(()=>window.location.reload(), 1500); // Reload halaman ini
+                setTimeout(()=>window.location.reload(), 1500); 
               } else {
-                displayFormErrors(data.errors || {}); // Tampilkan error di form
-                showToast('Gagal!', data.message || 'Periksa form.', 'error'); // Tampilkan toast error
+                displayFormErrors(data.errors || {}); 
+                showToast('Gagal!', data.message || 'Periksa form.', 'error'); 
               }
             })
-            .catch(error => { // Tangkap error fetch atau reject dari server
+            .catch(error => { 
                  console.error('Save Profile Error:', error);
                  let errorMsg = 'Terjadi kesalahan.';
                  if (error && error.message) errorMsg = error.message;
                  else if (error && error.errors) errorMsg = Object.values(error.errors).flat().join(' ');
                  showToast('Error!', errorMsg, 'error');
-                 // Tampilkan error non-field jika ada
                  const formErr = document.getElementById('formErrors');
                  const errList = document.getElementById('errorList');
                  if(formErr && errList && errors.__all__) {
@@ -290,7 +278,6 @@
         });
     }
 
-    // --- CONTOH displayFormErrors (Pastikan ada) ---
     function displayFormErrors(errors) {
         document.querySelectorAll('.field-error').forEach(el => { el.classList.add('hidden'); el.textContent = ''; });
         let hasFieldErrors = false;
@@ -303,7 +290,7 @@
            }
            const fieldInput = document.getElementById('id_' + field);
            if (fieldInput) {
-               fieldInput.classList.add('border-red-500'); // Highlight error field
+               fieldInput.classList.add('border-red-500'); 
                fieldInput.addEventListener('input', () => {
                     fieldInput.classList.remove('border-red-500');
                     if (errorElement) errorElement.classList.add('hidden');

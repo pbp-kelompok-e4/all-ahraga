@@ -29,7 +29,6 @@ import base64
 import requests
 
 def get_user_dashboard(user):
-    # Disederhanakan menggunakan helper baru
     redirect_url_name = get_dashboard_redirect_url_name(user)
     return redirect(reverse(redirect_url_name))
 
@@ -39,10 +38,10 @@ def get_dashboard_redirect_url_name(user):
     berdasarkan role pengguna.
     """
     if not user.is_authenticated:
-        return 'index' # Jika (entah bagaimana) dipanggil oleh user non-auth
+        return 'index' 
     
     if user.is_superuser or user.is_staff:
-        return 'admin_dashboard'  # Arahkan ke admin dashboard baru
+        return 'admin_dashboard'  
 
     try:
         profile = user.profile
@@ -51,11 +50,10 @@ def get_dashboard_redirect_url_name(user):
         elif profile.is_coach:
             return 'coach_profile'
         elif profile.is_customer:
-            return 'home' # 'home' sekarang adalah dashboard customer
+            return 'home' 
     except UserProfile.DoesNotExist:
-        pass # Lanjut ke default
+        pass 
 
-    # Default untuk customer (tanpa profil), admin, atau staff
     return 'home'
 
 def index_view(request):
@@ -65,11 +63,10 @@ def index_view(request):
     - Pengguna auth -> Redirect ke dashboard masing-masing.
     """
     if request.user.is_authenticated:
-        # Arahkan pengguna yang sudah login ke dashboard mereka
         redirect_url_name = get_dashboard_redirect_url_name(request.user)
         return redirect(reverse(redirect_url_name))
     
-    # Pengguna anonim (visitor) akan melihat landing page
+
     return render(request, 'main/landing.html')
 
 def is_admin(user):
@@ -116,7 +113,7 @@ def login_view(request):
                 messages.info(request, f"Welcome back, {user.username}.")
                 return redirect(final_redirect_url)
 
-        else: # Form tidak valid
+        else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
             messages.error(request, "Invalid username or password.")
@@ -129,17 +126,15 @@ def logout_view(request):
     logout(request)
     return redirect(f"{reverse('landing')}?logout=1")
 
-@login_required(login_url='login') # Ganti 'login' ke 'index' jika mau
-@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='index') # Arahkan non-customer ke index
+@login_required(login_url='login') 
+@user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_customer, login_url='index') 
 def main_view(request):
     """Main page untuk customer - list venues dengan filter"""
-    # Hanya customer yang bisa akses
     if not request.user.is_authenticated or not request.user.profile.is_customer:
         return redirect('home')
     
     venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
     
-    # Get filter options
     locations = LocationArea.objects.all().order_by('name')
     sports = SportCategory.objects.all().order_by('name')
     
@@ -155,9 +150,6 @@ def main_view(request):
 def coach_dashboard_view(request):
     return redirect('home')
 
-# ======================================================
-# ======================================================
-# ======================================================
 
 def venue_detail_view(request, venue_id):
     venue = get_object_or_404(Venue, pk=venue_id)
@@ -192,20 +184,17 @@ def venue_dashboard_view(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_revenue_view(request):
-    # Check if it's an AJAX request
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     
-    # 1. Ambil semua venue milik user ini
     venues = Venue.objects.filter(owner=request.user)
     venue_ids = venues.values_list('id', flat=True)
     
-    # 2. Total revenue dari semua venue
+
     total_revenue = Transaction.objects.filter(
         booking__venue_schedule__venue__id__in=venue_ids,
         status='CONFIRMED'
     ).aggregate(total=Sum('revenue_venue'))['total'] or 0.00
 
-    # 3. Revenue per venue dengan detail bookings
     venue_revenue_data = []
     for venue in venues:
         confirmed_bookings = Booking.objects.filter(
@@ -230,7 +219,6 @@ def venue_revenue_view(request):
             'booking_count': confirmed_bookings.count()
         }
         
-        # If AJAX, convert to serializable format
         if is_ajax:
             bookings_data = []
             for booking in confirmed_bookings:
@@ -256,7 +244,6 @@ def venue_revenue_view(request):
         
         venue_revenue_data.append(venue_data)
 
-    # Return JSON for AJAX requests
     if is_ajax:
         return JsonResponse({
             'success': True,
@@ -264,7 +251,6 @@ def venue_revenue_view(request):
             'venue_revenue_data': venue_revenue_data
         })
 
-    # Return HTML for normal requests
     context = {
         'total_revenue': total_revenue,
         'venue_revenue_data': venue_revenue_data,
@@ -280,7 +266,6 @@ def venue_create_view(request):
             user = request.user
             venue = form.save(commit=False)
             venue.owner = user
-            # Set payment_options default ke TRANSFER (bisa handle TRANSFER dan CASH)
             venue.payment_options = 'TRANSFER'
             venue.save()
             
@@ -314,7 +299,7 @@ def venue_manage_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
 
     if request.method == 'POST':
-        # Handle Venue Edit
+ 
         if 'submit_venue_edit' in request.POST:
             venue_edit_form = VenueForm(request.POST, instance=venue)
             if venue_edit_form.is_valid():
@@ -342,7 +327,6 @@ def venue_manage_view(request, venue_id):
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'errors': venue_edit_form.errors}, status=400)
 
-        # Handle Equipment Add
         elif 'submit_equipment' in request.POST:
             equipment_form = EquipmentForm(request.POST)
             if equipment_form.is_valid():
@@ -379,7 +363,6 @@ def venue_manage_view(request, venue_id):
                         'message': 'Validasi gagal. Periksa input Anda.'
                     }, status=400)
 
-        # Handle Equipment Edit
         elif request.POST.get('action') == 'edit':
             equipment_id = request.POST.get('equipment_id')
             try:
@@ -424,7 +407,6 @@ def venue_manage_view(request, venue_id):
                         'message': 'Equipment tidak ditemukan.'
                     }, status=404)
 
-        # Handle Equipment Delete
         elif request.POST.get('action') == 'delete':
             equipment_id = request.POST.get('equipment_id')
             try:
@@ -456,7 +438,6 @@ def venue_manage_view(request, venue_id):
                         'message': 'Equipment tidak ditemukan.'
                     }, status=404)
 
-    # GET request - display forms
     venue_edit_form = VenueForm(instance=venue)
     equipment_form = EquipmentForm()
     venue_location = venue.location 
@@ -481,16 +462,14 @@ def venue_manage_view(request, venue_id):
 def venue_manage_schedule_view(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id, owner=request.user)
     
-    # === 1. LOGIKA POST (Menambah Data) ===
     if request.method == 'POST':
-        # Cek apakah data dari Flutter (JSON Body) atau Web (Form Data)
         try:
             data = json.loads(request.body)
             schedule_form = VenueScheduleForm(data)
-            is_flutter = True # Penanda request dari Flutter
+            is_flutter = True 
         except json.JSONDecodeError:
             schedule_form = VenueScheduleForm(request.POST)
-            is_flutter = False # Penanda request dari Web
+            is_flutter = False 
 
         if schedule_form.is_valid():
             cd = schedule_form.cleaned_data
@@ -511,7 +490,6 @@ def venue_manage_schedule_view(request, venue_id):
                 msg = "Waktu selesai harus setelah mulai."
                 return JsonResponse({"success": False, "message": msg}, status=400) if is_flutter else render(request, 'main/venue_manage_schedule.html', {'error': msg, 'venue': venue, 'schedule_form': schedule_form})
 
-            # Proses Loop Create Slot
             created = 0
             new_slots_data = []
             current = start_dt
@@ -519,7 +497,6 @@ def venue_manage_schedule_view(request, venue_id):
                 slot_start = current.time()
                 next_dt = current + timedelta(hours=1)
                 
-                # Handle jika waktu sisa tidak pas 1 jam
                 if next_dt > end_dt: 
                     next_dt = end_dt
                 
@@ -536,23 +513,20 @@ def venue_manage_schedule_view(request, venue_id):
                     )
                     created += 1
                     
-                    # --- BAGIAN INI DIPERBAIKI (Agar tidak undefined) ---
                     new_slots_data.append({
                         'id': new_sch.id,
-                        # date_str_iso untuk logic pengelompokan di JS/Flutter
                         'date_str_iso': new_sch.date.strftime('%Y-%m-%d'),
-                        # date_str_display untuk TAMPILAN JUDUL (Kamis, 11 Des 2025)
                         'date_str_display': date_format(new_sch.date, "l, d M Y"), 
                         'start_time': new_sch.start_time.strftime('%H:%M'),
                         'end_time': new_sch.end_time.strftime('%H:%M'),
                         'is_booked': False,
                         'is_available': True,
                     })
-                    # ----------------------------------------------------
+
                 
                 current = next_dt
             
-            # --- RESPONSE SUKSES POST ---
+
             if is_flutter:
                 return JsonResponse({
                     "success": True, 
@@ -560,8 +534,7 @@ def venue_manage_schedule_view(request, venue_id):
                     "new_slots": new_slots_data
                 })
             else:
-                # Kalau Web, tapi AJAX Fetch (seperti script JS kamu), kita return JSON juga
-                # Kalau submit form biasa, baru render html (tapi script kamu pakai fetch json)
+
                 return JsonResponse({
                     "success": True, 
                     "message": f"{created} slot berhasil dibuat.",
@@ -569,19 +542,19 @@ def venue_manage_schedule_view(request, venue_id):
                 })
 
         else:
-            # --- RESPONSE ERROR POST ---
+
             if is_flutter:
                 return JsonResponse({"success": False, "message": "Data tidak valid", "errors": schedule_form.errors}, status=400)
             else:
-                # Fallback jika error form web biasa
+
                 return render(request, 'main/venue_manage_schedule.html', {
                     'venue': venue, 'schedule_form': schedule_form, 
                     'schedules': venue.schedules.all().order_by('date', 'start_time')
                 })
 
-    # === 2. LOGIKA GET (Mengambil Data) ===
+
     
-    # A. JIKA FLUTTER/AJAX (Minta JSON)
+
     if request.GET.get('format') == 'json' or request.headers.get('Accept') == 'application/json':
         schedules = venue.schedules.all().order_by('date', 'start_time')
         data = []
@@ -589,7 +562,7 @@ def venue_manage_schedule_view(request, venue_id):
             data.append({
                 'id': s.id,
                 'date': s.date.strftime('%Y-%m-%d'),
-                # Tambahkan display juga di GET agar konsisten
+
                 'date_display': date_format(s.date, "l, d M Y"), 
                 'start_time': s.start_time.strftime('%H:%M'),
                 'end_time': s.end_time.strftime('%H:%M'),
@@ -598,7 +571,7 @@ def venue_manage_schedule_view(request, venue_id):
             })
         return JsonResponse(data, safe=False)
 
-    # B. JIKA WEB BROWSER (Minta HTML)
+
     schedule_form = VenueScheduleForm()
     schedules = venue.schedules.all().order_by('date', 'start_time')
     context = {
@@ -612,8 +585,7 @@ def venue_manage_schedule_view(request, venue_id):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_venue_owner, login_url='home')
 def venue_schedule_delete(request, venue_id):
-    # --- MODIFIKASI PENTING DI SINI ---
-    # Kita izinkan method 'DELETE' (Standar) ATAU 'POST' (Alternatif Flutter)
+
     if request.method != 'DELETE' and request.method != 'POST':
         return JsonResponse({"success": False, "message": "Metode tidak diizinkan."}, status=405)
 
@@ -819,7 +791,6 @@ def save_coach_profile_ajax(request):
     if form.is_valid():
         profile = form.save()
         
-        # Prepare response data
         response_data = {
             'success': True,
             'message': 'Profil berhasil disimpan!',
@@ -835,7 +806,6 @@ def save_coach_profile_ajax(request):
         }
         return JsonResponse(response_data)
     else:
-        # Return validation errors
         errors = {}
         for field, error_list in form.errors.items():
             errors[field] = [str(error) for error in error_list]
@@ -895,21 +865,21 @@ def get_coach_profile_form_ajax(request):
 def coach_schedule(request):
     """Handles displaying and AJAX/JSON creation of coach schedules."""
 
-    # --- 1. Ambil Profil Coach ---
+
     try:
         coach_profile = CoachProfile.objects.get(user=request.user)
     except CoachProfile.DoesNotExist:
-        # Jika profil belum ada
+
         if request.method == 'POST':
             return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan. Lengkapi profil dulu."}, status=400)
         coach_profile = None
 
-    # --- 2. LOGIKA POST (Menambah Jadwal) ---
+
     if request.method == 'POST':
         if not coach_profile:
              return JsonResponse({"success": False, "message": "Profil pelatih tidak ditemukan."}, status=400)
 
-        # A. Deteksi Input (JSON vs Form)
+
         try:
             data = json.loads(request.body)
             form = CoachScheduleForm(data)
@@ -918,14 +888,14 @@ def coach_schedule(request):
             form = CoachScheduleForm(request.POST)
             is_flutter = False
 
-        # B. Validasi Form
+
         if form.is_valid():
-            # Ambil data bersih
+
             end_time_global_str = form.cleaned_data.get('end_time_global')
             schedule_date = form.cleaned_data['date']
             start_time_slot = form.cleaned_data['start_time']
             
-            # C. Validasi Waktu
+
             try:
                 start_dt = datetime.combine(schedule_date, start_time_slot)
                 end_dt_time = datetime.strptime(end_time_global_str, '%H:%M').time()
@@ -938,7 +908,7 @@ def coach_schedule(request):
                 msg = "Waktu selesai harus setelah waktu mulai."
                 return JsonResponse({"success": False, "message": msg}, status=400) if is_flutter else render(request, 'main/coach_schedule.html', {'form': form, 'error': msg})
 
-            # D. Loop Pembuatan Slot
+
             created = 0
             new_slots_data = []
             current = start_dt
@@ -948,11 +918,10 @@ def coach_schedule(request):
                 next_dt = current + timedelta(hours=1)
                 
                 if next_dt > end_dt:
-                    next_dt = end_dt # Handle sisa waktu jika tidak pas 1 jam
+                    next_dt = end_dt 
                 
                 slot_end = next_dt.time()
 
-                # Cek Duplikat
                 exists = CoachSchedule.objects.filter(
                     coach=coach_profile, date=schedule_date, start_time=slot_start
                 ).exists()
@@ -967,21 +936,20 @@ def coach_schedule(request):
                     )
                     created += 1
                     
-                    # --- FIX UTAMA: FORMAT TANGGAL AGAR TIDAK UNDEFINED ---
                     new_slots_data.append({
                         'id': new_schedule.id,
-                        'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'), # Untuk data-date di HTML
-                        'date_str_display': date_format(new_schedule.date, "l, d M Y"), # Untuk Tampilan Judul
+                        'date_str_iso': new_schedule.date.strftime('%Y-%m-%d'),
+                        'date_str_display': date_format(new_schedule.date, "l, d M Y"), 
                         'start_time': new_schedule.start_time.strftime('%H:%M'),
                         'end_time': new_schedule.end_time.strftime('%H:%M'),
                         'is_booked': False,
                         'is_available': True,
                     })
-                    # ------------------------------------------------------
+
                 
                 current = next_dt
 
-            # E. Response Sukses
+
             if is_flutter:
                 return JsonResponse({
                     "success": True,
@@ -989,9 +957,7 @@ def coach_schedule(request):
                     "new_slots": new_slots_data
                 }, status=200)
             else:
-                # Web response (biasanya akan dihandle JS fetch, jadi return JSON juga aman)
-                # Tapi kalau submit biasa tanpa JS, return render. 
-                # Karena template JS kamu pakai fetch dan expect JSON, kita return JsonResponse juga disini.
+
                 return JsonResponse({
                     "success": True,
                     "message": f"{created} slot jadwal berhasil ditambahkan.",
@@ -999,20 +965,18 @@ def coach_schedule(request):
                 }, status=200)
 
         else:
-            # F. Response Error Form
+
             if is_flutter:
                 return JsonResponse({"success": False, "message": "Data form tidak valid.", "errors": form.errors}, status=400)
             else:
-                # Fallback jika submit bukan via AJAX/Flutter
+
                 schedules = coach_profile.schedules.all().order_by('date', 'start_time') if coach_profile else []
                 return render(request, 'main/coach_schedule.html', {'form': form, 'schedules': schedules, 'coach_profile': coach_profile})
 
-    # --- 3. LOGIKA GET (Menampilkan Data) ---
-    
-    # Ambil jadwal dari database (hanya jika profil ada)
+
     schedules_qs = coach_profile.schedules.all().order_by('date', 'start_time') if coach_profile else []
 
-    # A. Jika Flutter Request JSON
+
     if request.GET.get('format') == 'json' or request.headers.get('Accept') == 'application/json':
         data = []
         for s in schedules_qs:
@@ -1026,7 +990,7 @@ def coach_schedule(request):
             })
         return JsonResponse(data, safe=False)
 
-    # B. Jika Web Request HTML
+
     form = CoachScheduleForm()
     user_has_profile = coach_profile is not None
     
@@ -1042,7 +1006,7 @@ def coach_schedule(request):
 @login_required(login_url='login')
 @user_passes_test(lambda user: hasattr(user, 'profile') and user.profile.is_coach, login_url='home')
 def coach_schedule_delete(request):
-    # --- UBAH BAGIAN INI (Agar support POST dari Flutter) ---
+
     if request.method != 'DELETE' and request.method != 'POST':
         return JsonResponse({"message": "Metode tidak diizinkan."}, status=405)
 
@@ -1051,7 +1015,7 @@ def coach_schedule_delete(request):
     except CoachProfile.DoesNotExist:
         return JsonResponse({"message": "Profil pelatih tidak ditemukan."}, status=400)
 
-    # ... (Sisanya sama, parsing JSON body dst) ...
+
     try:
         data = json.loads(request.body)
         ids = data.get('selected_schedules', [])
@@ -1086,7 +1050,7 @@ def coach_list_view(request):
         'user', 'main_sport_trained'
     ).prefetch_related('service_areas').order_by('user__first_name')
     
-    # Filter berdasarkan pencarian
+
     query = request.GET.get('q')
     if query:
         coaches_list = coaches_list.filter(
@@ -1095,12 +1059,12 @@ def coach_list_view(request):
             Q(user__username__icontains=query)
         )
     
-    # Filter berdasarkan olahraga
+
     sport_filter = request.GET.get('sport')
     if sport_filter:
         coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
     
-    # Filter berdasarkan area
+
     area_filter = request.GET.get('area')
     if area_filter:
         coaches_list = coaches_list.filter(service_areas__id=area_filter)
@@ -1133,10 +1097,10 @@ def coach_detail_public_view(request, coach_id):
         id=coach_id
     )
     
-    # Ambil review untuk coach ini
+
     reviews = Review.objects.filter(target_coach=coach).select_related('customer').order_by('-created_at')[:5]
     
-    # Hitung rata-rata rating
+
     avg_rating = reviews.aggregate(avg=Sum('rating'))['avg']
     if avg_rating and reviews.count() > 0:
         avg_rating = avg_rating / reviews.count()
@@ -1160,12 +1124,12 @@ def filter_coaches_ajax(request):
         'user', 'main_sport_trained'
     ).prefetch_related('service_areas').order_by('user__first_name')
     
-    # Ambil parameter GET
+
     query = request.GET.get('q')
     sport_filter = request.GET.get('sport')
     area_filter = request.GET.get('area')
     
-    # Filter berdasarkan pencarian
+
     if query:
         coaches_list = coaches_list.filter(
             Q(user__first_name__icontains=query) |
@@ -1173,11 +1137,10 @@ def filter_coaches_ajax(request):
             Q(user__username__icontains=query)
         )
     
-    # Filter berdasarkan olahraga
+
     if sport_filter:
         coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
     
-    # Filter berdasarkan area
     if area_filter:
         coaches_list = coaches_list.filter(service_areas__id=area_filter)
     
@@ -1189,19 +1152,17 @@ def filter_coaches_ajax(request):
     except PageNotAnInteger:
         coaches = paginator.page(1)
     except EmptyPage:
-        # Jika request AJAX meminta halaman di luar jangkauan,
-        # kembalikan halaman terakhir.
+
         coaches = paginator.page(paginator.num_pages)
     
     context = {
         'coaches': coaches,
-        # Kita teruskan parameter GET agar pagination link tetap benar
         'query': query,
         'sport_filter': sport_filter,
         'area_filter': area_filter,
     }
     
-    # Render potongan HTML parsial, BUKAN seluruh halaman
+
     html = render_to_string(
         'main/coach_list_partial.html', 
         context,
@@ -1235,7 +1196,6 @@ def get_coach_detail_ajax(request, coach_id):
         'total_reviews': reviews.count(),
     }
     
-    # Render potongan HTML parsial untuk modal
     html = render_to_string(
         'main/coach_detail_partial.html', 
         context,
@@ -1279,13 +1239,11 @@ def admin_dashboard_view(request):
     Hanya menampilkan 4 statistik utama.
     """
     
-    # 1. Ambil 4 Statistik Utama
     total_users = User.objects.count()
     total_venues = Venue.objects.count()
     total_coaches = CoachProfile.objects.count()
     total_bookings = Booking.objects.count()
 
-    # 2. Siapkan Context
     context = {
         'total_users': total_users,
         'total_venues': total_venues,
@@ -1293,7 +1251,6 @@ def admin_dashboard_view(request):
         'total_bookings': total_bookings,
     }
     
-    # 3. Render template
     return render(request, 'main/admin_dashboard.html', context)
 
 @login_required(login_url='login')
@@ -1301,7 +1258,6 @@ def admin_dashboard_view(request):
 def create_booking(request, venue_id):
     venue = get_object_or_404(Venue, id=venue_id)
     
-    # === GET REQUEST (JSON / API) ===
     if request.method == 'GET' and request.headers.get('Accept') == 'application/json':
         equipment_list = Equipment.objects.filter(venue=venue)
         
@@ -1360,7 +1316,6 @@ def create_booking(request, venue_id):
             'equipments': equipments_data,
         })
 
-    # === POST REQUEST (CREATE BOOKING) ===
     if request.method == 'POST':
         is_json = request.headers.get('Content-Type') == 'application/json'
         
@@ -1375,21 +1330,18 @@ def create_booking(request, venue_id):
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
         else:
-            # === FORM DATA HANDLING (Web Browser) ===
             schedule_id = request.POST.get('schedule_id')
             equipment_ids = request.POST.getlist('equipment')
             coach_id = request.POST.get('coach')
             payment_method = request.POST.get('payment_method', 'CASH')
             quantities = {}
 
-            # --- [FIX START] Sanitize Inputs for Thousand Separators ---
-            # Membersihkan titik (format ribuan) agar menjadi integer murni
             if schedule_id and isinstance(schedule_id, str):
                 schedule_id = schedule_id.replace('.', '')
             
             if coach_id and isinstance(coach_id, str):
                 coach_id = coach_id.replace('.', '')
-                if coach_id == '': coach_id = None # Handle empty string
+                if coach_id == '': coach_id = None 
 
             if equipment_ids:
                 cleaned_ids = []
@@ -1399,7 +1351,6 @@ def create_booking(request, venue_id):
                     else:
                         cleaned_ids.append(eid)
                 equipment_ids = cleaned_ids
-            # --- [FIX END] ---
 
         if not schedule_id:
             error_msg = "Anda harus memilih jadwal terlebih dahulu!"
@@ -1417,7 +1368,6 @@ def create_booking(request, venue_id):
 
             with db_transaction.atomic():
                 try:
-                    # Query Schedule (ID sekarang sudah bersih)
                     schedule = VenueSchedule.objects.select_for_update().get(
                         id=schedule_id,
                         venue=venue,
@@ -1437,27 +1387,23 @@ def create_booking(request, venue_id):
                 selected_equipment_data = []
                 equipment_revenue = 0
 
-                # Handle Equipment
+
                 if equipment_ids:
                     equipment_queryset = Equipment.objects.filter(id__in=equipment_ids, venue=venue)
                     for eq in equipment_queryset:
                         if is_json:
                             quantity = quantities.get(str(eq.id), 1)
                         else:
-                            # Coba ambil quantity dengan berbagai format key
-                            # Format normal: quantity_123
-                            # Format L10n: quantity_1.234
-                            
-                            # 1. Coba ambil langsung ID bersih
+ 
                             q_val = request.POST.get(f'quantity_{eq.id}')
                             
-                            # 2. Jika tidak ketemu, coba format dengan titik (lokalisasi)
+ 
                             if not q_val:
                                 from django.utils.numberformat import format
                                 id_with_dot = format(eq.id, '.', grouping=3, thousand_sep='.', force_grouping=True)
                                 q_val = request.POST.get(f'quantity_{id_with_dot}')
                             
-                            # 3. Default ke '1'
+ 
                             quantity_str = q_val if q_val else '1'
                             
                             try:
@@ -1477,7 +1423,7 @@ def create_booking(request, venue_id):
                         equipment_revenue += item_sub_total
                         selected_equipment_data.append((eq, quantity, item_sub_total))
 
-                # Handle Coach
+ 
                 coach_obj = None
                 coach_schedule_obj = None
                 coach_revenue = 0
@@ -1496,13 +1442,12 @@ def create_booking(request, venue_id):
                         error_msg = "Coach tidak tersedia pada jadwal yang dipilih."
                         if is_json:
                             return JsonResponse({'success': False, 'message': error_msg}, status=400)
-                        # Jangan raise error fatal, cukup info user dan proceed tanpa coach atau redirect
+ 
                         messages.error(request, error_msg)
                         return redirect('create_booking', venue_id=venue.id)
 
                 total_price += equipment_revenue + coach_revenue
-
-                # Create Booking Object
+ 
                 booking = Booking.objects.create(
                     customer=request.user,
                     venue_schedule=schedule,
@@ -1510,7 +1455,7 @@ def create_booking(request, venue_id):
                     total_price=total_price,
                 )
 
-                # Update Status Schedule
+ 
                 schedule.is_booked = True
                 schedule.save()
 
@@ -1518,7 +1463,7 @@ def create_booking(request, venue_id):
                     coach_schedule_obj.is_booked = True
                     coach_schedule_obj.save()
 
-                # Save Booking Equipments
+ 
                 booking_equipment_list = []
                 for equipment, quantity, sub_total in selected_equipment_data:
                     booking_equipment_list.append(
@@ -1532,7 +1477,7 @@ def create_booking(request, venue_id):
                 if booking_equipment_list:
                     BookingEquipment.objects.bulk_create(booking_equipment_list)
 
-                # Create Transaction
+ 
                 Transaction.objects.create(
                     booking=booking,
                     status='PENDING',
@@ -1569,7 +1514,7 @@ def create_booking(request, venue_id):
             messages.error(request, f'Terjadi kesalahan: {str(e)}')
             return redirect('create_booking', venue_id=venue.id)
 
-    # === GET REQUEST (Display Form) ===
+ 
     equipment_list = Equipment.objects.filter(venue=venue)
     
     try:
@@ -2229,7 +2174,7 @@ def update_booking_data(request, booking_id):
 
     selected_equipment_map = {
         item['equipment_id']: item['quantity']
-        for item in booking.equipment_details.values('equipment_id', 'quantity')  # Ubah dari booking_equipments
+        for item in booking.equipment_details.values('equipment_id', 'quantity')   
     }
     
     equipments = Equipment.objects.filter(venue=venue)
@@ -2263,7 +2208,7 @@ def filter_venues_ajax(request):
     
     venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
     
-    # Apply filters
+  
     if search:
         venues = venues.filter(
             Q(name__icontains=search) | 
@@ -2276,7 +2221,7 @@ def filter_venues_ajax(request):
     if sport_id:
         venues = venues.filter(sport_category_id=sport_id)
     
-    # Pagination dengan 6 item per halaman
+ 
     paginator = Paginator(venues, 6)
     try:
         venues_page = paginator.page(page)
@@ -2285,7 +2230,7 @@ def filter_venues_ajax(request):
     except EmptyPage:
         venues_page = paginator.page(paginator.num_pages)
     
-    # Prepare JSON response
+  
     venues_data = []
     for venue in venues_page:
         avg_rating = venue.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
@@ -2301,7 +2246,7 @@ def filter_venues_ajax(request):
             'rating': round(avg_rating, 1),
         })
     
-    # Return dengan data pagination yang lengkap
+  
     return JsonResponse({
         'success': True,
         'venues': venues_data,
@@ -2480,9 +2425,7 @@ def get_booking_reviews(request, booking_id):
     
     return JsonResponse(reviews_data, safe=False)
 
-# ======================================================
-# ======================================================
-# ======================================================
+ 
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='home')
@@ -2490,7 +2433,7 @@ def admin_user_management_view(request):
     """Menampilkan halaman manajemen semua pengguna dengan pagination."""
     user_list = User.objects.select_related('profile').order_by('-date_joined')
     
-    paginator = Paginator(user_list, 20) # 20 user per halaman
+    paginator = Paginator(user_list, 20)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2506,7 +2449,7 @@ def admin_venue_management_view(request):
     """Menampilkan halaman manajemen semua venue dengan pagination."""
     venue_list = Venue.objects.select_related('owner', 'sport_category', 'location').order_by('-id')
     
-    paginator = Paginator(venue_list, 20) # 20 venue per halaman
+    paginator = Paginator(venue_list, 20)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2527,7 +2470,7 @@ def admin_booking_management_view(request):
         'coach_schedule__coach__user'
     ).order_by('-booking_time')
     
-    paginator = Paginator(booking_list, 20) # 20 booking per halaman
+    paginator = Paginator(booking_list, 20)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2541,7 +2484,7 @@ def admin_booking_management_view(request):
 def admin_coach_management_view(request):
     """Menampilkan halaman manajemen semua profil pelatih."""
     
-    # Ambil semua CoachProfile, optimalkan query
+  
     coach_list = CoachProfile.objects.select_related(
         'user', 
         'main_sport_trained'
@@ -2558,23 +2501,23 @@ def admin_coach_management_view(request):
 
 @login_required(login_url='login')
 @user_passes_test(is_admin, login_url='home')
-@require_http_methods(["POST"]) # Memastikan ini hanya bisa diakses via POST
+@require_http_methods(["POST"])  
 def admin_toggle_coach_verification_view(request, coach_id):
     """
     Meng-toggle status is_verified seorang Coach via AJAX.
     """
     try:
-        # Cari coach profile
+ 
         coach = get_object_or_404(CoachProfile, id=coach_id)
 
-        # Balik statusnya (jika True -> False, jika False -> True)
+ 
         coach.is_verified = not coach.is_verified
         coach.save()
 
-        # Kirim kembali status baru dalam format JSON
+ 
         return JsonResponse({
             'success': True,
-            'is_verified': coach.is_verified, # Kirim status baru
+            'is_verified': coach.is_verified,  
             'message': 'Status coach berhasil diperbarui.'
         })
     except Exception as e:
@@ -3114,7 +3057,7 @@ def api_booking_detail(request, booking_id):
 @login_required(login_url='login')
 def api_venue_dashboard(request):
     """Flutter API: Get venue dashboard data"""
-    # Cek apakah user adalah venue owner
+ 
     if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
         return JsonResponse({
             'success': False,
@@ -3142,14 +3085,14 @@ def api_venue_dashboard(request):
 @login_required(login_url='login')
 def api_venue_add(request):
     """Flutter API: Add new venue & Get master data"""
-    # Cek apakah user adalah venue owner
+ 
     if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
         return JsonResponse({
             'success': False,
             'message': 'Hanya venue owner yang dapat menambah lapangan'
         }, status=403)
     
-    # GET - Return master data (locations & sports)
+ 
     if request.method == 'GET':
         locations = LocationArea.objects.all()
         sports = SportCategory.objects.all()
@@ -3170,12 +3113,11 @@ def api_venue_add(request):
             'sports': sports_data
         })
     
-    # POST - Add new venue
+ 
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
-            # Validate required fields
+             
             required_fields = ['name', 'sport_category', 'location', 'price_per_hour']
             for field in required_fields:
                 if field not in data:
@@ -3184,7 +3126,7 @@ def api_venue_add(request):
                         'message': f'Field {field} wajib diisi'
                     }, status=400)
             
-            # Validasi sport_category dan location exist
+ 
             try:
                 sport_category = SportCategory.objects.get(id=data['sport_category'])
             except SportCategory.DoesNotExist:
@@ -3201,7 +3143,7 @@ def api_venue_add(request):
                     'message': 'Lokasi tidak valid'
                 }, status=400)
             
-            # Create venue
+ 
             venue = Venue.objects.create(
                 owner=request.user,
                 name=data['name'],
@@ -3211,13 +3153,13 @@ def api_venue_add(request):
                 description=data.get('description', '')
             )
             
-            # Handle image URL if provided
+ 
             if 'image' in data and data['image']:
                 try:
-                    venue.main_image = data['image']  # URLField accepts string
+                    venue.main_image = data['image']   
                     venue.save()
                 except Exception as e:
-                    pass  # Image is optional
+                    pass   
             
             return JsonResponse({
                 'success': True,
@@ -3242,7 +3184,7 @@ def api_venue_add(request):
 @login_required(login_url='login')
 def api_venue_revenue(request):
     """Flutter API: Get venue revenue report"""
-    # Cek apakah user adalah venue owner
+  
     if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
         return JsonResponse({
             'success': False,
@@ -3268,7 +3210,7 @@ def api_venue_revenue(request):
                 amount = float(booking.transaction.revenue_venue or 0)
                 venue_revenue += amount
                 
-                # Mengambil nama coach jika ada
+ 
                 coach_name = None
                 if booking.coach_schedule:
                     coach_name = booking.coach_schedule.coach.user.username
@@ -3305,7 +3247,7 @@ def api_venue_revenue(request):
 @login_required(login_url='login')
 def api_venue_manage(request, venue_id):
     """Flutter API: Manage venue (GET data, POST edit/add/delete equipment)"""
-    # Cek apakah user adalah venue owner
+ 
     if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
         return JsonResponse({
             'success': False,
@@ -3320,7 +3262,7 @@ def api_venue_manage(request, venue_id):
             'message': 'Venue tidak ditemukan atau bukan milik Anda'
         }, status=404)
     
-    # GET - Ambil data venue dan equipment
+ 
     if request.method == 'GET':
         locations = LocationArea.objects.all()
         categories = SportCategory.objects.all()
@@ -3334,7 +3276,7 @@ def api_venue_manage(request, venue_id):
             'location_id': venue.location.id,
             'sport_category_id': venue.sport_category.id,
             'payment_options': venue.payment_options,
-            'image': venue.main_image if venue.main_image else None, # TAMBAHKAN INI
+            'image': venue.main_image if venue.main_image else None,  
         }
         
         locations_data = [{'id': loc.id, 'name': loc.name} for loc in locations]
@@ -3354,13 +3296,13 @@ def api_venue_manage(request, venue_id):
             'equipments': equipments_data
         })
     
-    # POST - Edit venue atau manage equipment
+ 
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
             action = data.get('action')
             
-            # Check action first - equipment operations
+ 
             if action == 'add_equipment':
                 equipment = Equipment.objects.create(
                     venue=venue,
@@ -3383,7 +3325,7 @@ def api_venue_manage(request, venue_id):
                     'equipments': equipments_data
                 })
             
-            # Edit equipment
+ 
             elif action == 'edit_equipment':
                 equipment_id = data.get('equipment_id')
                 try:
@@ -3412,7 +3354,7 @@ def api_venue_manage(request, venue_id):
                         'message': 'Equipment tidak ditemukan'
                     }, status=404)
             
-            # Delete equipment
+ 
             elif action == 'delete_equipment':
                 equipment_id = data.get('equipment_id')
                 try:
@@ -3438,18 +3380,18 @@ def api_venue_manage(request, venue_id):
                         'message': 'Equipment tidak ditemukan'
                     }, status=404)
             
-            # Default: Edit venue
+ 
             else:
-                # Edit venue - update image if provided
+ 
                 if 'image' in data and data['image']:
                     try:
-                        # Accept image as URL string
+ 
                         venue.main_image = data['image']
                     except Exception as e:
                         print(f"Error saving image: {e}")
-                        pass # Abaikan jika gagal
+                        pass  
 
-                # Update location
+ 
                 if 'location' in data:
                     try:
                         location = LocationArea.objects.get(id=data['location'])
@@ -3460,7 +3402,7 @@ def api_venue_manage(request, venue_id):
                             'message': 'Lokasi tidak valid'
                         }, status=400)
                 
-                # Update sport category
+ 
                 if 'sport_category' in data:
                     try:
                         category = SportCategory.objects.get(id=data['sport_category'])
@@ -3471,7 +3413,7 @@ def api_venue_manage(request, venue_id):
                             'message': 'Kategori olahraga tidak valid'
                         }, status=400)
                 
-                # Update other venue fields
+ 
                 if 'name' in data:
                     venue.name = data['name']
                 if 'description' in data:
@@ -3496,8 +3438,7 @@ def api_venue_manage(request, venue_id):
 @csrf_exempt
 @login_required(login_url='login')
 def api_venue_delete(request, venue_id):
-    """Flutter API: Delete venue"""
-    # Cek apakah user adalah venue owner
+    """Flutter API: Delete venue""" 
     if not hasattr(request.user, 'profile') or not request.user.profile.is_venue_owner:
         return JsonResponse({
             'success': False,
@@ -3626,10 +3567,10 @@ def save_coach_profile_flutter(request):
         }, status=405)
     
     try:
-        # Parse JSON body
+ 
         data = json.loads(request.body)
         
-        # Cek apakah profile sudah ada
+ 
         try:
             coach_profile = CoachProfile.objects.get(user=request.user)
             is_update = True
@@ -3637,26 +3578,26 @@ def save_coach_profile_flutter(request):
             coach_profile = CoachProfile(user=request.user)
             is_update = False
         
-        # Ambil data dari JSON
+ 
         age = data.get('age')
         rate_per_hour = data.get('rate_per_hour')
         main_sport_trained_id = data.get('main_sport_trained_id')
         experience_desc = data.get('experience_desc')
-        service_area_ids = data.get('service_area_ids')  # Array
-        profile_picture_url = data.get('profile_picture')  # URL string atau None atau empty string
+        service_area_ids = data.get('service_area_ids')   
+        profile_picture_url = data.get('profile_picture')   
         
-        # Validasi required fields
+ 
         if not all([age, rate_per_hour, main_sport_trained_id, experience_desc, service_area_ids]):
             return JsonResponse({
                 'success': False,
                 'message': 'Semua field wajib diisi'
             }, status=400)
         
-        # Update fields
+ 
         coach_profile.age = int(age)
         coach_profile.rate_per_hour = float(rate_per_hour)
         
-        # Set main sport
+ 
         try:
             coach_profile.main_sport_trained = SportCategory.objects.get(id=int(main_sport_trained_id))
         except SportCategory.DoesNotExist:
@@ -3667,19 +3608,18 @@ def save_coach_profile_flutter(request):
         
         coach_profile.experience_desc = experience_desc
         
-        # Handle profile picture URL
-        # Jika profile_picture ada di data (termasuk empty string), update
+ 
         if 'profile_picture' in data:
-            if profile_picture_url:  # Ada URL baru
+            if profile_picture_url:  
                 coach_profile.profile_picture = profile_picture_url
-            else:  # Empty string atau None -> hapus foto
-                coach_profile.profile_picture = None  # atau '' tergantung model field Anda
-        # Jika tidak ada di data, tidak mengubah foto yang sudah ada
+            else:   
+                coach_profile.profile_picture = None   
+ 
         
-        # Save profile
+ 
         coach_profile.save()
         
-        # Set service areas (many-to-many)
+ 
         try:
             service_areas = LocationArea.objects.filter(id__in=service_area_ids)
             coach_profile.service_areas.set(service_areas)
@@ -3689,7 +3629,7 @@ def save_coach_profile_flutter(request):
                 'message': f'Format area layanan tidak valid: {str(e)}'
             }, status=400)
         
-        # Prepare response
+ 
         response_data = {
             'success': True,
             'message': f'Profil berhasil {"diperbarui" if is_update else "dibuat"}!',
@@ -3780,7 +3720,7 @@ def coach_list_json(request):
             'user', 'main_sport_trained'
         ).prefetch_related('service_areas').order_by('user__first_name')
         
-        # Filter berdasarkan pencarian
+ 
         query = request.GET.get('q', '')
         if query:
             coaches_list = coaches_list.filter(
@@ -3789,17 +3729,16 @@ def coach_list_json(request):
                 Q(user__username__icontains=query)
             )
         
-        # Filter berdasarkan olahraga
+ 
         sport_filter = request.GET.get('sport', '')
         if sport_filter:
             coaches_list = coaches_list.filter(main_sport_trained__id=sport_filter)
-        
-        # Filter berdasarkan area
+ 
         area_filter = request.GET.get('area', '')
         if area_filter:
             coaches_list = coaches_list.filter(service_areas__id=area_filter)
         
-        # Pagination
+ 
         paginator = Paginator(coaches_list, 8)
         page_number = request.GET.get('page', 1)
         
@@ -3810,13 +3749,13 @@ def coach_list_json(request):
         except EmptyPage:
             coaches = paginator.page(paginator.num_pages)
         
-        # Serialize data
+ 
         coaches_data = []
         for coach in coaches:
-            # Get profile picture URL
+ 
             profile_pic = coach.profile_picture if coach.profile_picture else None
             
-            # Get service areas
+ 
             service_areas = [{'id': area.id, 'name': area.name} for area in coach.service_areas.all()]
             
             coaches_data.append({
@@ -3869,16 +3808,15 @@ def coach_detail_json(request, coach_id):
             id=coach_id
         )
         
-        # Get profile picture URL
+ 
         profile_pic = coach.profile_picture if coach.profile_picture else None
-        
-        # Get service areas
+ 
         service_areas = [
             {'id': area.id, 'name': area.name} 
             for area in coach.service_areas.all()
         ]
         
-        # Get reviews
+ 
         reviews = Review.objects.filter(
             target_coach=coach
         ).select_related('customer').order_by('-created_at')[:10]
@@ -3895,7 +3833,7 @@ def coach_detail_json(request, coach_id):
             })
             total_rating += review.rating
         
-        # Calculate average rating
+ 
         avg_rating = 0
         if reviews.count() > 0:
             avg_rating = total_rating / reviews.count()
@@ -3951,11 +3889,11 @@ def proxy_image(request):
         return HttpResponse('No URL provided', status=400)
     
     try:
-        # Fetch image from external source
+ 
         response = requests.get(image_url, timeout=10)
         response.raise_for_status()
         
-        # Return the image with proper content type
+  
         return HttpResponse(
             response.content,
             content_type=response.headers.get('Content-Type', 'image/jpeg')

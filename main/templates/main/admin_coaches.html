@@ -91,7 +91,6 @@ const csrftoken = getCSRFToken();
 // Tambahkan event listener ke seluruh dokumen
 document.addEventListener('click', function(e) {
     
-    // Cek apakah yang diklik adalah tombol toggle kita
     if (e.target.matches('.toggle-verify-btn')) {
         e.preventDefault();
         
@@ -114,7 +113,6 @@ document.addEventListener('click', function(e) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Sukses! Update tampilan di halaman
                 const badgeCell = document.getElementById(`status-badge-${coachId}`);
                 
                 if (data.is_verified) {
@@ -134,7 +132,6 @@ document.addEventListener('click', function(e) {
                 }
             } else {
                 alert('Error: ' + data.message);
-                // Kembalikan teks tombol jika error
                 button.textContent = data.is_verified ? 'Set to Pending' : 'Verify Now'; 
             }
         })
@@ -143,7 +140,6 @@ document.addEventListener('click', function(e) {
             alert('Terjadi kesalahan. Silakan coba lagi.');
         })
         .finally(() => {
-            // Hidupkan kembali tombolnya
             button.disabled = false;
         });
     }

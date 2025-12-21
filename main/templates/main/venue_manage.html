@@ -454,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmDeleteEquipmentBtn = document.getElementById('confirm-delete-equipment-btn');
     let equipmentToDelete = null;
     
-    // Fungsi Toast sama seperti sebelumnya
     function showToast(title, message, type = 'success') {
         const toast = document.getElementById('toast');
         const toastIcon = document.getElementById('toastIcon');
@@ -473,16 +472,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         toast.style.display = 'block';
-        toast.classList.remove('animate-slide-out'); // Reset jika ada animasi keluar sebelumnya
-        toast.classList.add('animate-slide-in'); // Ganti ke animasi masuk
+        toast.classList.remove('animate-slide-out'); 
+        toast.classList.add('animate-slide-in'); 
         
         setTimeout(() => {
             toast.classList.remove('animate-slide-in');
-            toast.classList.add('animate-slide-out'); // Animasi keluar
+            toast.classList.add('animate-slide-out'); 
              setTimeout(() => {
-                 toast.style.display = 'none'; // Sembunyikan setelah animasi keluar selesai
-             }, 300); // Durasi animasi keluar
-        }, 3000); // Total waktu toast terlihat
+                 toast.style.display = 'none'; 
+             }, 300); 
+        }, 3000); 
     }
     
     function showDeleteEquipmentModal(id, name) {
@@ -502,11 +501,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     window.addEventListener('click', function(e){ 
         if (e.target === deleteEquipmentModal) hideDeleteEquipmentModal();
-        const editModal = document.getElementById('edit-modal'); // Cek juga untuk modal edit
+        const editModal = document.getElementById('edit-modal'); 
         if (e.target === editModal) closeEditModal();
     });
     
-    // Submit Edit Venue Form
     venueEditForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -535,20 +533,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast('Berhasil', data.message, 'success');
                 
-                // Update UI dengan data yang baru dari server
                 if (data.venue) {
                     const venue = data.venue;
                     
-                    // Update page title
                     const pageTitle = document.getElementById('pageTitle');
                     if (pageTitle) {
                         pageTitle.textContent = `Kelola Lapangan: ${venue.name}`;
                     }
                     
-                    // Update browser title
                     document.title = `Kelola: ${venue.name}`;
                     
-                    // Update form input values untuk reflect perubahan
+
                     const nameInput = document.getElementById('id_name');
                     const descInput = document.getElementById('id_description');
                     const locationSelect = document.getElementById('id_location');
@@ -560,7 +555,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (descInput) descInput.value = venue.description;
                     if (priceInput) priceInput.value = venue.price_per_hour;
                     
-                    // Update main image display jika ada
                     const mainImageImg = document.querySelector('[data-type="main-image"] img');
                     const mainImagePlaceholder = document.querySelector('[data-type="main-image"] [data-placeholder]');
                     
@@ -607,7 +601,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Submit Add Equipment Form
     equipmentForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -646,7 +639,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Submit Edit Equipment Form
     editEquipmentForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -686,7 +678,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Confirm Delete Equipment
     confirmDeleteEquipmentBtn.addEventListener('click', function() {
         if (!equipmentToDelete) return;
         
@@ -720,21 +711,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Update Equipment List Function
     function updateEquipmentList(equipments) {
         const equipmentList = document.getElementById('equipment-list');
-        equipmentList.innerHTML = ''; // Clear current list
+        equipmentList.innerHTML = ''; 
         
         if (equipments && equipments.length > 0) {
             equipments.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-teal-300 transition-colors';
                 li.setAttribute('data-equipment-id', item.id);
-                // Fungsi format mata uang sederhana
                 const formatCurrency = (amount) => {
                     return parseFloat(amount).toLocaleString('id-ID'); 
                 };
-                 // Encode nama untuk atribut data (jika mengandung karakter khusus)
                 const encodedName = encodeURIComponent(item.name); 
 
                 li.innerHTML = `
@@ -765,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 equipmentList.appendChild(li);
             });
         } else {
-            // Tampilkan pesan jika tidak ada equipment
             equipmentList.innerHTML = `
                 <li id="no-equipment-message" class="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">
                   <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
@@ -775,14 +762,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Attach delete handler to initial list items and future ones
     const _equipmentListEl = document.getElementById('equipment-list');
     if (_equipmentListEl) {
         _equipmentListEl.addEventListener('click', function(e) {
             const btn = e.target.closest('.delete-equipment-btn');
             if (btn) {
                 const id = btn.dataset.deleteId;
-                const name = decodeURIComponent(btn.dataset.deleteName); // Decode nama saat menampilkan konfirmasi
+                const name = decodeURIComponent(btn.dataset.deleteName);
                 if (id) {
                     showDeleteEquipmentModal(id, name);
                 }
@@ -790,22 +776,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Make functions globally accessible (jika dipanggil dari HTML onclick)
     window.editEquipment = function(id, name, price, stock) {
         document.getElementById('edit-equipment-id').value = id;
         document.getElementById('edit-name').value = name;
         document.getElementById('edit-price').value = price;
         document.getElementById('edit-stock').value = stock;
         document.getElementById('edit-modal').classList.remove('hidden');
-        document.getElementById('edit-modal').classList.add('flex'); // Tampilkan modal
+        document.getElementById('edit-modal').classList.add('flex'); 
     }
 
     window.closeEditModal = function() {
         document.getElementById('edit-modal').classList.add('hidden');
-        document.getElementById('edit-modal').classList.remove('flex'); // Sembunyikan modal
+        document.getElementById('edit-modal').classList.remove('flex'); 
     }
     
-    // Assign global showToast (jika diperlukan dari luar)
     window.showToast = showToast;
 });
 </script>

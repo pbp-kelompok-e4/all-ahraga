@@ -749,9 +749,9 @@
     if(!raw) return;
     try{
       const data = JSON.parse(raw);
-      const fresh = (Date.now() - (data.ts||0)) <= 120000; // valid 2 menit
+      const fresh = (Date.now() - (data.ts||0)) <= 120000; 
       if(fresh && data.trigger === 'after_login_success'){
-        localStorage.removeItem('toastData'); // hapus dulu biar gak dobel
+        localStorage.removeItem('toastData'); 
         showToast(data.message || 'Berhasil.', data.type || 'success', data.duration || 3200);
       }
     }catch(e){
@@ -796,7 +796,6 @@
         document.getElementById('loadingSpinner').classList.add('active');
         const venueGrid = document.getElementById('venueGrid');
         
-        // Sembunyikan semua kecuali loading spinner
         Array.from(venueGrid.children).forEach(child => {
             if (!child.classList.contains('loading-spinner')) {
                 child.style.display = 'none';
@@ -847,18 +846,16 @@
     function displayPagination(data) {
         const grid = document.getElementById('venueGrid');
         
-        // Hapus pagination lama jika ada
         const oldPagination = document.getElementById('pagination-container');
         if (oldPagination) {
             oldPagination.remove();
         }
         
-        // Jika hanya 1 halaman atau tidak ada data, tidak perlu pagination
+
         if (data.total_pages <= 1 || data.total_count === 0) {
             return;
         }
         
-        // Buat pagination container
         const paginationContainer = document.createElement('div');
         paginationContainer.id = 'pagination-container';
         paginationContainer.className = 'mt-12 flex justify-center';
@@ -912,7 +909,6 @@
     function displayVenues(venues) {
         const grid = document.getElementById('venueGrid');
         
-        // Hapus semua elemen kecuali loading spinner
         Array.from(grid.children).forEach(child => {
             if (!child.classList.contains('loading-spinner')) {
                 child.remove();
@@ -934,7 +930,6 @@
             return;
         }
 
-        // Render venues
         venues.forEach((venue, index) => { 
             const venueCard = document.createElement('div');
             venueCard.className = 'venue-card';
@@ -947,9 +942,7 @@
             venueCard.style.animationDelay = `${index * 100}ms`;
 
             venueCard.addEventListener('animationend', () => {
-                // Hapus style animasi agar tidak lagi mengontrol 'transform'
                 venueCard.style.animation = 'none'; 
-                // Pastikan opacity tetap 1
                 venueCard.style.opacity = '1'; 
             }, { once: true });
 
@@ -1009,7 +1002,6 @@
         filterVenues(1);  
     }
 
-    // Event listeners
     function initializeEventListeners() {
         const searchInput = document.getElementById('searchInput');
         const locationFilter = document.getElementById('locationFilter');
@@ -1031,29 +1023,24 @@
         }
     }
 
-    // Initialize ketika DOM siap
     document.addEventListener('DOMContentLoaded', function() {
         initializeEventListeners();
         
-        // Animasikan Hero Section
         const heroSection = document.querySelector('.hero-section');
         if (heroSection) {
             heroSection.style.opacity = '0';
             heroSection.style.animation = `fadeInUp 0.6s ease-out forwards`;
         }
 
-        // Load initial data
         filterVenues(1);
     });
 
-    // Fallback initialization
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeEventListeners);
     } else {
         initializeEventListeners();
     }
 
-    // Mobile-friendly touch improvements
     document.addEventListener('touchstart', function() {}, { passive: true });
 </script>
 {% endblock extra_js %}

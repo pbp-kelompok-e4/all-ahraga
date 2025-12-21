@@ -314,14 +314,6 @@
 
 {% block extra_js %}
 <script>
-  // Fungsi getCookie, showToast, modal handling, AJAX (sama seperti sebelumnya)
-  // ... (Salin semua fungsi JavaScript dari file asli Anda ke sini) ...
-  // Pastikan URL AJAX sudah benar:
-  // - fetch("{% url 'get_coach_profile_form_ajax' %}")
-  // - fetch("{% url 'save_coach_profile_ajax' %}")
-  // - fetch("{% url 'delete_coach_profile_ajax' %}")
-
-  // --- Salin SEMUA kode JavaScript dari file asli Anda ke bagian ini ---
 
   function getCookie(name) {
     let cookieValue = null;
@@ -357,20 +349,17 @@
     } else if (type === 'error') {
       gradientClass = 'bg-gradient-to-br from-red-600 to-red-800';
       iconContent = '❌';
-    } else { // Misal 'warning' atau 'info'
+    } else { 
       gradientClass = 'bg-gradient-to-br from-yellow-500 to-yellow-700';
       iconContent = '⚠️';
     }
    
-    // Terapkan class Tailwind untuk background
     toast.className = `fixed bottom-6 right-6 text-white p-4 rounded-xl shadow-2xl z-[10000] min-w-[300px] animate-slideInRight ${gradientClass}`;
     toastIcon.textContent = iconContent;
    
     toast.classList.remove('hidden');
    
-    // Sembunyikan setelah 3 detik
     setTimeout(() => {
-      // Opsi: Tambahkan animasi fade out jika diinginkan
       toast.classList.add('hidden');
     }, 3000);
   }
@@ -379,16 +368,15 @@
     const modal = document.getElementById('manageModal');
     if (!modal) return;
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Cegah scroll background
-    loadProfileForm(); // Muat form saat modal dibuka
+    document.body.style.overflow = 'hidden'; 
+    loadProfileForm(); 
   }
 
   function hideManageModal() {
     const modal = document.getElementById('manageModal');
     if (!modal) return;
     modal.classList.add('hidden');
-    document.body.style.overflow = 'auto'; // Kembalikan scroll background
-    // Kosongkan kontainer form untuk memuat ulang saat dibuka lagi (opsional)
+    document.body.style.overflow = 'auto'; 
      document.getElementById('formContainer').innerHTML = '<div class="text-center p-10 text-gray-600"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
   }
 
@@ -396,7 +384,6 @@
     const formContainer = document.getElementById('formContainer');
     if (!formContainer) return;
 
-    // Tampilkan loading state
     formContainer.innerHTML = '<div class="text-center p-10 text-gray-600"><div class="text-4xl mb-3 animate-spin text-teal-600"><i class="fa-solid fa-spinner"></i></div>Memuat formulir...</div>';
    
     fetch("{% url 'get_coach_profile_form_ajax' %}")
@@ -406,7 +393,7 @@
       })
       .then(html => {
         formContainer.innerHTML = html;
-        attachFormHandler(); // Pasang event listener ke form yang baru dimuat
+        attachFormHandler(); 
       })
       .catch(error => {
         console.error("Fetch form error:", error);
@@ -429,16 +416,14 @@
       if (!submitBtn) return;
       const originalText = submitBtn.innerHTML;
      
-      // State Loading
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<svg class="animate-spin inline-block w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyimpan...';
      
-      // Reset error messages
       form.querySelectorAll('.field-error').forEach(el => {
         el.classList.add('hidden');
         el.textContent = '';
       });
-      const formErrors = document.getElementById('formErrors'); // Pastikan ID ini ada di template form
+      const formErrors = document.getElementById('formErrors'); 
       if (formErrors) formErrors.classList.add('hidden');
      
       const formData = new FormData(form);
@@ -448,40 +433,35 @@
         method: 'POST',
         headers: {
           'X-CSRFToken': csrftoken,
-          'X-Requested-With': 'XMLHttpRequest' // Penting untuk request.is_ajax() di Django
+          'X-Requested-With': 'XMLHttpRequest' 
         },
         body: formData
-        // credentials: 'same-origin' // Tidak perlu jika X-CSRFToken dikirim
       })
       .then(response => {
           if (!response.ok) {
-               // Coba parse error JSON dari server jika status bukan 2xx
                return response.json().then(errData => { throw errData; });
            }
           return response.json();
        })
       .then(data => {
         if (data.success) {
-          updateProfileUI(data.profile); // Update tampilan profil utama
-          hideManageModal(); // Tutup modal
-          showToast('Berhasil!', data.message || 'Profil berhasil disimpan.', 'success'); // Tampilkan notif sukses
+          updateProfileUI(data.profile); 
+          hideManageModal(); 
+          showToast('Berhasil!', data.message || 'Profil berhasil disimpan.', 'success'); 
         } else {
-          // Tampilkan error validasi form
           displayFormErrors(data.errors || {}); 
-          showToast('Gagal!', data.message || 'Periksa kembali isian form.', 'error'); // Tampilkan notif gagal
+          showToast('Gagal!', data.message || 'Periksa kembali isian form.', 'error'); 
         }
       })
       .catch(error => {
         console.error('Error submitting form:', error);
         let errorMsg = 'Terjadi kesalahan saat menyimpan profil.';
-        // Coba tampilkan pesan error dari server jika ada
         if (error && error.message) {
             errorMsg = error.message;
         } else if (error && error.errors) {
             errorMsg = Object.values(error.errors).flat().join(' ');
         }
-        showToast('Error!', errorMsg, 'error'); // Tampilkan notif error umum
-        // Tampilkan error non-field jika ada di form (pastikan elemennya ada)
+        showToast('Error!', errorMsg, 'error'); 
         const formErrorsEl = document.getElementById('formErrors'); 
         const errorListEl = document.getElementById('errorList');
         if (formErrorsEl && errorListEl && errorMsg !== 'Terjadi kesalahan saat menyimpan profil.') {
@@ -490,16 +470,13 @@
         }
       })
       .finally(() => {
-        // Kembalikan state tombol submit
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
       });
     });
   }
 
-  // Fungsi untuk menampilkan error validasi di form
   function displayFormErrors(errors) {
-    // Reset error field sebelumnya
     document.querySelectorAll('.field-error').forEach(el => {
       el.classList.add('hidden');
       el.textContent = '';
@@ -507,18 +484,15 @@
     
     let hasFieldErrors = false;
     for (const [field, messages] of Object.entries(errors)) {
-       // Target elemen error di bawah field (misal: <div class="field-error text-red-500 text-sm mt-1 hidden" id="error_id_age"></div>)
        const errorElement = document.getElementById(`error_id_${field}`);
        if (errorElement) {
          errorElement.textContent = messages.join(', ');
          errorElement.classList.remove('hidden');
          hasFieldErrors = true;
        }
-       // Highlight field input jika perlu (tambahkan border merah)
        const fieldInput = document.getElementById('id_' + field);
        if (fieldInput) {
-           fieldInput.classList.add('border-red-500'); // Contoh
-           // Hapus highlight saat user mulai mengetik lagi
+           fieldInput.classList.add('border-red-500'); 
            fieldInput.addEventListener('input', () => {
                 fieldInput.classList.remove('border-red-500');
                 if (errorElement) errorElement.classList.add('hidden');
@@ -526,18 +500,16 @@
        }
     }
 
-    // Tampilkan error non-field (jika ada dan elemennya tersedia)
     const formErrorsEl = document.getElementById('formErrors'); 
     const errorListEl = document.getElementById('errorList');
     if (errors.__all__ && formErrorsEl && errorListEl) {
         errorListEl.innerHTML = errors.__all__.map(msg => `<li>${msg}</li>`).join('');
         formErrorsEl.classList.remove('hidden');
-    } else if (formErrorsEl && !hasFieldErrors) { // Sembunyikan jika tidak ada error field & non-field
+    } else if (formErrorsEl && !hasFieldErrors) {
          formErrorsEl.classList.add('hidden');
     }
   }
   
-  // Fungsi untuk update teks tombol Kelola/Update
   function updateManageButtonText(hasProfile) {
     const buttonText = document.getElementById('manageButtonText');
     if (buttonText) {
@@ -545,9 +517,7 @@
     }
   }
 
-  // Fungsi untuk update UI profil setelah save/delete
   function updateProfileUI(profile) {
-    // Update Foto Profil
     const profilePicContainer = document.getElementById('profilePictureContainer');
     if (profilePicContainer) {
         if (profile.profile_picture) {
@@ -559,23 +529,21 @@
         }
     }
   
-    // Update Badge Verifikasi
     const verifiedBadge = document.getElementById('verifiedBadge');
     if (verifiedBadge) {
         verifiedBadge.classList.toggle('hidden', !profile.is_verified);
     }
   
-    // Update atau Buat Tampilan Detail
     const profileContent = document.getElementById('profileContent');
     const existingDataView = document.getElementById('profileDataView');
     const noProfileView = document.getElementById('noProfileView');
 
-    if (existingDataView) { // Jika sudah ada, update isinya
-        if (noProfileView) noProfileView.remove(); // Hapus pesan 'belum lengkap' jika ada
+    if (existingDataView) { 
+        if (noProfileView) noProfileView.remove(); 
         
         document.getElementById('displayAge').textContent = `${profile.age || '-'} tahun`;
         document.getElementById('displayRate').textContent = `Rp ${new Intl.NumberFormat('id-ID').format(profile.rate_per_hour)}`;
-        document.getElementById('displaySport').textContent = profile.main_sport_trained || '-'; // Tambah fallback
+        document.getElementById('displaySport').textContent = profile.main_sport_trained || '-'; 
         document.getElementById('displayExperience').textContent = profile.experience_desc || '-';
       
         const areasContainer = document.getElementById('displayAreas');
@@ -585,16 +553,15 @@
               : '<span class="text-gray-500 italic text-sm">Belum ada area layanan</span>';
             areasContainer.innerHTML = areasHTML;
         }
-        updateManageButtonText(true); // Pastikan teks tombol jadi 'Update'
+        updateManageButtonText(true); 
     
-    } else { // Jika belum ada (pertama kali isi), buat elemennya
+    } else { 
       if (noProfileView) noProfileView.remove();
       
       const areasHTML = profile.service_areas && profile.service_areas.length > 0
           ? profile.service_areas.map(area => `<span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-medium border border-teal-200 shadow-sm">${area}</span>`).join('')
           : '<span class="text-gray-500 italic text-sm">Belum ada area layanan</span>';
       
-      // Buat HTML untuk profileDataView (lebih aman dari XSS jika data dari server)
       const dataViewHTML = `
         <div id="profileDataView">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -613,27 +580,24 @@
           </div>
         </div>`;
       
-      profileContent.innerHTML = dataViewHTML; // Masukkan HTML baru
-      updateManageButtonText(true); // Teks tombol jadi 'Update'
+      profileContent.innerHTML = dataViewHTML; 
+      updateManageButtonText(true); 
 
-      // Tampilkan tombol Hapus dan sesuaikan grid tombol aksi
       const deleteBtn = document.getElementById('deleteBtn');
       if (deleteBtn) deleteBtn.classList.remove('hidden');
       const actionButtons = document.getElementById('actionButtons');
       if (actionButtons) {
-         actionButtons.classList.remove('grid-cols-1', 'sm:grid-cols-1'); // Hapus class lama
-         actionButtons.classList.add('sm:grid-cols-2'); // Tambah class baru
+         actionButtons.classList.remove('grid-cols-1', 'sm:grid-cols-1'); 
+         actionButtons.classList.add('sm:grid-cols-2'); 
       }
     }
   }
 
-  // --- Fungsi Modal Hapus ---
   function showDeleteModal() {
     const modal = document.getElementById('deleteModal');
     if (!modal) return;
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    // Reset state checkbox dan tombol konfirmasi
     const checkbox = document.getElementById('confirmCheckbox');
     const deleteBtn = document.getElementById('confirmDeleteBtn');
     if(checkbox) checkbox.checked = false;
@@ -666,10 +630,9 @@
       method: 'POST',
       headers: {
         'X-CSRFToken': csrftoken,
-        'X-Requested-With': 'XMLHttpRequest', // Penting
-        'Content-Type': 'application/json', // Jika Anda mengirim data, tapi ini kosong
+        'X-Requested-With': 'XMLHttpRequest', 
+        'Content-Type': 'application/json', 
       }
-      // body tidak diperlukan karena ID coach diambil dari user session di backend
     })
     .then(response => {
         if (!response.ok) { return response.json().then(err => { throw err; }); }
@@ -678,45 +641,37 @@
     .then(data => {
       if (data.success) {
         hideDeleteModal();
-        showToast('Berhasil!', data.message || 'Profil berhasil dihapus.', 'success'); // Notif sukses (bukan error)
-        // Update UI untuk menunjukkan profil sudah tidak ada
+        showToast('Berhasil!', data.message || 'Profil berhasil dihapus.', 'success'); 
         updateUIAfterDelete(); 
       } else {
-        throw new Error(data.message || 'Gagal menghapus profil.'); // Lemparkan error jika success=false
+        throw new Error(data.message || 'Gagal menghapus profil.'); 
       }
     })
-    .catch(error => { // Tangkap error network atau error dari server
+    .catch(error => { 
       console.error("Delete Error:", error);
       showToast('Error!', error.message || 'Terjadi kesalahan saat menghapus.', 'error');
     })
     .finally(() => {
-        // Kembalikan state tombol Hapus (jika diperlukan, misal jika error)
-        // Biasanya setelah sukses, UI berubah jadi tidak perlu reset tombol
-        // Jika ingin reset:
          const checkbox = document.getElementById('confirmCheckbox');
-         if(checkbox) checkbox.checked = false; // Uncheck
-         deleteBtn.disabled = true; // Tetap disabled karena checkbox unchecked
+         if(checkbox) checkbox.checked = false; 
+         deleteBtn.disabled = true; 
          deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Ya, Hapus';
          deleteBtn.classList.remove('opacity-75');
-         deleteBtn.classList.add('opacity-50'); // Kembali ke state disabled
+         deleteBtn.classList.add('opacity-50');
          deleteBtn.style.cursor = 'not-allowed';
     });
   }
 
-  // Fungsi untuk update UI setelah profil dihapus
   function updateUIAfterDelete() {
-    // Kosongkan foto profil
     const profilePicContainer = document.getElementById('profilePictureContainer');
     if (profilePicContainer) {
         profilePicContainer.innerHTML =
           '<div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white bg-opacity-10 mx-auto flex items-center justify-center border-4 border-yellow-400 shadow-xl"><span class="text-5xl text-white opacity-80"><i class="fa-solid fa-user"></i></span></div>';
     }
   
-    // Sembunyikan badge verifikasi
     const verifiedBadge = document.getElementById('verifiedBadge');
     if(verifiedBadge) verifiedBadge.classList.add('hidden');
   
-    // Tampilkan pesan "Profil Belum Lengkap"
     const profileContent = document.getElementById('profileContent');
     if (profileContent) {
         profileContent.innerHTML =
@@ -727,22 +682,18 @@
           '</div>';
     }
   
-    // Ubah teks tombol utama
     updateManageButtonText(false);
   
-    // Sembunyikan tombol Hapus dan sesuaikan grid tombol aksi
     const deleteBtn = document.getElementById('deleteBtn');
     if(deleteBtn) deleteBtn.classList.add('hidden');
     const actionButtons = document.getElementById('actionButtons');
     if (actionButtons) {
        actionButtons.classList.remove('sm:grid-cols-2');
-       actionButtons.classList.add('grid-cols-1'); // Kembali ke 1 kolom
+       actionButtons.classList.add('grid-cols-1'); 
     }
   }
 
-  // --- Event Listeners ---
   document.addEventListener('DOMContentLoaded', function() {
-    // Checkbox konfirmasi hapus
     const checkbox = document.getElementById('confirmCheckbox');
     const deleteBtn = document.getElementById('confirmDeleteBtn');
     if (checkbox && deleteBtn) {
@@ -751,19 +702,16 @@
         deleteBtn.disabled = !isChecked;
         deleteBtn.classList.toggle('opacity-50', !isChecked);
         deleteBtn.classList.toggle('cursor-not-allowed', !isChecked);
-         deleteBtn.classList.toggle('hover:bg-red-700', isChecked); // Aktifkan hover hanya jika checked
+         deleteBtn.classList.toggle('hover:bg-red-700', isChecked); 
       });
     }
 
-    // Set teks tombol awal berdasarkan data profil
     const hasProfile = {% if coach_profile %}true{% else %}false{% endif %};
     updateManageButtonText(hasProfile);
 
-    // Klik di luar modal untuk menutup
     const manageModal = document.getElementById('manageModal');
     if(manageModal) {
       manageModal.addEventListener('click', function(e) {
-        // Tutup hanya jika klik pada backdrop (elemen modal itu sendiri)
         if (e.target === manageModal) {
           hideManageModal();
         }

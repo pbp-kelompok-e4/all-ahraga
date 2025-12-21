@@ -245,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const csrf        = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
   const redirectURL = "{% url 'booking_history' %}";
 
-  // ADD/EDIT via AJAX
   if (reviewForm) {
     reviewForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -274,7 +273,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // DELETE via AJAX
   if (deleteForm) {
     deleteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
