@@ -164,9 +164,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # URL dasar untuk mengakses file media (misalnya: http://127.0.0.1:8000/media/venue_photos/...)
 MEDIA_URL = '/media/'
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-
 # ===== CSRF Settings untuk Flutter =====
 # settings.py
 
