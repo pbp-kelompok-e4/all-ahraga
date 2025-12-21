@@ -2797,6 +2797,8 @@ def api_create_booking(request, venue_id):
 @csrf_exempt
 def api_filter_venues(request):
     search = request.GET.get('search', '').strip()
+    location_id = request.GET.get('location', '')
+    sport_id = request.GET.get('sport', '')
     page = request.GET.get('page', 1) 
     
     venues_query = Venue.objects.all().select_related('location', 'sport_category', 'owner').order_by('id')
@@ -2808,14 +2810,22 @@ def api_filter_venues(request):
             Q(sport_category__name__icontains=search)
         )
     
+    if location_id:
+        venues_query = venues_query.filter(location_id=location_id)
+        
+    if sport_id:
+        venues_query = venues_query.filter(sport_category_id=sport_id)
+    
     paginator = Paginator(venues_query, 6) 
     try:
         venues_page = paginator.page(page)
     except:
-        return JsonResponse({'success': True, 'venues': [], 'has_next': False})
+        return JsonResponse({'success': True, 'venues': [], 'total_pages': 1})
 
     venues_data = []
     for v in venues_page:
+        avg_rating = Review.objects.filter(target_venue=v).aggregate(avg=Avg('rating'))['avg']
+        
         venues_data.append({
             'id': v.pk,
             'name': v.name,
@@ -2823,15 +2833,16 @@ def api_filter_venues(request):
             'sport_category': v.sport_category.name if v.sport_category else '',
             'price_per_hour': float(v.price_per_hour or 0),
             'image': v.main_image if v.main_image else '',
-            'rating': 5.0, 
+            'rating': float(avg_rating) if avg_rating else 5.0,  
         })
     
     return JsonResponse({
         'success': True,
         'venues': venues_data,
+        'total_pages': paginator.num_pages, 
+        'current_page': venues_page.number,
         'has_next': venues_page.has_next() 
     })
-
 
 @csrf_exempt
 def api_booking_form_data(request, venue_id):
