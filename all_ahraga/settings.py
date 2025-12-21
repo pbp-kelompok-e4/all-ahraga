@@ -164,21 +164,21 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # URL dasar untuk mengakses file media (misalnya: http://127.0.0.1:8000/media/venue_photos/...)
 MEDIA_URL = '/media/'
 
+# ===== CSRF Settings untuk Flutter =====
+# settings.py
+
+# Izinkan semua origin (sudah benar)
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# ===== CSRF Settings untuk Flutter =====
-if PRODUCTION:
-    CSRF_COOKIE_SECURE = True 
-    SESSION_COOKIE_SECURE = True  
-    CSRF_COOKIE_SAMESITE = 'None'  
-    SESSION_COOKIE_SAMESITE = 'None'  
-else:
-    # Untuk LOCALHOST (HTTP)
-    CSRF_COOKIE_SECURE = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SAMESITE = 'Lax'
+# ===== UBAH BAGIAN INI =====
+# Karena PWS pakai HTTPS, Secure harus True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+# Supaya cookie bisa dikirim lintas domain (Localhost -> PWS)
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:*",
