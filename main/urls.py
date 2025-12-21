@@ -69,4 +69,5 @@ urlpatterns = [
     path('api/coach/revenue/', views.coach_revenue_api, name='coach_revenue_api'),
     path('api/coaches/', views.coach_list_json, name='coach_list_json'),
     path('api/coach/<int:coach_id>/', views.coach_detail_json, name='coach_detail_json'),
+    path('proxy-image/', views.proxy_image, name='proxy_image'),
 ]
