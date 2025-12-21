@@ -2796,36 +2796,40 @@ def api_create_booking(request, venue_id):
     
 @csrf_exempt
 def api_filter_venues(request):
-    """API endpoint untuk filter venues (untuk Flutter)"""
     search = request.GET.get('search', '').strip()
+    page = request.GET.get('page', 1) 
     
-    venues = Venue.objects.all().select_related('location', 'sport_category', 'owner')
+    venues_query = Venue.objects.all().select_related('location', 'sport_category', 'owner').order_by('id')
     
     if search:
-        venues = venues.filter(
+        venues_query = venues_query.filter(
             Q(name__icontains=search) |
             Q(location__name__icontains=search) |
             Q(sport_category__name__icontains=search)
         )
     
+    paginator = Paginator(venues_query, 6) 
+    try:
+        venues_page = paginator.page(page)
+    except:
+        return JsonResponse({'success': True, 'venues': [], 'has_next': False})
+
     venues_data = []
-    for v in venues:
-        avg_rating = Review.objects.filter(target_venue=v).aggregate(avg=Avg('rating'))['avg']
-        
+    for v in venues_page:
         venues_data.append({
             'id': v.pk,
             'name': v.name,
-            'description': v.description or '',
             'location': v.location.name if v.location else '',
             'sport_category': v.sport_category.name if v.sport_category else '',
             'price_per_hour': float(v.price_per_hour or 0),
             'image': v.main_image if v.main_image else '',
-            'rating': float(avg_rating) if avg_rating else 5.0,  
+            'rating': 5.0, 
         })
     
     return JsonResponse({
         'success': True,
         'venues': venues_data,
+        'has_next': venues_page.has_next() 
     })
 
 
