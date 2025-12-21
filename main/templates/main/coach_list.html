@@ -162,7 +162,6 @@ document.addEventListener('DOMContentLoaded', function() {
  
   const filterUrl = "{% url 'filter_coaches_ajax' %}";
 
-  // --- 1. FETCH COACHES FUNCTION ---
   function fetchCoaches(url) {
     coachListContainer.classList.add('loading');
    
@@ -177,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (data.html !== undefined) {
         coachListContainer.innerHTML = data.html;
          
-        // Update browser URL
         const currentUrl = new URL(window.location);
         const newParams = new URLSearchParams(url.split('?')[1] || '');
           
@@ -205,7 +203,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // --- 2. FILTER FORM LISTENERS ---
   filterForm.querySelectorAll('input[name="q"]').forEach(input => {
     input.addEventListener('input', handleFilterChange);
   });
@@ -232,10 +229,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 350);
   }
 
-  // --- 3. PAGINATION & MODAL HANDLERS (Event Delegation) ---
   coachListContainer.addEventListener('click', function(e) {
    
-    // Pagination Handler
     const paginationButton = e.target.closest('.pagination-btn');
     if (paginationButton && !paginationButton.disabled) {
       e.preventDefault();
@@ -252,11 +247,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const url = `${filterUrl}?${params.toString()}`;
       fetchCoaches(url);
       
-      // Smooth scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
    
-    // Detail Modal Handler
     const detailButton = e.target.closest('.open-detail-modal-btn');
     if (detailButton) {
       e.preventDefault();
@@ -265,7 +258,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // --- 4. MODAL FUNCTIONS ---
   function openDetailModal(url) {
     if (!modal || !modalContent || !modalBody || !modalSpinner) return;
 
@@ -321,26 +313,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300);
   }
 
-  // Close modal button
   if (closeModalBtn) {
     closeModalBtn.addEventListener('click', hideDetailModal);
   }
  
-  // Click backdrop to close
   if (modal) {
     modal.addEventListener('click', function(e) {
       if (e.target === modal) hideDetailModal();
     });
   }
 
-  // ESC key to close
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
       hideDetailModal();
     }
   });
   
-  // Prevent iOS background scroll when modal is open
   if (modal) {
     let touchStartY = 0;
     
@@ -352,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const modalContentEl = modalContent;
       const target = e.target;
       
-      // Only prevent if touching the backdrop directly
       if (target === modal) {
         e.preventDefault();
       }

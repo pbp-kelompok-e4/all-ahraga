@@ -194,14 +194,12 @@
 </div>
 
 <script>
-  // Input styling
   (function(){
     const s=(id,ph)=>{const el=document.getElementById(id);if(!el)return;el.classList.add('styled-input');if(ph)el.placeholder=ph;};
     s('id_username','Masukkan username');
     s('id_password','Masukkan password');
   })();
 
-  // Toast util
   function showToast(message, type='success', duration=3500){
     const t = document.getElementById('toast');
     if(!t) return;
@@ -236,7 +234,7 @@
         showToast(obj.message || 'Registrasi berhasil! Silakan login 👋', obj.type || 'success', obj.duration || 3500);
         localStorage.removeItem('toastData');
       } else {
-        const tooOld = Date.now() - (obj.ts || 0) > 120000; // 2 menit
+        const tooOld = Date.now() - (obj.ts || 0) > 120000; 
         if (tooOld) localStorage.removeItem('toastData');
       }
     }catch{
@@ -244,7 +242,6 @@
     }
   });
 
-  // AJAX login
   (function(){
     const form=document.getElementById('login-form');
     const errorBox=document.getElementById('login-errors');
@@ -272,7 +269,6 @@
           showToast("✓ Login berhasil! Selamat datang", "success", 1500);
           setTimeout(()=>{ window.location.href=data.redirect || "{% url 'home' %}"; }, 800);
         }else{
-          // Format error messages dengan lebih baik
           let errorMessages = [];
           if (data?.errors) {
             Object.entries(data.errors).forEach(([field, msgs])=>{

@@ -603,7 +603,7 @@
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
-      const fresh = (Date.now() - (data.ts || 0)) <= 120000; // valid 2 menit
+      const fresh = (Date.now() - (data.ts || 0)) <= 120000; 
       if (fresh && (data.trigger === 'after_logout' || data.trigger === 'after_login_success')) {
         localStorage.removeItem('toastData');
         (window.showToast || function(m){ alert(m); })(

@@ -63,7 +63,6 @@ input.datepicker:focus, input.timepicker:focus {
 
 {% block content %}
 
-{# --- KONDISI 1: PROFIL BELUM LENGKAP --- #}
 {% if not has_profile %}
   <div class="bg-white rounded-xl shadow-lg p-8 sm:p-12 text-center max-w-3xl mx-auto border border-gray-100">
     <div class="text-6xl mb-6 text-teal-500"><i class="fa-solid fa-clipboard-question"></i></div>
@@ -78,7 +77,6 @@ input.datepicker:focus, input.timepicker:focus {
     </div>
   </div>
 
-{# --- KONDISI 2: PROFIL SUDAH LENGKAP (TAMPILKAN JADWAL) --- #}
 {% else %}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2 space-y-6">
@@ -91,7 +89,6 @@ input.datepicker:focus, input.timepicker:focus {
             <button id="clear-filter" class="px-3 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg text-sm hidden">Semua</button>
           </div>
 
-          {# Form ini digunakan URL-nya untuk fetch delete #}
           <form method="post" action="{% url 'coach_schedule_delete' %}" id="bulk-delete-form" class="flex-shrink-0">
             {% csrf_token %}
             <div class="flex items-center gap-3">
@@ -250,7 +247,6 @@ input.datepicker:focus, input.timepicker:focus {
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-// --- UTILITIES (getCookie, showToast) ---
 function getCookie(name) { let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)'); return v ? v[2] : null; }
 function showToast(message, type = 'success') {
     const toast = document.getElementById('custom-toast');
@@ -266,7 +262,7 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.classList.remove('show-toast'), 3000);
 }
 
-// --- HELPERS (createSlotHtml, createGroupCardHtmlForAjax) ---
+
 function createSlotHtml(slot) { 
     return `
     <label class="relative inline-flex items-center slot-label">
@@ -290,19 +286,16 @@ function createGroupCardHtmlForAjax(firstSlot, allSlots) {
      </div>`;
 }
 
-// --- MAIN LOGIC ---
+
 document.addEventListener('DOMContentLoaded', function(){
-    // Flatpickr Initialization
     flatpickr(".datepicker", { altInput: true, altFormat: "d M Y", dateFormat: "Y-m-d", minDate: "today" });
     flatpickr(".timepicker", { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true, minuteIncrement: 60 });
 
-    // Element References
     const filter = document.getElementById('filter-date');
     const applyBtn = document.getElementById('apply-filter');
     const clearBtn = document.getElementById('clear-filter');
     const bodyEl = document.body;
     
-    // Delete & Modal Elements
     const deleteToggleBtn = document.getElementById('delete-toggle-btn');
     const deleteToggleText = document.getElementById('delete-toggle-text'); 
     const cancelBtn = document.getElementById('cancel-delete-btn');
@@ -311,23 +304,19 @@ document.addEventListener('DOMContentLoaded', function(){
     const deleteControlsContainer = document.getElementById('delete-controls-container');
     const scheduleListContainer = document.getElementById('schedules-list-container');
     
-    // Add Form
     const addScheduleForm = document.getElementById('add-schedule-form');
 
-    // Modal Delete Elements
     const deleteModal = document.getElementById('delete-modal');
     const modalMessage = document.getElementById('modal-message');
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     const cancelModalBtn = document.getElementById('cancel-modal-btn');
 
     let selectionActive = false;
-    let idsToDeletePending = []; // Menyimpan ID sementara
+    let idsToDeletePending = []; 
 
-    // --- AJAX: Add Schedule (UPDATE: Kirim JSON agar Backend return JSON) ---
     addScheduleForm?.addEventListener('submit', async function(e){
         e.preventDefault();
         
-        // 1. Ubah FormData menjadi JSON Object
         const formData = new FormData(this);
         const dataObj = {};
         formData.forEach((value, key) => {
@@ -338,27 +327,24 @@ document.addEventListener('DOMContentLoaded', function(){
         if (submitButton) submitButton.disabled = true;
 
         try {
-            // 2. Kirim sebagai JSON String
             const response = await fetch(this.action, {
                 method: 'POST',
-                body: JSON.stringify(dataObj), // <-- UBAH KE JSON
+                body: JSON.stringify(dataObj), 
                 headers: {
-                    'Content-Type': 'application/json', // <-- HEADER WAJIB
+                    'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest', 
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             });
             
-            // Backend sekarang akan mendeteksi JSON body dan me-return JsonResponse
             const data = await response.json(); 
 
-            if (!data.success) { // Sesuaikan pengecekan success
+            if (!data.success) { 
                  throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join('; ') : `HTTP error ${response.status}`));
             }
             
             showToast(data.message || 'Jadwal ditambahkan!', 'success');
             
-            // --- Update UI DOM (Kode di bawah ini SAMA, tidak perlu diubah) ---
             if (data.new_slots && data.new_slots.length > 0) {
                 const noScheduleMsg = document.getElementById('no-schedule-message');
                 if (noScheduleMsg) noScheduleMsg.remove();
@@ -376,18 +362,18 @@ document.addEventListener('DOMContentLoaded', function(){
                      const firstSlot = slotsForThisDate[0];
                      let groupCard = scheduleListContainer.querySelector(`.group[data-date="${dateISO}"]`);
                      
-                     if (groupCard) { // Update existing group
+                     if (groupCard) { 
                          const slotContainer = groupCard.querySelector('.slot-container');
                          if (slotContainer) {
                              let slotsHtml = slotsForThisDate.map(createSlotHtml).join('');
                              slotContainer.insertAdjacentHTML('beforeend', slotsHtml);
                              const countEl = groupCard.querySelector('.slot-count');
                              if (countEl) {
-                                 const newCount = slotContainer.children.length; // Hitung children
+                                 const newCount = slotContainer.children.length; 
                                  countEl.textContent = `${newCount} ${newCount !== 1 ? 'slots' : 'slot'}`;
                              }
                          }
-                     } else { // Insert new group
+                     } else { 
                          const newGroupHtml = createGroupCardHtmlForAjax(firstSlot, slotsForThisDate);
                          const tempDiv = document.createElement('div'); tempDiv.innerHTML = newGroupHtml.trim();
                          const newGroupCard = tempDiv.firstChild;
@@ -412,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
 
-    // --- FUNCTION: MODAL DELETE ---
     function showDeleteModal(count) {
         if(modalMessage) modalMessage.textContent = `Apakah Anda yakin ingin menghapus ${count} jadwal yang dipilih? Tindakan ini tidak dapat dibatalkan.`;
         if(deleteModal) deleteModal.classList.remove('hidden');
@@ -423,29 +408,27 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(cancelModalBtn) cancelModalBtn.addEventListener('click', hideDeleteModal);
 
-    // --- STEP 1: TOMBOL HAPUS (BUKA MODAL) ---
+
     deleteToggleBtn?.addEventListener('click', function(){
         if (!selectionActive) { enterSelectionMode(); return; }
 
         const checkedCheckboxes = Array.from(scheduleListContainer.querySelectorAll('.delete-checkbox:checked:not(:disabled)'));
         if (checkedCheckboxes.length === 0) { showToast('Pilih jadwal untuk dihapus.', 'warning'); return; }
         
-        // Simpan ID sementara
         idsToDeletePending = checkedCheckboxes.map(ch => ch.dataset.id);
         
-        // Buka Modal
+
         showDeleteModal(checkedCheckboxes.length);
     });
 
-    // --- STEP 2: TOMBOL YA HAPUS (EKSEKUSI DELETE) ---
+
     confirmDeleteBtn?.addEventListener('click', function() {
-        // UI Feedback
         const originalText = confirmDeleteBtn.textContent;
         confirmDeleteBtn.disabled = true;
         confirmDeleteBtn.textContent = 'Menghapus...';
 
         fetch(bulkForm.action, {
-            method: 'DELETE', // <-- GANTI JADI DELETE
+            method: 'DELETE', 
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'},
             body: JSON.stringify({ selected_schedules: idsToDeletePending })
         })
@@ -454,7 +437,6 @@ document.addEventListener('DOMContentLoaded', function(){
             if (data.success) {
                 showToast(data.message || 'Jadwal dihapus!', 'success');
                 
-                // Update DOM
                 idsToDeletePending.forEach(id => {
                     const checkbox = scheduleListContainer.querySelector(`.delete-checkbox[data-id="${id}"]`);
                     const label = checkbox?.closest('label.slot-label');
@@ -464,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     
                     if (card && groupContainer?.children.length === 0) { 
                         card.remove(); 
-                    } else if (card) { // Update count
+                    } else if (card) { 
                         const countEl = card.querySelector('.slot-count');
                         const newCount = groupContainer.children.length;
                         if(countEl) countEl.textContent = `${newCount} ${newCount !== 1 ? 'slots' : 'slot'}`;
@@ -492,7 +474,6 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     });
 
-    // --- Filter Logic ---
     function applyFilterValue(val) {
         const allGroups = scheduleListContainer.querySelectorAll('.group[data-date]');
         let visibleCount = 0;
@@ -511,7 +492,6 @@ document.addEventListener('DOMContentLoaded', function(){
     applyBtn?.addEventListener('click', function(){ const v = filter.value; applyFilterValue(v); clearBtn?.classList.toggle('hidden', !v); });
     clearBtn?.addEventListener('click', function(){ filter.value=''; if(filter._flatpickr) filter._flatpickr.clear(); applyFilterValue(''); clearBtn?.classList.add('hidden'); const noMsg = document.getElementById('no-schedule-message'); if(noMsg && scheduleListContainer.querySelectorAll('.group[data-date]').length > 0) noMsg.remove(); });
 
-    // --- Selection Mode Logic ---
      function enterSelectionMode() {
         selectionActive = true;
         bodyEl.classList.add('selection-active');
@@ -550,10 +530,8 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
 
-    // Initial state
     exitSelectionMode();
 
-    // --- PROFILE MODAL LOGIC (TETAP ADA) ---
     {% if not has_profile %}
     const profileModal = document.getElementById('profileModal');
     const profileFormContainer = document.getElementById('profileFormContainer');

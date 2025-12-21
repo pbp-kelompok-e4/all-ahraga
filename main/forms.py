@@ -43,8 +43,7 @@ class VenueForm(forms.ModelForm):
             'name', 'description', 'location', 'sport_category', 
             'price_per_hour', 'main_image'
         ]
-        # 'owner' tidak dimasukkan karena akan diisi otomatis oleh view
-        # 'payment_options' dihapus, akan diset default di view
+
         widgets = {
             'main_image': forms.URLInput(attrs={
                 'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg',
@@ -54,12 +53,12 @@ class VenueForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Mengisi pilihan (queryset) untuk location dan sport_category
+
         self.fields['location'].queryset = LocationArea.objects.all()
         self.fields['sport_category'].queryset = SportCategory.objects.all()
         self.fields['description'].widget = forms.Textarea(attrs={'rows': 4})
         
-        # Ensure main_image field uses URLInput and has proper attributes
+
         self.fields['main_image'].widget = forms.URLInput(attrs={
             'class': 'w-full px-4 py-3 border border-slate-300 rounded-lg',
             'placeholder': 'https://example.com/image.jpg',
@@ -68,7 +67,7 @@ class VenueForm(forms.ModelForm):
 
 
 class VenueScheduleForm(forms.ModelForm):
-    # Tambahkan field ini, sama seperti di CoachScheduleForm
+
     end_time_global = forms.CharField(
         label="Waktu Selesai Harian",
         help_text="Waktu terakhir sesi (mis. 22:00). Slot dibuat per jam hingga waktu ini.",
@@ -83,7 +82,7 @@ class VenueScheduleForm(forms.ModelForm):
 
     class Meta:
         model = VenueSchedule
-        # Hapus 'end_time' dari fields, kita ganti dengan 'end_time_global'
+
         fields = ['date', 'start_time', 'is_available']
         widgets = {
             'date': forms.DateInput(
@@ -113,7 +112,7 @@ class VenueScheduleForm(forms.ModelForm):
         self.fields['is_available'].label = "Tersedia"
         self.fields['date'].help_text = "Pilih tanggal untuk jadwal venue"
         self.fields['start_time'].help_text = "Format 24 jam (mis. 09:00)"
-        # Hapus label/help_text untuk 'end_time' yang sudah tidak ada
+
 
 class EquipmentForm(forms.ModelForm):
     class Meta:
@@ -142,7 +141,6 @@ class EquipmentForm(forms.ModelForm):
         }
 
 class CoachProfileForm(forms.ModelForm):
-    # ganti ke URLField untuk input link gambar
     profile_picture = forms.URLField(
         required=False,
         label="URL Foto Profil",
@@ -154,7 +152,6 @@ class CoachProfileForm(forms.ModelForm):
 
     class Meta:
         model = CoachProfile
-        # pastikan fields sesuai dengan CoachProfile model
         fields = [
             'age',
             'experience_desc',
@@ -185,7 +182,6 @@ class CoachProfileForm(forms.ModelForm):
         if rp in (None, ''):
             return rp
         try:
-            # allow integer-like decimal
             return int(rp)
         except (TypeError, ValueError):
             raise forms.ValidationError("Tarif harus berupa angka")

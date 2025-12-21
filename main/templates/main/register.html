@@ -295,7 +295,6 @@
     window.addEventListener('scroll', onScroll, { passive: true });
   })();
 
-  // AJAX submit register 
   (function(){
     const form = document.getElementById('register-form');
     const errorBox = document.getElementById('register-errors');
@@ -328,7 +327,6 @@
           return;
         }
         
-        // Format error messages dengan lebih baik
         let errorMessages = [];
         if (data?.errors) {
           Object.entries(data.errors).forEach(([field, msgs])=>{

@@ -159,12 +159,10 @@
     </div>
 </div>
 
-{# TOAST container (hidden by default) #}
 <div id="mc-toast" aria-live="polite" class="hidden fixed right-6 bottom-6 z-[9999] min-w-[280px] rounded-xl p-4 text-white shadow-2xl transition-all duration-300"></div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function(){
-        // build messages array from Django messages (if any)
         var django_messages = [{% for message in messages %} {
             message: "{{ message|escapejs }}",
             tags: "{{ message.tags }}"
@@ -175,7 +173,7 @@
         var toast = document.getElementById('mc-toast');
 
         function showToast(text, type){
-            var bg = 'bg-gradient-to-r from-blue-600 to-blue-800'; // info
+            var bg = 'bg-gradient-to-r from-blue-600 to-blue-800';
             var icon = 'ℹ️';
             if (type === 'success') { bg = 'bg-gradient-to-r from-green-600 to-green-800'; icon = '✅'; }
             if (type === 'error')   { bg = 'bg-gradient-to-r from-red-600 to-red-800'; icon = '❌'; }
@@ -194,7 +192,6 @@
             setTimeout(function(){ toast.classList.add('hidden'); }, 3600);
         }
 
-        // show all messages sequentially
         (function showSequential(i){
             if (i >= django_messages.length) return;
             var m = django_messages[i];

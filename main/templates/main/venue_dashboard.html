@@ -419,7 +419,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateVenueCount(true);
         
         const tbody = document.querySelector('tbody');
-        // Cek apakah ada empty state row (colspan="5")
         const emptyRow = tbody.querySelector('td[colspan="5"]');
         if (emptyRow) {
           emptyRow.parentElement.remove();
@@ -428,7 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const newRow = document.createElement('tr');
         newRow.setAttribute('data-venue-id', data.venue.id);
         newRow.className = 'hover:bg-gray-50/70 transition-colors';
-        // Rebuild row HTML dengan data dari response
         newRow.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="w-16 h-16 rounded-lg overflow-hidden shadow-md flex-shrink-0">
@@ -517,7 +515,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Berhasil', data.message, 'success');
         hideDeleteModal();
         
-        // Check if table body is empty and add empty state if needed
         const tbody = document.querySelector('tbody');
         if (!tbody.querySelector('tr')) {
             tbody.innerHTML = `

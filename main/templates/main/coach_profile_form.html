@@ -140,7 +140,7 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() { // Pastikan DOM siap
+document.addEventListener('DOMContentLoaded', function() { 
     const urlInput = document.getElementById('id_profile_picture');
     const previewContainer = document.getElementById('imagePreviewContainer');
     const imagePreview = document.getElementById('imagePreview');
@@ -148,11 +148,11 @@ document.addEventListener('DOMContentLoaded', function() { // Pastikan DOM siap
     if (urlInput && previewContainer && imagePreview) {
         urlInput.addEventListener('change', function(e) {
             const url = e.target.value;
-            if (url && url.trim()) { // Jika ada URL
+            if (url && url.trim()) { 
                 imagePreview.src = url;
                 previewContainer.classList.remove('hidden');
             } else {
-                imagePreview.src = ""; // Kosongkan jika URL kosong
+                imagePreview.src = "";
                 previewContainer.classList.add('hidden');
             }
         });
