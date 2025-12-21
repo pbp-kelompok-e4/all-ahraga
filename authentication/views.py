@@ -6,7 +6,6 @@ import json
 from django.contrib.auth import logout as auth_logout
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from django.conf import settings
 
 from main.models import UserProfile
 
@@ -66,15 +65,6 @@ def login(request):
         if user.is_active:
             auth_login(request, user)
 
-            # ✅ TAMBAHKAN DEBUG INI
-            print(f"🍪 Login successful for user: {username}")
-            print(f"   Session Key: {request.session.session_key}")
-            print(f"   SESSION_COOKIE_SECURE: {settings.SESSION_COOKIE_SECURE}")
-            print(f"   SESSION_COOKIE_SAMESITE: {settings.SESSION_COOKIE_SAMESITE}")
-            print(f"   CSRF_COOKIE_SECURE: {settings.CSRF_COOKIE_SECURE}")
-            print(f"   CSRF_COOKIE_SAMESITE: {settings.CSRF_COOKIE_SAMESITE}")
-            print(f"   PRODUCTION mode: {settings.PRODUCTION}")
-
             role_type = get_role_type(user)
             redirect_name = get_dashboard_redirect_name(user)
 
@@ -88,28 +78,15 @@ def login(request):
                 else:
                     role_type = 'CUSTOMER'
             except UserProfile.DoesNotExist:
-                role_type = 'CUSTOMER'
-            
-            # ✅ OPTIONAL: Buat response object untuk set cookie secara eksplisit
-            response = JsonResponse({
+                role_type = 'CUSTOMER'  # Default fallback
+            # Login status successful.
+            return JsonResponse({
                 "username": user.username,
                 "status": True,
-                "role_type": role_type,
+                "role_type": role_type,          # untuk Flutter
                 "redirect_to": redirect_name,   
                 "message": "Login successful!"
             }, status=200)
-            
-            # ✅ OPTIONAL: Set cookie secara manual (sebagai backup)
-            if settings.PRODUCTION:
-                response.set_cookie(
-                    'sessionid',
-                    request.session.session_key,
-                    secure=True,
-                    httponly=True,
-                    samesite='None',
-                )
-            
-            return response
         else:
             return JsonResponse({
                 "status": False,
