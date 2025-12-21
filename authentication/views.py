@@ -16,6 +16,10 @@ ROLE_COACH = "COACH"
 
 def get_role_type(user: User) -> str:
     """Baca role dari UserProfile dan kembalikan string seperti di form Django."""
+    # Prioritaskan superuser/staff sebagai ADMIN
+    if user.is_superuser or user.is_staff:
+        return "ADMIN"
+
     try:
         profile = user.profile  # related_name='profile'
     except UserProfile.DoesNotExist:
@@ -68,7 +72,6 @@ def login(request):
             role_type = get_role_type(user)
             redirect_name = get_dashboard_redirect_name(user)
 
-            # Mengambil role dari UserProfile
             try:
                 user_profile = UserProfile.objects.get(user=user)
                 if user_profile.is_venue_owner:
@@ -78,12 +81,11 @@ def login(request):
                 else:
                     role_type = 'CUSTOMER'
             except UserProfile.DoesNotExist:
-                role_type = 'CUSTOMER'  # Default fallback
-            # Login status successful.
+                role_type = 'ADMIN' if user.is_superuser or user.is_staff else 'CUSTOMER'
             return JsonResponse({
                 "username": user.username,
                 "status": True,
-                "role_type": role_type,          # untuk Flutter
+                "role_type": role_type,          
                 "redirect_to": redirect_name,   
                 "message": "Login successful!"
             }, status=200)
@@ -117,38 +119,33 @@ def register(request):
     username = data.get('username', '').strip()
     password1 = data.get('password1', '')
     password2 = data.get('password2', '')
-    role_type = data.get('role_type', ROLE_CUSTOMER)  # 🔹 kirim dari Flutter
-    phone_number = data.get('phone_number')           # opsional, kalau mau
-    email = data.get('email')                         # opsional
+    role_type = data.get('role_type', ROLE_CUSTOMER) 
+    phone_number = data.get('phone_number')           
+    email = data.get('email')                         
 
-    # Check if the passwords match
     if password1 != password2:
         return JsonResponse({
             "status": False,
             "message": "Passwords do not match."
         }, status=400)
 
-    # Check if the username is already taken
     if User.objects.filter(username=username).exists():
         return JsonResponse({
             "status": False,
             "message": "Username already exists."
         }, status=400)
 
-    # validasi role_type
     if role_type not in {ROLE_CUSTOMER, ROLE_VENUE_OWNER, ROLE_COACH}:
         return JsonResponse({
             "status": False,
             "message": "Invalid role type."
         }, status=400)
 
-    # Create the new user
     user = User.objects.create_user(username=username, password=password1)
     if email:
         user.email = email
     user.save()
 
-    # Create UserProfile with role flags
     profile = UserProfile.objects.create(
         user=user,
         phone_number=phone_number,

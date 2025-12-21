@@ -70,4 +70,9 @@ urlpatterns = [
     path('api/coaches/', views.coach_list_json, name='coach_list_json'),
     path('api/coach/<int:coach_id>/', views.coach_detail_json, name='coach_detail_json'),
     path('proxy-image/', views.proxy_image, name='proxy_image'),
+    path('api/admin/dashboard/', views.api_admin_dashboard, name='api_admin_dashboard'),
+    path('api/admin/users/', views.api_admin_users, name='api_admin_users'),
+    path('api/admin/venues/', views.api_admin_venues, name='api_admin_venues'),
+    path('api/admin/coaches/', views.api_admin_coaches, name='api_admin_coaches'),
+    path('api/admin/bookings/', views.api_admin_bookings, name='api_admin_bookings'),
 ]

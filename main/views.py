@@ -106,9 +106,24 @@ def login_view(request):
         
             redirect_url_name = get_dashboard_redirect_url_name(user)
             final_redirect_url = reverse(redirect_url_name)
+            
+            role_type = 'CUSTOMER'
+            if user.is_superuser:
+                role_type = 'ADMIN'
+            elif hasattr(user, 'profile'):
+                if user.profile.is_venue_owner:
+                    role_type = 'VENUE_OWNER'
+                elif user.profile.is_coach:
+                    role_type = 'COACH'
 
             if is_ajax:
-                return JsonResponse({'ok': True, 'redirect': final_redirect_url})
+                return JsonResponse({
+                    'ok': True, 
+                    'redirect': final_redirect_url,
+                    'username': user.username,
+                    'is_superuser': user.is_superuser, 
+                    'role_type': role_type             
+                })
             else:
                 messages.info(request, f"Welcome back, {user.username}.")
                 return redirect(final_redirect_url)
@@ -3900,3 +3915,133 @@ def proxy_image(request):
         )
     except requests.RequestException as e:
         return HttpResponse(f'Error fetching image: {str(e)}', status=500)
+    
+# --- ADMIN API FOR FLUTTER ---
+
+@login_required
+@user_passes_test(is_admin)
+def api_admin_dashboard(request):
+    data = {
+        'total_users': User.objects.count(),
+        'total_venues': Venue.objects.count(),
+        'total_coaches': CoachProfile.objects.count(),
+        'total_bookings': Booking.objects.count(),
+    }
+    return JsonResponse(data)
+
+@login_required
+@user_passes_test(is_admin)
+def api_admin_users(request):
+    # Ambil parameter pencarian 'q' dari URL, default kosong
+    search_query = request.GET.get('q', '').strip()
+    
+    users = User.objects.select_related('profile').all().order_by('-date_joined')
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+
+    data = []
+    for u in users:
+        role = "Lainnya"
+        if u.is_superuser: role = "Admin"
+        elif hasattr(u, 'profile'):
+            if u.profile.is_venue_owner: role = "Venue Owner"
+            elif u.profile.is_coach: role = "Coach"
+            elif u.profile.is_customer: role = "Customer"
+        
+        phone = "-"
+        if hasattr(u, 'profile') and u.profile.phone_number:
+            phone = u.profile.phone_number
+
+        data.append({
+            'username': u.username,
+            'email': u.email or "-",
+            'role': role,
+            'phone_number': phone,
+            'date_joined': u.date_joined.strftime("%d %b %Y")
+        })
+    return JsonResponse({'users': data})
+
+@login_required
+@user_passes_test(is_admin)
+def api_admin_venues(request):
+    search_query = request.GET.get('q', '').strip()
+    
+    venues = Venue.objects.select_related('owner', 'sport_category', 'location').all()
+    
+    if search_query:
+        venues = venues.filter(name__icontains=search_query)
+
+    data = []
+    for v in venues:
+        data.append({
+            'name': v.name,
+            'owner': v.owner.username,
+            'category': v.sport_category.name,
+            'location': v.location.name if v.location else "-",
+            'price': v.price_per_hour
+        })
+    return JsonResponse({'venues': data})
+
+@login_required
+@user_passes_test(is_admin)
+def api_admin_coaches(request):
+    search_query = request.GET.get('q', '').strip()
+    
+    coaches = CoachProfile.objects.select_related('user', 'main_sport_trained').all()
+    
+    if search_query:
+        coaches = coaches.filter(user__username__icontains=search_query)
+
+    data = []
+    for c in coaches:
+        areas = [a.name for a in c.service_areas.all()] 
+        
+        data.append({
+            'id': c.id,
+            'username': c.user.username,
+            'sport': c.main_sport_trained.name if c.main_sport_trained else "-",
+            'rate': c.rate_per_hour,
+            'is_verified': c.is_verified,
+            'service_areas': areas,
+            'profile_picture': c.profile_picture 
+        })
+        
+    return JsonResponse({'coaches': data})
+
+@login_required
+@user_passes_test(is_admin)
+def api_admin_bookings(request):
+    search_query = request.GET.get('q', '').strip()
+    
+    bookings = Booking.objects.select_related(
+        'customer', 
+        'venue_schedule__venue', 
+        'transaction'
+    ).all().order_by('-booking_time')
+    
+    if search_query:
+        bookings = bookings.filter(
+            Q(id__icontains=search_query) |
+            Q(customer__username__icontains=search_query) |
+            Q(venue_schedule__venue__name__icontains=search_query)
+        )
+
+    data = []
+    for b in bookings:
+        status = "Unknown"
+        if hasattr(b, 'transaction'):
+            status = b.transaction.status
+            
+        data.append({
+            'id': b.id,
+            'customer': b.customer.username,
+            'venue': b.venue_schedule.venue.name,
+            'total': b.total_price,
+            'status': status,
+            'coach': b.coach_schedule.coach.user.username if b.coach_schedule else "-"
+        })
+    return JsonResponse({'bookings': data})
