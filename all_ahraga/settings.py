@@ -168,11 +168,20 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # ===== CSRF Settings untuk Flutter =====
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# settings.py
 
-CSRF_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SAMESITE = 'Lax'
+# Izinkan semua origin (sudah benar)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# ===== UBAH BAGIAN INI =====
+# Karena PWS pakai HTTPS, Secure harus True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+# Supaya cookie bisa dikirim lintas domain (Localhost -> PWS)
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:*",
