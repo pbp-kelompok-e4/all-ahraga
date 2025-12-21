@@ -2797,8 +2797,8 @@ def api_create_booking(request, venue_id):
 @csrf_exempt
 def api_filter_venues(request):
     search = request.GET.get('search', '').strip()
-    location_id = request.GET.get('location', '')
-    sport_id = request.GET.get('sport', '')
+    location_name = request.GET.get('location', '') 
+    sport_name = request.GET.get('sport_category', '') 
     page = request.GET.get('page', 1) 
     
     venues_query = Venue.objects.all().select_related('location', 'sport_category', 'owner').order_by('id')
@@ -2810,11 +2810,11 @@ def api_filter_venues(request):
             Q(sport_category__name__icontains=search)
         )
     
-    if location_id:
-        venues_query = venues_query.filter(location_id=location_id)
+    if location_name:
+        venues_query = venues_query.filter(location__name__icontains=location_name)
         
-    if sport_id:
-        venues_query = venues_query.filter(sport_category_id=sport_id)
+    if sport_name:
+        venues_query = venues_query.filter(sport_category__name__icontains=sport_name)
     
     paginator = Paginator(venues_query, 6) 
     try:
